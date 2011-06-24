@@ -21,10 +21,13 @@ import java.io.DataOutput;
 
 import java.util.Iterator;
 import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Map;
 import java.lang.Math;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.nio.ByteBuffer;
 
@@ -1347,7 +1350,7 @@ public class SchemaStatisticalSummary implements Writable {
         }
       } while (cur != null);
 
-      this.root.computePreorder(0);
+      this.root.computePreorder(-1);
       return s;
     } finally {
       in.close();
@@ -1473,363 +1476,309 @@ public class SchemaStatisticalSummary implements Writable {
   /////////////////////////////////////////////////////////
   // Schema distance computation
   /////////////////////////////////////////////////////////
-  /**
-   * Compute a distance between two statistical summaries.  
-   * Larger values indicate trees that are more different.
-   *
-   * This value should not be interpreted as a probability.  It's just a score.
-   *
-   * It is very roughly the schema-edit-distance.  We transform one schema into another
-   * through a series of node-edits, inserts, deletes.  The cost of a node-edit depends
-   * on the similarity of the nodes involved.  The algorithm we use is 
-   * similar to that described in "The Tree-to-Tree Correction Problem", Tai, JACM, 1979.
-   */
   public SchemaMapping getBestMapping(SchemaStatisticalSummary other) {
     SummaryNode t1 = root;
     SummaryNode t2 = other.root;
+    TreeMap<Integer, SummaryNode> t1NonLeafs = new TreeMap<Integer, SummaryNode>();
+    TreeMap<Integer, SummaryNode> t1Leafs = new TreeMap<Integer, SummaryNode>();
+    TreeMap<Integer, SummaryNode> t2NonLeafs = new TreeMap<Integer, SummaryNode>();
+    TreeMap<Integer, SummaryNode> t2Leafs = new TreeMap<Integer, SummaryNode>();
 
-    ////////////////////////////////////////
-    // Part I of tree-correction algorithm
-    ////////////////////////////////////////
-    Hashtable E = new Hashtable();    
-    Hashtable<String, List<SchemaMappingOp>> Echoice = new Hashtable<String, List<SchemaMappingOp>>();
+    //
+    // Find all the non-leaf nodes
+    //
+    for (SummaryNode iNode: t1.preorder()) {
+      if (iNode.children().size() > 0) {
+        t1NonLeafs.put(iNode.preorderCount(), iNode);
+      } else {
+        t1Leafs.put(iNode.preorderCount(), iNode);
+      }
+    }
+    for (SummaryNode jNode: t2.preorder()) {
+      if (jNode.children().size() > 0) {
+        t2NonLeafs.put(jNode.preorderCount(), jNode);
+      } else {
+        t2Leafs.put(jNode.preorderCount(), jNode);
+      }
+    }
+
+    //
+    // Start by computing all the potential 1:1 leaf-level match costs.
+    //
+    List<DistancePair[]> allCosts = new ArrayList<DistancePair[]>();
     for (SummaryNode iNode: t1.preorder()) {
       int iIdx = iNode.preorderCount();
-      for (SummaryNode jNode: t2.preorder()) {
-        int jIdx = jNode.preorderCount();
+      DistancePair fromI[] = null;
+      if (t1NonLeafs.get(iIdx) == null) {
+        List<DistancePair> costs = new ArrayList<DistancePair>();
+        for (SummaryNode jNode: t2.preorder()) {
+          int jIdx = jNode.preorderCount();
+          if (t2NonLeafs.get(jIdx) == null) {
+            costs.add(new DistancePair(iNode.transformCost(jNode), jNode));
+          }
+        }
+        costs.add(new DistancePair(iNode.deleteCost(), null));
+        fromI = costs.toArray(new DistancePair[costs.size()]);
+        Arrays.sort(fromI);
+      }
+      allCosts.add(fromI);
+    }
 
-        SummaryNode xNode = null;
-        int xIdx = -1;
-        for (SummaryNode uNode:  iNode.pathToRoot()) {
-          int uIdx = uNode.preorderCount();
+    //
+    // Figure out how far down into each attr's match-list we can go while only evaluating the
+    // estimated top-k-scoring schema matches.  (Estimated by combining independent 1:1 match scores;
+    // no enforcement of the pigeonhole constraint.)
+    //
+    int MAX_TRIES = 40000;
+    int numToPeek[] = new int[allCosts.size()];
+    for (int i = 0; i < numToPeek.length; i++) {
+      if (allCosts.get(i) == null) {
+        numToPeek[i] = 0;
+      } else {
+        numToPeek[i] = 1;
+      }
+    }
+    int numCandidates = 1;
+    do {
+      int peekIndex = -1;
+      double cheapestPeek = Double.MAX_VALUE;
+      for (int i = 0; i < numToPeek.length; i++) {      
+        if (allCosts.get(i) != null &&
+            numToPeek[i] < allCosts.get(i).length) {
+          double candidatePeekValue = allCosts.get(i)[numToPeek[i]].getCost();
+          if (candidatePeekValue < cheapestPeek) {
+            cheapestPeek = candidatePeekValue;
+            peekIndex = i;
+          }
+        }
+      }
+      if (peekIndex >= 0) {
+        numToPeek[peekIndex]++;
+      } else {
+        break;
+      }
+      numCandidates = 1;
+      for (int i = 0; i < numToPeek.length; i++) {      
+        if (numToPeek[i] >= 1) {
+          numCandidates *= numToPeek[i];
+        }
+      }
+    } while (numCandidates < MAX_TRIES);
 
-          for (SummaryNode sNode: uNode.pathToRoot()) {
-            int sIdx = sNode.preorderCount();
+    //
+    // Now the numToPeek vector tells us how many steps down to go in each attr's
+    // ranked list of preferred matches.  The product of all of these determines the # of candidates.
+    //
+    int curPeek[] = new int[numToPeek.length];
+    for (int i = 0; i < curPeek.length; i++) {
+      if (numToPeek[i] == 0) {
+        curPeek[i] = 0;
+      } else {
+        curPeek[i] = 1;
+      }
+    }
 
-            SummaryNode yNode = null;
-            int yIdx = -1;
-            for (SummaryNode vNode: jNode.pathToRoot()) {
-              int vIdx = vNode.preorderCount();
-              for (SummaryNode tNode: vNode.pathToRoot()) {
-                int tIdx = tNode.preorderCount();
+    //
+    // Now go through all the possible configurations of top-k mappings
+    //
+    DistancePair bestMatchConfig[] = new DistancePair[curPeek.length];
+    DistancePair matchConfig[] = new DistancePair[curPeek.length];
+    double bestCost = Double.MAX_VALUE;
+    boolean peeksRemain = numCandidates > 0;
+    while (peeksRemain) {
+      ////////////////////////////////////////
+      // Evaluate this configuration ("peek")
+      ////////////////////////////////////////
+      //
+      // 1. Build a proper 'match configuration' out of the leaf-level 1:1 'curPeek'.
+      //    That means we generate record-level correspondences when justified by full 
+      //    child-correspondences
+      //
+      for (SummaryNode iNode: t1.preorder()) {
+        int iNodeIdx = iNode.preorderCount();
+        matchConfig[iNodeIdx] = null;
+        DistancePair[] allINodeMatches = allCosts.get(iNodeIdx);
+        if (allINodeMatches != null) {
+          matchConfig[iNodeIdx] = allINodeMatches[curPeek[iNodeIdx]-1];
+        }
+      }
 
-                if (((sIdx == uIdx) && (uIdx == iIdx)) &&
-                    ((tIdx == vIdx) && (vIdx == jIdx))) {
-                  storeValue(E, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx, 
-                             iNode.transformCost(jNode));
+      //
+      // 2. Modify the current matchConfig s.t. if ALL of a non-leaf's children match ALL of
+      //    the children of a non-leaf, then the two non-leafs also match.
+      //    Because of the potential record hierarchy, this procedure needs to be repeated until 
+      //    there is an iteration in which no new matches are found (or until the roots are matched).
+      //
+      for (Map.Entry<Integer, SummaryNode> elt: t1NonLeafs.entrySet()) {
+        SummaryNode iNode = elt.getValue();
+        if (matchConfig[iNode.preorderCount()] != null) {
+          continue;
+        }
 
-                  //System.err.println("TXCOST: " + iNode.transformCost(jNode));
-
-                  // The choice is TRANSFORM-I-J
-                  storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                              new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, iIdx, other, jIdx));
-                } else if (((sIdx == uIdx) && (uIdx == iIdx)) ||
-                           ((tIdx < vIdx) && (vIdx == jIdx))) {
-                  storeValue(E, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx, 
-                             getValue(E, sIdx, uIdx, iIdx, tIdx, jNode.parent().preorderCount(), jIdx - 1) +
-                             jNode.createCost());
-                  // The choice is CREATE-J plus a previous one!
-                  storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                              new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jIdx));
-                  storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                              new PreviousChoice(Echoice, sIdx, uIdx, iIdx, tIdx, jNode.parent().preorderCount(), jIdx - 1));
-                } else if (((sIdx < uIdx) && (uIdx == iIdx)) ||
-                           ((tIdx == vIdx) && (vIdx == jIdx))) {
-                  storeValue(E, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx, 
-                             getValue(E, sIdx, iNode.parent().preorderCount(), iIdx-1, tIdx, vIdx, jIdx) +
-                             iNode.deleteCost());
-                  // The choice is DELETE-I plus a previous one!
-                  storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                              new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, iIdx));
-                  storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                              new PreviousChoice(Echoice, sIdx, iNode.parent().preorderCount(), iIdx-1, tIdx, vIdx, jIdx));
-                } else {
-                  // The choice is some combination of the previous ones!
-                  double option1 = getValue(E, sIdx, xIdx, iIdx, tIdx, vIdx, jIdx);
-                  double option2 = getValue(E, sIdx, uIdx, iIdx, tIdx, yIdx, jIdx);
-                  double option3 = getValue(E, sIdx, uIdx, xIdx-1, tIdx, vIdx, yIdx-1) +
-                    getValue(E, xIdx, xIdx, iIdx, yIdx, yIdx, jIdx);
-                  double min = Math.min(option1, Math.min(option2, option3));
-                  storeValue(E, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx, min);
-
-                  if (option1 == min) {
-                    storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                                new PreviousChoice(Echoice, sIdx, xIdx, iIdx, tIdx, vIdx, jIdx));
-                  } else if (option2 == min) {
-                    storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                                new PreviousChoice(Echoice, sIdx, uIdx, iIdx, tIdx, yIdx, jIdx));
-                  } else if (option3 == min) {
-                    storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                                new PreviousChoice(Echoice, sIdx, uIdx, xIdx-1, tIdx, vIdx, yIdx-1));
-                    storeChoice(Echoice, sIdx, uIdx, iIdx, tIdx, vIdx, jIdx,
-                                new PreviousChoice(Echoice, xIdx, xIdx, iIdx, yIdx, yIdx, jIdx));
-                  }
-                }
-              }
-              yNode = vNode;
-              yIdx = yNode.preorderCount();
+        // For each child of this t1 internal node, place the matching node's parent into a set
+        TreeMap<Integer, SummaryNode> observedMatchParents = new TreeMap<Integer, SummaryNode>();
+        for (SummaryNode iChild: iNode.children()) {
+          int iChildIdx = iChild.preorderCount();
+          DistancePair jMatch = matchConfig[iChildIdx];
+          if (jMatch != null) {
+            if (jMatch.getNode() == null) {
+              observedMatchParents.put(-1, iChild);
+            } else {
+              SummaryNode jMatchParent = jMatch.getNode().getParent();
+              observedMatchParents.put(jMatchParent.preorderCount(), jMatchParent);
             }
           }
-          xNode = uNode;
-          xIdx = xNode.preorderCount();
+        }
+
+        // If the parent-set has just one element, then internal node iNode 
+        // should be matched to the singleton elt in the parent-set.
+        if (observedMatchParents.size() == 1) {
+          int matchIdx = observedMatchParents.firstKey().intValue();
+          if (matchIdx >= 0) {
+            SummaryNode jMatchParent = observedMatchParents.get(matchIdx);
+            matchConfig[iNode.preorderCount()] = new DistancePair(0, jMatchParent);
+          }
+        }
+      }
+
+      //
+      // 3. Compute the total match costs.  
+      // a. The first component is the TRANSFORM costs of the discovered 1:1 leaf matches.
+      //    (Valid matches among non-leafs are free.)
+      //
+      double total = 0;
+      for (int iNodeIdx = 0; iNodeIdx < matchConfig.length; iNodeIdx++) {
+        if (matchConfig[iNodeIdx] != null) {
+          // Get the transform cost
+          total += matchConfig[iNodeIdx].getCost();
+        }
+      }
+
+      //
+      // 3b. Compute DELETE penalties.  These are elts in t1 that are NOT MATCHED to anything
+      //     in t2.  Non-leaf nodes that are unmatched DO incur penalties.
+      //
+      //     While we're there, compute the set of items in t2 that DO have a matched elt.
+      //
+      int numDuplicates = 0;
+      HashSet<Integer> observedT2Nodes = new HashSet<Integer>();
+      for (SummaryNode iNode: t1.preorder()) {
+        int iNodeIdx = iNode.preorderCount();
+        if (matchConfig[iNodeIdx] == null || matchConfig[iNodeIdx].getNode() == null) {
+          total += iNode.deleteCost();
+        } else {
+          int jIdx = matchConfig[iNodeIdx].getNode().preorderCount();
+          if (observedT2Nodes.contains(jIdx)) {
+            numDuplicates++;
+          } else {
+            observedT2Nodes.add(jIdx);
+          }
+        }
+      }
+
+      //
+      // 3c. Compute CREATE penalties.  These count for any items in the target schema t2
+      //     that have gone unmapped.  
+      //
+      for (SummaryNode jNode: t2.preorder()) {
+        int jIdx = jNode.preorderCount();
+        if (! observedT2Nodes.contains(jIdx)) {
+          total += jNode.createCost();
+        }
+      }
+
+      //
+      // 4.  Impose a penalty for duplicate mappings in t2.
+      // 
+      
+      //
+      // Is it the best mapping so far?
+      // 
+      if (total < bestCost) {
+        bestCost = total;
+        System.arraycopy(matchConfig, 0, bestMatchConfig, 0, bestMatchConfig.length);
+      }
+
+      /////////////////////////////////////////////
+      // Find the next configuration to evaluate (leaf-level "peek")
+      /////////////////////////////////////////////
+      peeksRemain = false;
+      for (int i = 0; i < curPeek.length; i++) {
+        if (curPeek[i] == 0) {
+          continue;
+        } else {
+          if (curPeek[i] < numToPeek[i]) {
+            curPeek[i]++;
+            for (int j = i-1; j >= 0; j--) {
+              if (curPeek[j] > 0) {
+                curPeek[j] = 1;
+              }
+            }
+            peeksRemain = true;
+            break;
+          }
         }
       }
     }
-    ////////////////////////////////////////
-    // Part II of tree-correction algorithm
-    ////////////////////////////////////////
-    double minM[][] = new double[t1.size()+1][];
-    Hashtable<String, List<SchemaMappingOp>> Mchoice = new Hashtable<String, List<SchemaMappingOp>>();
 
-    for (int i = 0; i < minM.length; i++) {
-      minM[i] = new double[t2.size()+1];
-    }
-    minM[1][1] = 0;
-    storeChoice(Mchoice, 1, 1, new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, 1, other, 1));
-
-    for (SummaryNode iNode: t1.preorder()) {
-      int iIdx = iNode.preorderCount();
-      if (iIdx < 2) {
-        continue;
+    //
+    // ALMOST DONE: We have the best match.  Now we translate it into a series of SchemaMappingOps 
+    //
+    List<SchemaMappingOp> bestOps = new ArrayList<SchemaMappingOp>();
+    HashSet<Integer> bestMapTargets = new HashSet<Integer>();
+    for (int i = 0; i < bestMatchConfig.length; i++) {
+      if (bestMatchConfig[i] != null && bestMatchConfig[i].getNode() != null) {
+        int dstIdx = bestMatchConfig[i].getNode().preorderCount();
+        bestOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, i, other, dstIdx));
+        bestMapTargets.add(dstIdx);
+      } else {
+        bestOps.add(new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, i));
       }
-      minM[iIdx][1] = minM[iIdx-1][1] + iNode.deleteCost();
-      storeChoice(Mchoice, iIdx, 1, new PreviousChoice(Mchoice, iIdx-1, 1));
-      storeChoice(Mchoice, iIdx, 1, new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, iIdx));
     }
     for (SummaryNode jNode: t2.preorder()) {
       int jIdx = jNode.preorderCount();
-      if (jIdx < 2) {
-        continue;
-      }
-      minM[1][jIdx] = minM[1][jIdx-1] + jNode.createCost();
-      storeChoice(Mchoice, 1, jIdx, new PreviousChoice(Mchoice, 1, jIdx-1));
-      storeChoice(Mchoice, 1, jIdx, new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jIdx));
-    }
-
-    for (SummaryNode iNode: t1.preorder()) {
-      int iIdx = iNode.preorderCount();
-      if (iNode.preorderCount() < 2) {
-        continue;
-      }
-      for (SummaryNode jNode: t2.preorder()) {
-        int jIdx = jNode.preorderCount();
-        if (jNode.preorderCount() < 2) {
-          continue;
-        }
-
-        SummaryNode chosenSNode = null;
-        SummaryNode chosenTNode = null;
-
-        minM[iIdx][jIdx] = Double.MAX_VALUE;
-        List<SchemaMappingOp> curBestOps = new ArrayList<SchemaMappingOp>();
-
-        for (SummaryNode sNode: iNode.parent().pathToRoot()) {
-          int sIdx = sNode.preorderCount();
-          for (SummaryNode tNode: jNode.parent().pathToRoot()) {          
-            int tIdx = tNode.preorderCount();
-            double tmp = minM[sIdx][tIdx] +
-              getValue(E, sIdx, iNode.parent().preorderCount(), iIdx - 1,
-                       tIdx, jNode.parent().preorderCount(), jIdx - 1) - 
-              sNode.transformCost(tNode);
-
-            //
-            // REMIND - mjc - I'm not sure this code correctly translates the min cost into 
-            // an appropriate operation reconstruction.  This appears to be where we sometimes incorrectly
-            // pursue a delete/create strategy instead of a lower-cost transformation-based one.
-            //
-            if (tmp <= minM[iIdx][jIdx]) {
-              minM[iIdx][jIdx] = tmp;
-              curBestOps.clear();
-              // We substract the s-t transformation cost from the "tmp" computation above, as the other terms count it
-              // twice.  Thus, the operation-generation code must substract a TRANSFORM out of the op-stream.
-              // This is why the code adds a "Negative Transformation".  It will be used to cancel out a TRANSFORM
-              // in the final operation stream later on.
-              curBestOps.add(new PreviousChoice(Mchoice, sIdx, tIdx));
-              curBestOps.add(new PreviousChoice(Echoice, 
-                                                sIdx, iNode.parent().preorderCount(), iIdx - 1,
-                                                tIdx, jNode.parent().preorderCount(), jIdx - 1));
-              curBestOps.add(new SchemaMappingOp(SchemaMappingOp.NEGATIVE_TRANSFORM_OP, this, sIdx, other, tIdx));
-            }
-            // The current possible choice is OPS-FROM-MIN(S, T) PLUS OPS-FROM-E(s, i-1, t, j-1)
-          }
-        }
-        //System.err.print("Transform cost: " + iNode.transformCost(jNode) + " for " + iIdx + ", " + jIdx + ", with pre-tx cost " + minM[iIdx][jIdx]);
-        minM[iIdx][jIdx] = minM[iIdx][jIdx] + iNode.transformCost(jNode);
-        //System.err.println("... post of " + minM[iIdx][jIdx]);
-
-        // The choice is TRANSFORM-I-J PLUS ops from previous step
-        for (SchemaMappingOp op: curBestOps) {
-          storeChoice(Mchoice, iIdx, jIdx, op);
-        }
-        storeChoice(Mchoice, iIdx, jIdx,
-                    new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, iIdx, other, jIdx));
-      }
-    }
-
-    ////////////////////////////////////////
-    // Part III of tree-correction algorithm
-    ////////////////////////////////////////
-    double D[][] = new double[t1.size()+1][];
-    Hashtable<String, List<SchemaMappingOp>> Dchoice = new Hashtable<String, List<SchemaMappingOp>>();
-
-    int mapping[][] = new int[t1.size()+1][];
-    for (int i = 0; i < D.length; i++) {
-      D[i] = new double[t2.size()+1];
-      mapping[i] = new int[t2.size()+1];
-    }
-
-    D[1][1] = 0;
-    storeChoice(Dchoice, 1, 1, new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, 1, other, 1));
-
-
-    for (SummaryNode iNode: t1.preorder()) {
-      int i = iNode.preorderCount();
-      if (i < 2) {
-        continue;
-      }
-      D[i][1] = D[i-1][1] + iNode.deleteCost();
-      // The decision is DELETE-I PLUS OPS-FROM-D[i-1][j]
-      storeChoice(Dchoice, i, 1, 
-                  new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, i));
-      storeChoice(Dchoice, i, 1, 
-                  new PreviousChoice(Dchoice, i-1, 1));
-    }
-    for (SummaryNode jNode: t2.preorder()) {
-      int j = jNode.preorderCount();
-      if (j < 2) {
-        continue;
-      }
-      D[1][j] = D[1][j-1] + jNode.createCost();
-      // The decision is CREATE-J PLUS OPS-FROM-D[i][j-1]
-      storeChoice(Dchoice, 1, j,
-                  new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, j));
-      storeChoice(Dchoice, 1, j,
-                  new PreviousChoice(Dchoice, 1, j-1));
-    }
-
-    for (SummaryNode iNode: t1.preorder()) {
-      int i = iNode.preorderCount();
-      if (i < 2) {
-        continue;
-      }
-      for (SummaryNode jNode: t2.preorder()) {
-        int j = jNode.preorderCount();
-        if (j < 2) {
-          continue;
-        }
-        double option1 = D[i][j-1] + jNode.createCost();
-        double option2 = D[i-1][j] + iNode.deleteCost();
-        double option3 = minM[i][j];
-        double min = Math.min(option1, Math.min(option2, option3));
-        D[i][j] = min;
-
-        // The choice is one of:
-        // 1) CREATE-J + OPS-FROM-D[i][j-1], or
-        // 2) DELETE-I + OPS-FROM-D[i-1][j], or 
-        // 3) OPS-FROM-M
-        if (option1 == min) {
-          storeChoice(Dchoice, i, j,
-                      new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, j));
-          storeChoice(Dchoice, i, j,
-                      new PreviousChoice(Dchoice, i, j-1));
-        } else if (option2 == min) {
-          storeChoice(Dchoice, i, j,
-                      new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, i));
-          storeChoice(Dchoice, i, j,
-                      new PreviousChoice(Dchoice, i-1, j));
-        } else {
-          storeChoice(Dchoice, i, j,
-                      new PreviousChoice(Mchoice, i, j));
-        }
+      if (jNode.children().size() == 0 && ! bestMapTargets.contains(jIdx)) {
+        bestOps.add(new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jIdx));
       }
     }
 
     //
-    // Now massage the mapping until only base-level elements remain
+    // All done!
     //
-    int maxI = D.length-1;
-    int maxJ = D[0].length-1;
-    List<SchemaMappingOp> bestOps = Dchoice.get("" + maxI + "-" + maxJ);
-    boolean maybeHasPrev = true;
-    int counter = 0;
-    while (maybeHasPrev) {
-      maybeHasPrev = false;
-      List<SchemaMappingOp> newOps = new ArrayList<SchemaMappingOp>();
-      //System.err.println("ROUND " + counter);
-      for (SchemaMappingOp op: bestOps) {
-        //System.err.println("OP: " + op);
-        if (op instanceof PreviousChoice) {
-          //System.err.print("  ==> YIELDS ==> ");
-          //for (SchemaMappingOp op2: ((PreviousChoice) op).getOps()) {
-          //System.err.print(" " + op2 + ", ");
-          //}
-          //System.err.println();
-          newOps.addAll(((PreviousChoice) op).getOps());
-          maybeHasPrev = true;
-        } else {
-          newOps.add(op);
-        }
-      }
-      //System.err.println("  Added " + newOps.size() + " ops.");
-      //for (SchemaMappingOp curOp: newOps) {
-      //System.err.println("    " + curOp);
-      //}
-      bestOps = newOps;
-      counter++;
-      //System.err.println();
-    }
-
-    // Finally, resolve "negative" operations
-    List<SchemaMappingOp> negativeOps = new ArrayList<SchemaMappingOp>();
-    for (Iterator<SchemaMappingOp> it = bestOps.iterator(); it.hasNext(); ) {
-      SchemaMappingOp op = it.next();
-      if (op.getOpcode() == SchemaMappingOp.NEGATIVE_TRANSFORM_OP) {
-        it.remove();
-        negativeOps.add(op);
-      }
-    }
-    for (SchemaMappingOp negativeOp: negativeOps) {
-      for (Iterator<SchemaMappingOp> it = bestOps.iterator(); it.hasNext(); ) {      
-        SchemaMappingOp candidate = it.next();
-        if (candidate.getOpcode() == SchemaMappingOp.TRANSFORM_OP &&
-            candidate.getNodeId1() == negativeOp.getNodeId1() &&
-            candidate.getNodeId2() == negativeOp.getNodeId2()) {
-          it.remove();
-          break;
-        }
-      }
-    }
-
-    // Distance of best mapping is stored in D[max-i][max-j].
-    return new SchemaMapping(this, other, D[D.length-1][D[0].length-1], bestOps);
+    return new SchemaMapping(this, other, bestCost, bestOps);
   }
 
-  //////////////////////////////////////////////////////////
-  // Utility methods for computing a schema mapping distance
-  //////////////////////////////////////////////////////////
-  double getValue(Hashtable E, int p1, int p2, int p3, int p4, int p5, int p6) {
-    String label = "" + p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5 + "-" + p6;
-    return ((Double) E.get(label)).doubleValue();
-  }
-  void storeValue(Hashtable E, int p1, int p2, int p3, int p4, int p5, int p6, double cToStore) {
-    String label = "" + p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5 + "-" + p6;
-    E.put(label, cToStore);
-  }
-  void storeChoice(Hashtable<String, List<SchemaMappingOp>> h, int i, int j, SchemaMappingOp op) {
-    String label = "" + i + "-" + j;
-    storeChoice(h, label, op);
-  }
-  void storeChoice(Hashtable<String, List<SchemaMappingOp>> h, int p1, int p2, int p3, int p4, int p5, int p6, SchemaMappingOp op) {
-    String label = "" + p1 + "-" + p2 + "-" + p3 + "-" + p4 + "-" + p5 + "-" + p6;
-    storeChoice(h, label, op);
-  }
-  void storeChoice(Hashtable<String, List<SchemaMappingOp>> h, String label, SchemaMappingOp op) {
-    List<SchemaMappingOp> ops = h.get(label);
-    if (ops == null) {
-      ops = new ArrayList<SchemaMappingOp>();
-      h.put(label, ops);
+  class DistancePair implements Comparable {
+    double cost;
+    SummaryNode target;
+    public DistancePair(double cost, SummaryNode target) {
+      this.cost = cost;
+      this.target = target;
     }
-    ops.add(op);
+    public int compareTo(Object o) {
+      DistancePair other = (DistancePair) o;
+      if (cost < other.cost) {
+        return -1;
+      } else if (cost > other.cost) {
+        return 1;
+      } else return target.preorderCount() - other.target.preorderCount();
+    }
+    public double getCost() {
+      return cost;
+    }
+    public SummaryNode getNode() {
+      return target;
+    }
+    public int getIdx() {
+      return target.preorderCount();
+    }      
+    public String toString() {
+      if (target != null) {
+        return "" + target.getDesc(false) + " cost=" + cost;
+      } else {
+        return " DELETE cost=" + cost;
+      }
+    }
   }
 
   ////////////////////////////////////////////////
@@ -1868,7 +1817,7 @@ public class SchemaStatisticalSummary implements Writable {
     byte magic = in.readByte();
     byte version = in.readByte();
     this.root = readAndCreate(in);
-    this.root.computePreorder(0);
+    this.root.computePreorder(-1);
     this.datasetLabel = UTF8.readString(in);
   }
 }
