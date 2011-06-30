@@ -1,23 +1,37 @@
-// (c) Copyright (2010) Cloudera, Inc.
-package com.cloudera.learnavro;
+/*
+ * Copyright (c) 2011, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
+package com.cloudera.recordbreaker.learnstructure;
 
 import java.io.*;
 import java.util.*;
 import org.apache.avro.Schema;
 import org.apache.avro.io.JsonEncoder;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.avro.generic.GenericDatumWriter;
 
 /*********************************************************
- * LearnAvro is the main file for figuring out pattern-extractors and schemas for a text file.
+ * LearnStructure is the main file for figuring out pattern-extractors and schemas for a text file.
  *
  * This code operates on a raw text file and emits the extractors/schemas.  The user
  * may decide to remove certain extractors/schemas if they only apply to a tiny number of
  * potential lines in the target text file.
  *
  *********************************************************/
-public class LearnAvro {
+public class LearnStructure {
   static String SCHEMA_FILENAME = "schema.json";
   static String JSONDATA_FILENAME = "data.avro.json";
   static String DATA_FILENAME = "data.avro";
@@ -26,7 +40,7 @@ public class LearnAvro {
   /**
    *
    */
-  public RecordFormat inferRecordFormat(File f, File outdir, boolean emitAvro) throws IOException {
+  public void inferRecordFormat(File f, File outdir, boolean emitAvro) throws IOException {
     File schemaFile = new File(outdir, SCHEMA_FILENAME);
     File jsonDataFile = new File(outdir, JSONDATA_FILENAME);
     File dataFile = new File(outdir, DATA_FILENAME);
@@ -114,7 +128,7 @@ public class LearnAvro {
       Schema schema = typeTree.getAvroSchema();
       GenericDatumWriter jsonGDWriter = new GenericDatumWriter(schema);
       BufferedOutputStream outJson = new BufferedOutputStream(new FileOutputStream(jsonDataFile));
-      JsonEncoder encoder = new JsonEncoder(schema, outJson);
+      JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, outJson);
 
       GenericDatumWriter gdWriter = new GenericDatumWriter(schema);
       DataFileWriter outData = new DataFileWriter(gdWriter);
@@ -151,8 +165,6 @@ public class LearnAvro {
       System.err.println("Total # input lines: " + lineno);
       System.err.println("Total # lines parsed correctly: " + numGoodParses);
     }
-
-    return null;
   }
 
   //////////////////////////////////////////
@@ -160,7 +172,7 @@ public class LearnAvro {
   //////////////////////////////////////////
   public static void main(String argv[]) throws IOException {
     if (argv.length < 2) {
-      System.err.println("Usage: LearnAvro <input-datafile> <outdir> (-emitAvro (true)|false)");
+      System.err.println("Usage: LearnStructure <input-datafile> <outdir> (-emitAvro (true)|false)");
       return;
     }
     boolean emitAvro = true;
@@ -181,8 +193,7 @@ public class LearnAvro {
     }
     outdir.mkdirs();
 
-    LearnAvro la = new LearnAvro();
-    RecordFormat rf = la.inferRecordFormat(f, outdir, emitAvro);
-    //System.err.println("RecordFormat: " + rf);
+    LearnStructure ls = new LearnStructure();
+    ls.inferRecordFormat(f, outdir, emitAvro);
   }
 }

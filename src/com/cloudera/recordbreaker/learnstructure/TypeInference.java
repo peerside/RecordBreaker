@@ -1,5 +1,18 @@
-// (c) Copyright (2010) Cloudera, Inc.
-package com.cloudera.learnavro;
+/*
+ * Copyright (c) 2011, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
+package com.cloudera.recordbreaker.learnstructure;
 
 import java.io.*;
 import java.util.*;
@@ -10,6 +23,8 @@ import java.util.*;
  *
  **********************************************************/
 public class TypeInference {
+  static int MAX_SAMPLES = 3;
+
   /////////////////////////////////////
   // Inner Classes
   /////////////////////////////////////
@@ -18,11 +33,16 @@ public class TypeInference {
 
   static class BaseProphecy extends TypeProphecy {
     Token.AbstractToken token;
-    public BaseProphecy(Token.AbstractToken token) {
+    List<Token.AbstractToken> samples;
+    public BaseProphecy(Token.AbstractToken token, List<Token.AbstractToken> samples) {
       this.token = token;
+      this.samples = samples;
     }
     public Token.AbstractToken getToken() {
       return token;
+    }
+    public List<Token.AbstractToken> getSamples() {
+      return samples;
     }
   }
 
@@ -111,7 +131,10 @@ public class TypeInference {
     //
     if (numToks == 0 && noops == chunks.size()) {
       //System.err.println("BASE-1");
-      return new BaseProphecy(new Token.NoopToken());
+      List<Token.AbstractToken> samples = new ArrayList<Token.AbstractToken>();
+      Token.NoopToken noop = new Token.NoopToken();
+      samples.add(noop);
+      return new BaseProphecy(noop, samples);
     }
     //
     // CONDITION: Does the chunkset consist of a single column of one type of token?
@@ -121,7 +144,16 @@ public class TypeInference {
       Token.AbstractToken prizeToken = chunks.get(0).get(0);
       if (! (prizeToken instanceof Token.MetaToken)) {
         // If it's not a MetaToken, then it's easy: we prophesy a data column consisting of a single basic type
-        return new BaseProphecy(prizeToken);
+        List<Token.AbstractToken> samples = new ArrayList<Token.AbstractToken>();
+        int numSamples = 0;
+        for (List<Token.AbstractToken> curChunk: chunks) {
+          samples.add(curChunk.get(0));
+          numSamples++;
+          if (numSamples >= MAX_SAMPLES) {
+            break;
+          }
+        }
+        return new BaseProphecy(prizeToken, samples);
       } else {
         //System.err.println("STRUCT-1");
         //
@@ -567,7 +599,12 @@ public class TypeInference {
     TypeProphecy typePrediction = oracle(chunks);
     if (typePrediction instanceof BaseProphecy) {
       BaseProphecy bp = (BaseProphecy) typePrediction;
-      return new BaseType(bp.getToken());
+      List<String> sampleStrs = new ArrayList<String>();
+      for (Iterator<Token.AbstractToken> it = bp.getSamples().iterator(); it.hasNext(); ) {
+        Token.AbstractToken tok = it.next();
+        sampleStrs.add(tok.getSampleString());
+      }
+      return new BaseType(bp.getToken(), sampleStrs);
 
     } else if (typePrediction instanceof StructProphecy) {
       StructProphecy sp = (StructProphecy) typePrediction;

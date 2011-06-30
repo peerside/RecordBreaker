@@ -1,5 +1,18 @@
-// (c) Copyright (2010) Cloudera, Inc.
-package com.cloudera.learnavro;
+/*
+ * Copyright (c) 2011, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
+package com.cloudera.recordbreaker.learnstructure;
 
 import java.io.*;
 import java.util.*;
@@ -158,6 +171,7 @@ public class Token {
       return getStrDesc(classId, tokenParameter);
     }
     public abstract Object get();
+    public abstract String getSampleString();
   }
 
   static class MetaToken extends AbstractToken {
@@ -191,6 +205,9 @@ public class Token {
       buf.append(")");
       return buf.toString();
     }
+    public String getSampleString() {
+      return toString();
+    }
     public String getParameter() {
       return "" + start.getChar();
     }
@@ -215,6 +232,9 @@ public class Token {
     public String toString() {
       return "CHAR(" + c + ")";
     }
+    public String getSampleString() {
+      return get().toString();
+    }
     public Object get() {
       return c;
     }
@@ -229,6 +249,9 @@ public class Token {
     public String toString() {
       return "IPADDR(" + s + ")";
     }
+    public String getSampleString() {
+      return get().toString();
+    }
     public Object get() {
       return new Utf8(s);
     }
@@ -242,6 +265,9 @@ public class Token {
     }
     public String toString() {
       return "PERMISSION-BITS(" + s + ")";
+    }
+    public String getSampleString() {
+      return get().toString();
     }
     public Object get() {
       return new Utf8(s);
@@ -331,6 +357,9 @@ public class Token {
     public String toString() {
       return "DATE(" + day + ", " + month + ", " + year + ")";
     }
+    public String getSampleString() {
+      return "(" + day + ", " + month + ", " + year + ")";
+    }
     public Object get() {
       List<Schema.Field> fields = new ArrayList<Schema.Field>();
       fields.add(new Schema.Field("month", Schema.create(Schema.Type.INT), "", null));
@@ -364,6 +393,9 @@ public class Token {
     public String toString() {
       return "TIME(" + hr + ":" + min + ":" + sec + ")";
     }
+    public String getSampleString() {
+      return "(" + hr + ", " + min + ", " + sec + ")";
+    }
     public Object get() {
       List<Schema.Field> fields = new ArrayList<Schema.Field>();
       fields.add(new Schema.Field("hrs", Schema.create(Schema.Type.INT), "", null));
@@ -393,6 +425,9 @@ public class Token {
     public String toString() {
       return "INT(" + i + ")";
     }
+    public String getSampleString() {
+      return get().toString();
+    }
     public Object get() {
       return i;
     }
@@ -411,6 +446,9 @@ public class Token {
     public String toString() {
       return "FLOAT(" + f + ")";
     }
+    public String getSampleString() {
+      return get().toString();
+    }
     public Object get() {
       return f;
     }
@@ -425,6 +463,9 @@ public class Token {
     public String toString() {
       return "STRING(" + s + ")";
     }
+    public String getSampleString() {
+      return get().toString();
+    }
     public Object get() {
       return new Utf8(s);
     }
@@ -436,6 +477,9 @@ public class Token {
     }
     public String toString() {
       return "EOL()";
+    }
+    public String getSampleString() {
+      return toString();
     }
     public Object get() {
       return null;
@@ -449,6 +493,9 @@ public class Token {
     public String toString() {
       return "WS()";
     }
+    public String getSampleString() {
+      return toString();
+    }
     public Object get() {
       return null;
     }
@@ -460,6 +507,9 @@ public class Token {
     }
     public String toString() {
       return "NOOP()";
+    }
+    public String getSampleString() {
+      return toString();
     }
     public Object get() {
       return null;

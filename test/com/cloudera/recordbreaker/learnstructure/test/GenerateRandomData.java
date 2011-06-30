@@ -1,5 +1,18 @@
-// (c) Copyright (2010) Cloudera, Inc.
-package com.cloudera.learnavro.test;
+/*
+ * Copyright (c) 2011, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
+package com.cloudera.recordbreaker.learnstructure.test;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -26,6 +39,7 @@ import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.JsonEncoder;
+import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.reflect.ReflectDatumWriter;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.generic.GenericData;
@@ -34,8 +48,8 @@ import org.apache.avro.util.Utf8;
 
 import org.codehaus.jackson.JsonGenerator;
 
-import com.cloudera.learnavro.TestRecord;
-import com.cloudera.learnavro.SchemaSuggest;
+import com.cloudera.recordbreaker.schemadict.TestRecord;
+import com.cloudera.recordbreaker.schemadict.SchemaSuggest;
 
 /**
  * @author mjc
@@ -67,7 +81,7 @@ public class GenerateRandomData {
       List<String> symbols = s.getEnumSymbols();
       return symbols.get(r.nextInt(symbols.size()));
     } else if (stype == Schema.Type.FIXED) {
-      return new GenericData.Fixed(new byte[16]);
+      return new GenericData.Fixed(s, new byte[16]);
     } else if (stype == Schema.Type.FLOAT) {
       return new Float(r.nextFloat());
     } else if (stype == Schema.Type.INT) {
@@ -108,7 +122,7 @@ public class GenerateRandomData {
     if (encodeJson) {
       BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outfile));
       try {
-        Encoder encoder = new org.apache.avro.io.JsonEncoder(schema, (OutputStream) out);
+        Encoder encoder = EncoderFactory.get().jsonEncoder(schema, (OutputStream) out);
         for (int i = 0; i < numRecords; i++) {
           TestRecord tr = new TestRecord();
           dout.write(tr, encoder);

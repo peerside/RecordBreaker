@@ -1,5 +1,18 @@
-// (c) Copyright (2010) Cloudera, Inc.
-package com.cloudera.learnavro;
+/*
+ * Copyright (c) 2011, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
+package com.cloudera.recordbreaker.learnstructure;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -154,6 +167,9 @@ public abstract class InferredType implements Writable {
   public abstract InferredType hoistUnions();
   public abstract List<InferredType> materializeWithoutUnions();
   abstract InferredType duplicate();
+  public String getDocString() {
+    return "";
+  }
   public String getName() {
     return name;
   }
@@ -169,18 +185,23 @@ class BaseType extends InferredType {
   int tokenClassIdentifier;
   String tokenParameter;
   Schema schema = null;
+  List<String> sampleStrs = null;
 
   static int fieldCounter = 0;
   public BaseType() {
   }
-  public BaseType(Token.AbstractToken token) {
+  public BaseType(Token.AbstractToken token, List<String> sampleStrs) {
+    this.sampleStrs = sampleStrs;
     this.tokenClassIdentifier = token.getClassId();
     this.tokenParameter = token.getParameter();
+    //System.err.println("Token parameter: " + tokenParameter);
     this.schema = computeAvroSchema();
   }
-  public BaseType(int tokenClassIdentifier, String tokenParameter) {
+  public BaseType(int tokenClassIdentifier, List<String> sampleStrs, String tokenParameter) {
+    this.sampleStrs = sampleStrs;
     this.tokenClassIdentifier = tokenClassIdentifier;
     this.tokenParameter = tokenParameter;
+    //System.err.println("Token parameter: " + tokenParameter);
     this.schema = computeAvroSchema();
   }
   public InferredType hoistUnions() {
@@ -192,7 +213,7 @@ class BaseType extends InferredType {
     return toReturn;
   }
   InferredType duplicate() {
-    return new BaseType(tokenClassIdentifier, tokenParameter);
+    return new BaseType(tokenClassIdentifier, sampleStrs, tokenParameter);
   }
 
   Schema computeAvroSchema() {
@@ -200,6 +221,18 @@ class BaseType extends InferredType {
   }
   public Schema getAvroSchema() {
     return schema;
+  }
+  public String getDocString() {
+    StringBuffer buf = new StringBuffer();
+    buf.append("Example data: ");
+    for (Iterator<String> it = sampleStrs.iterator(); it.hasNext(); ) {
+      String tokStr = it.next();
+      buf.append("'" + tokStr + "'");
+      if (it.hasNext()) {
+        buf.append(", ");
+      }
+    }
+    return buf.toString();
   }
   ParseResult internalParse(String s, Map<String, Integer> targetUnionDecisions, boolean mustConsumeStr) {
     List<Token.AbstractToken> outputToks = new ArrayList<Token.AbstractToken>();
@@ -226,10 +259,15 @@ class BaseType extends InferredType {
     return CARD_COST;
   }
   String createName() {
-    return "base-" + fieldCounter++;
+    return "base_" + fieldCounter++;
   }
   public void readFields(DataInput in) throws IOException {
     // instance-specific
+    this.sampleStrs = new ArrayList<String>();
+    int numSamples = in.readInt();
+    for (int i = 0; i < numSamples; i++) {
+      sampleStrs.add(UTF8.readString(in).toString());
+    }
     this.tokenClassIdentifier = in.readInt();
     if (in.readBoolean()) {
       this.tokenParameter = UTF8.readString(in);
@@ -239,6 +277,10 @@ class BaseType extends InferredType {
     this.schema = computeAvroSchema();
   }
   public void write(DataOutput out) throws IOException {
+    out.writeInt(sampleStrs.size());
+    for (int i = 0; i < sampleStrs.size(); i++) {
+      UTF8.writeString(out, sampleStrs.get(i));
+    }
     out.writeInt(tokenClassIdentifier);
     out.writeBoolean(tokenParameter != null);
     if (tokenParameter != null) {
@@ -322,9 +364,9 @@ class StructType extends InferredType {
       if (itS == null) {
         continue;
       }
-      fields.add(new Schema.Field(it.getName(), it.getAvroSchema(), "", it.getDefaultValue()));
+      fields.add(new Schema.Field(it.getName(), it.getAvroSchema(), it.getDocString(), it.getDefaultValue()));
     }
-    Schema s = Schema.createRecord(name, "", "", false);
+    Schema s = Schema.createRecord(name, "RECORD", "", false);
     s.setFields(fields);
     return s;
   }
@@ -346,7 +388,7 @@ class StructType extends InferredType {
     return dc;
   }
   String createName() {
-    return "record-" + recordCounter++;
+    return "record_" + recordCounter++;
   }
   public void readFields(DataInput in) throws IOException {
     int numStructTypes = in.readInt();
@@ -444,7 +486,7 @@ class ArrayType extends InferredType {
     return CARD_COST + bodyType.getDescriptionCost();
   }
   String createName() {
-    return "array-" + arrayCounter++;
+    return "array_" + arrayCounter++;
   }
   /**
    * Parse the given string, return resulting data if appropriate.
@@ -636,7 +678,7 @@ class UnionType extends InferredType {
     return dc;
   }
   String createName() {
-    return "union-" + unionCounter++;
+    return "union_" + unionCounter++;
   }
   public void readFields(DataInput in) throws IOException {
     int numUnionElts = in.readInt();

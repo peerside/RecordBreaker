@@ -1,5 +1,18 @@
-// (c) Copyright (2010) Cloudera, Inc.
-package com.cloudera.schemadict;
+/*
+ * Copyright (c) 2011, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
+package com.cloudera.recordbreaker.schemadict;
 
 import java.io.*;
 import java.util.*;
@@ -51,8 +64,6 @@ public class SchemaSuggest {
    * has the identical format as the input file's Schema object, but the labels may be changed.
    */
   public List<DictionaryMapping> inferSchemaMapping(File avroFile, int k) throws IOException {
-    System.err.println("Anonymous data filename: " + avroFile);
-
     SchemaStatisticalSummary srcSummary = new SchemaStatisticalSummary("input");
     Schema srcSchema = null;
     try {
@@ -93,9 +104,11 @@ public class SchemaSuggest {
    */
   public static void main(String argv[]) throws IOException {
     CommandLine cmd = null;
+    boolean debug = false;
     Options options = new Options();
     options.addOption("?", false, "Help for command-line");
     options.addOption("f", true, "Accept suggestions and rewrite input to a new Avro file");
+    options.addOption("d", false, "Debug mode");
     options.addOption("k", true, "How many matches to emit.");
 
     try {
@@ -113,6 +126,10 @@ public class SchemaSuggest {
       fmt.printHelp("SchemaSuggest", options, true);
       System.err.println("Required inputs: <schemadictionary> <anonymousAvro>");
       System.exit(0);
+    }
+
+    if (cmd.hasOption("d")) {
+      debug = true;
     }
 
     int k = 1;
@@ -174,6 +191,11 @@ public class SchemaSuggest {
         } else {
           for (SchemaMappingOp op: renames) {
             System.err.println("  " + counterIn + ".  " + "In '" + op.getS1DatasetLabel() + "', label '" + op.getS1FieldLabel() + "' AS " + op.getS2FieldLabel());
+            if (debug) {
+              if (op.getS1DocStr() != null && op.getS1DocStr().length() > 0) {
+                System.err.println("         '" + op.getS1DocStr() + "'  ==> '" + op.getS2DocStr() + "'");
+              }
+            }
             counterIn++;
           }
         }
@@ -186,6 +208,11 @@ public class SchemaSuggest {
         } else {
           for (SchemaMappingOp op: extraInTarget) {
             System.err.println("  " + counterIn + ".  " + op.getS1FieldLabel());
+            if (debug) {
+              if (op.getS1DocStr() != null && op.getS1DocStr().length() > 0) {
+                System.err.println("         " + op.getS1DocStr());
+              }
+            }
             counterIn++;
           }
         }
@@ -198,10 +225,14 @@ public class SchemaSuggest {
         } else {
           for (SchemaMappingOp op: extraInSource) {
             System.err.println("  " + counterIn + ".  " + op.getS1FieldLabel());
+            if (debug) {
+              if (op.getS1DocStr() != null && op.getS1DocStr().length() > 0) {
+                System.err.println("         " + op.getS1DocStr());
+              }
+            }
             counterIn++;
           }
         }
-
         counter++;
       }
     }
