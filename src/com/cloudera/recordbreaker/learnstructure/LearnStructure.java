@@ -32,10 +32,10 @@ import org.apache.avro.generic.GenericDatumWriter;
  *
  *********************************************************/
 public class LearnStructure {
-  static String SCHEMA_FILENAME = "schema.json";
-  static String JSONDATA_FILENAME = "data.avro.json";
-  static String DATA_FILENAME = "data.avro";
-  static String PARSER_FILENAME = "parser.dat";
+  public static String SCHEMA_FILENAME = "schema.json";
+  public static String JSONDATA_FILENAME = "data.avro.json";
+  public static String DATA_FILENAME = "data.avro";
+  public static String PARSER_FILENAME = "parser.dat";
 
   /**
    *

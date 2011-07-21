@@ -14,12 +14,30 @@
  */
 package com.cloudera.recordbreaker.learnstructure.test;
 
-import junit.framework.TestCase;
+import java.io.File;
+
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.rules.Timeout;
 
 /**
- * @author mjc
+ * TestFilelistingInference tests the LearnStructure component for 'commonlog.txt' data
+ *
+ * @author "Michael Cafarella" <mjc@cloudera.com>
+ * @version 1.0
+ * @since 1.0
+ * @see InferenceTest
  */
-public class TestInference extends TestCase {
-  public void testInfer() {
+public class TestFilelistingInference extends InferenceTest {
+  /**
+   * Creates a new <code>FilelistingInferenceTest</code> instance.
+   *
+   */
+  public TestFilelistingInference() {
+  }
+
+  @Test(timeout=5000)
+  public void testFilelistingInference() {
+    Assert.assertTrue(runSingletonTest(new File(sampleDir, "filelisting.txt")));
   }
 }
