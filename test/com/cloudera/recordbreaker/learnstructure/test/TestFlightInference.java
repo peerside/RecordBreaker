@@ -17,8 +17,12 @@ package com.cloudera.recordbreaker.learnstructure.test;
 import java.io.File;
 
 import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * TestFlightInference tests the LearnStructure component for 'commonlog.txt' data
@@ -29,6 +33,9 @@ import org.junit.rules.Timeout;
  * @see InferenceTest
  */
 public class TestFlightInference extends InferenceTest {
+  @Rule
+  public TemporaryFolder tmpOutDir = new TemporaryFolder();
+  File workingDir = null;
   /**
    * Creates a new <code>FlightInferenceTest</code> instance.
    *
@@ -36,8 +43,20 @@ public class TestFlightInference extends InferenceTest {
   public TestFlightInference() {
   }
 
-  @Test(timeout=5000)
+  @Before
+  public void prepare() {
+    workingDir = tmpOutDir.newFolder("workingdir");
+  }
+
+  @Test(timeout=10000)
   public void testFlightInference() {
-    Assert.assertTrue(runSingletonTest(new File(sampleDir, "flights.txt")));
+    boolean testResult = runSingletonTest(workingDir, new File(sampleDir, "flights.txt"));
+    System.err.println("TestFlight reuslt: " + testResult);
+    Assert.assertTrue(testResult);
+  }
+
+  @After
+  public void teardown() {
+    //tmpOutDir.delete();
   }
 }

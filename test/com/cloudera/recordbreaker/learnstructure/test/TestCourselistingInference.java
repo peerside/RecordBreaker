@@ -17,8 +17,12 @@ package com.cloudera.recordbreaker.learnstructure.test;
 import java.io.File;
 
 import org.junit.Assert;
+import org.junit.Rule;
+import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.rules.TemporaryFolder;
 
 /**
  * TestCourselistingInference tests the LearnStructure component for 'commonlog.txt' data
@@ -29,6 +33,9 @@ import org.junit.rules.Timeout;
  * @see InferenceTest
  */
 public class TestCourselistingInference extends InferenceTest {
+  @Rule
+  public TemporaryFolder tmpOutDir = new TemporaryFolder();
+  File workingDir = null;
   /**
    * Creates a new <code>CourselistingInferenceTest</code> instance.
    *
@@ -36,8 +43,18 @@ public class TestCourselistingInference extends InferenceTest {
   public TestCourselistingInference() {
   }
 
-  @Test(timeout=5000)
+  @Before
+  public void prepare() {
+    workingDir = tmpOutDir.newFolder("workingdir");
+  }
+
+  @Test(timeout=10000)
   public void testCourselistingInference() {
-    Assert.assertTrue(runSingletonTest(new File(sampleDir, "courselisting.txt")));
+    Assert.assertTrue(runSingletonTest(workingDir, new File(sampleDir, "courselisting.txt")));
+  }
+
+  @After
+  public void teardown() {
+    tmpOutDir.delete();
   }
 }

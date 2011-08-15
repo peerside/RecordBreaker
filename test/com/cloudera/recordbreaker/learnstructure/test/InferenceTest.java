@@ -23,11 +23,7 @@ import java.util.Iterator;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.junit.rules.TemporaryFolder;
-
 import com.cloudera.recordbreaker.learnstructure.LearnStructure;
 
 /**
@@ -39,10 +35,7 @@ import com.cloudera.recordbreaker.learnstructure.LearnStructure;
  */
 public abstract class InferenceTest {
   private static double MIN_PARSE_RATIO = 0.85;
-  private static int MAX_RUNTIME = 30;
-  private TemporaryFolder tmpOutDir = new TemporaryFolder();
-  private Timeout timer = new Timeout(MAX_RUNTIME);
-  static File sampleDir = new File(System.getProperty("test.samples.dir", "src/samples"), "textdata");
+  static File sampleDir = new File(System.getProperty("test.samples.dir", "src/samples"), "textdata"); 
   
   /**
    * runSingletonTest() executes LearnStructure test for a single given input text file.
@@ -50,8 +43,9 @@ public abstract class InferenceTest {
    * @param inputData a <code>File</code> value
    * @return a <code>boolean</code> value;  did the test succeed?
    */
-  boolean runSingletonTest(File inputData) {
-    File tmpSingletonDir = tmpOutDir.newFolder("testinference-" + inputData.getName());
+  boolean runSingletonTest(File workingDir, File inputData) {
+    File tmpSingletonDir = new File(workingDir, "testinference-" + inputData.getName());
+    tmpSingletonDir.mkdir();
     File avroFile = new File(tmpSingletonDir, LearnStructure.DATA_FILENAME);
     File schemaFile = new File(tmpSingletonDir, LearnStructure.SCHEMA_FILENAME);
     
