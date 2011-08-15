@@ -128,31 +128,39 @@ public class LearnStructure {
       Schema schema = typeTree.getAvroSchema();
       GenericDatumWriter jsonGDWriter = new GenericDatumWriter(schema);
       BufferedOutputStream outJson = new BufferedOutputStream(new FileOutputStream(jsonDataFile));
+
+      //System.err.println("ABOUT to encode JSON...");
       JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, outJson);
+      //System.err.println("DONE with JSON.");
 
       GenericDatumWriter gdWriter = new GenericDatumWriter(schema);
       DataFileWriter outData = new DataFileWriter(gdWriter);
       outData = outData.create(schema, dataFile);
+      //System.err.println("DONE with JSON-2");
 
       try {
         in = new BufferedReader(new FileReader(f));
         try {
           //System.err.println("Type tree root is " + typeTree);
           String str = in.readLine();
+          //System.err.println("DONE with JSON-3");
           while (str != null) {
+            System.err.println("  about to parse: '" + str + "'");
             GenericContainer gct = typeTree.parse(str);
-
+            //System.err.println("DONE with JSON-4");
             if (gct != null) {
               numGoodParses++;
               jsonGDWriter.write(gct, encoder);
               outData.append(gct);
-              //System.err.println("Good parse " + numGoodParses);
+              System.err.println("Good parse " + numGoodParses);
             } else {
               System.err.println("unparsed line: '" + str + "'");
             }
             str = in.readLine();
             lineno++;
-          }      
+            break;
+          }
+          //System.err.println("DONE with JSON-5");
         } finally {
           in.close();
         }

@@ -66,6 +66,7 @@ public class Tokenizer {
    * InferredType.BaseType.internalParse().
    */
   public static String attemptParse(int tokenClassId, String tokenParameter, String inputStr, List<Token.AbstractToken> outputToks) {
+    //System.err.println("ATTEMPT PARSE: " + tokenClassId);
     switch (tokenClassId) {
     case Token.IPADDR_TOKENCLASSID: {
       Matcher m = ipAddrPattern.matcher(inputStr);
@@ -173,10 +174,15 @@ public class Tokenizer {
       return null;
     }
     case Token.INT_TOKENCLASSID: {
+      //System.err.println("Token-Int parsing '" + inputStr + "'");
       Matcher m = intPattern.matcher(inputStr);
       if (m.lookingAt()) {
         outputToks.add(new Token.IntToken(m.group(1)));
-        return cutChunk(m, inputStr);
+        String istr = cutChunk(m, inputStr);
+        //System.err.println("The group matched is " + m.group(1));
+        //System.err.println("The raw inputStr is " + inputStr);
+        //System.err.println("The cutChunk str is " + istr);
+        return istr;
       }
       return null;
     }
@@ -201,7 +207,11 @@ public class Tokenizer {
       Matcher m = wsPattern.matcher(inputStr);
       if (m.lookingAt()) {
         outputToks.add(new Token.WhitespaceToken());
-        return cutChunk(m, inputStr);
+        String retWS = cutChunk(m, inputStr);
+        //System.err.println("Formerly: '" + inputStr + "'" + ", " + "Now: '" + retWS + "'");
+        //System.err.println("WS token: " + retWS);
+        //Thread.dumpStack();
+        return retWS;
       }
       return null;
     }
@@ -382,6 +392,7 @@ public class Tokenizer {
       attemptStr = attemptParse(Token.WHITESPACE_TOKENCLASSID, null, curS, toksSoFar);
       if (attemptStr != null) {
         curS = attemptStr;
+        //System.err.println("CurS is now: '" + curS + "'");
         continue;
       }
 
