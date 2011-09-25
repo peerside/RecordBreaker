@@ -23,7 +23,7 @@ import java.util.*;
  *
  **********************************************************/
 public class TypeInference {
-  static int MAX_SAMPLES = 3;
+  static int MAX_SAMPLES = 5;
 
   /////////////////////////////////////
   // Inner Classes

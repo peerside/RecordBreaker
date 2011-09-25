@@ -499,7 +499,7 @@ class ArrayType extends InferredType {
     String currentStr = s;
 
     while (true) {
-      ParseResult pr = bodyType.internalParse(s, targetUnionDecisions, false);
+      ParseResult pr = bodyType.internalParse(currentStr, targetUnionDecisions, false);
       if (pr == null) {
         break;
       }
