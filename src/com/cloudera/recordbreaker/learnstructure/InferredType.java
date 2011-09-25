@@ -98,7 +98,6 @@ public abstract class InferredType implements Writable {
     // Try the naive parse
     //
     ParseResult pr = internalParse(str, null, true);
-    System.err.println("Got FINAL internal parse: " + pr);
     if (pr != null && pr.hasData()) {
       return (GenericContainer) pr.getData();
     }
@@ -108,7 +107,6 @@ public abstract class InferredType implements Writable {
     // Unfold the candidate decisions into a series of target decisions
     //
     Map<String, Set<Integer>> candidateUnionDecisions = findCandidateUnionDecisions();
-    System.err.println("Number of union-decisions: " + candidateUnionDecisions.size());
 
     List<HashMap<String, Integer>> allUnionDecisions = new ArrayList<HashMap<String, Integer>>();
     for (Map.Entry<String, Set<Integer>> pair: candidateUnionDecisions.entrySet()) {
@@ -239,12 +237,8 @@ class BaseType extends InferredType {
   ParseResult internalParse(String s, Map<String, Integer> targetUnionDecisions, boolean mustConsumeStr) {
     List<Token.AbstractToken> outputToks = new ArrayList<Token.AbstractToken>();
     String newStr = Tokenizer.attemptParse(tokenClassIdentifier, tokenParameter, s, outputToks);
-    //System.err.println("Made it to internalParser: " + newStr);
     if (newStr == null || (mustConsumeStr && newStr.trim().length()!=0)) {
-      System.err.println("BASE " + getName() + " failed to parse a token of type " + Token.AbstractToken.getClassStr(tokenClassIdentifier) + " on input string '" + s + "'");
       return null;
-    } else {
-      System.err.println("BASE " + getName() + " GOT a parse of type " + Token.AbstractToken.getClassStr(tokenClassIdentifier) + " on input string '" + s + "'");
     }
     assert(outputToks.size()==1);
     // outputToks should contain just one result.
@@ -420,20 +414,12 @@ class StructType extends InferredType {
     GenericData.Record gdr = new GenericData.Record(getAvroSchema());
     String currentStr = s;
 
-    System.err.print("STRUCT " + getName() + " will try to parse the following elements: ");
-    for (InferredType subelt: structTypes) {
-      System.err.print(subelt.getName() + "  ");
-    }
-    System.err.println();
     for (InferredType subelt: structTypes) {
       if (currentStr.length() == 0) {
-        System.err.println("STRUCT " + getName() + " giving up...");
         return null;
       }
-      //System.err.println("Sub element: " + subelt);
       ParseResult pr = subelt.internalParse(currentStr, targetUnionDecisions, false);
       if (pr == null) {
-        System.err.println("STRUCT subelt '" + getName() + "' failed due to " + subelt.getName());
         return null;
       }
       if (pr.hasData()) {
@@ -443,13 +429,10 @@ class StructType extends InferredType {
       currentStr = pr.getRemainingString();
     }
     if (mustConsumeStr && currentStr.trim().length() != 0) {
-      System.err.println("STRUCT " + getName() + " failed consumption...");        
       return null;
     }
-    System.err.println("STRUCT " + getName() + " is ALL DONE!!");        
     return new ParseResult(gdr, hasData, currentStr);
   }
-  
   Map<String, Set<Integer>> findCandidateUnionDecisions() {
     Map<String, Set<Integer>> candidateUnionDecisions = new HashMap<String, Set<Integer>>();
     for (InferredType subelt: structTypes) {
@@ -516,25 +499,18 @@ class ArrayType extends InferredType {
     String currentStr = s;
 
     while (true) {
-      //System.err.println("Array body type: " + bodyType.getClass());
-      ParseResult pr = bodyType.internalParse(currentStr, targetUnionDecisions, false);
+      ParseResult pr = bodyType.internalParse(s, targetUnionDecisions, false);
       if (pr == null) {
-        //System.err.println("==>DOES IT EVER BREAK????");
         break;
-      } else{
-        //System.err.println("==>CONTINUE PLEASE");
       }
-      //System.err.println("ARRAY Got a parse " + pr);
       assert(pr.hasData());
 
       gda.add(pr.getData());
       currentStr = pr.getRemainingString();
     }
     if (mustConsumeStr && currentStr.trim().length() != 0) {
-      System.err.println("ARRAY failed parse...");
       return null;
     }
-    System.err.println("ARRAY got a GREAT parse, taking out the following substr:'" + s.substring(0, s.length() - currentStr.length()) + "' and leaving '" + currentStr);
     return new ParseResult(gda, true, currentStr);
   }
   Map<String, Set<Integer>> findCandidateUnionDecisions() {
@@ -623,19 +599,12 @@ class UnionType extends InferredType {
     // If there's no target decision, then go ahead and try all branches.
     //
     if (targetUnionDecisions == null || targetUnionDecisions.get(name) == null) {
-      System.err.println("... trying " + unionTypes.size() + " union types...");
       for (InferredType subelt: unionTypes) {
         ParseResult pr = subelt.internalParse(s, targetUnionDecisions, false);
         if (pr != null && (!mustConsumeStr || (mustConsumeStr && pr.getRemainingString().trim().length() == 0))) {
           return new ParseResult(pr.getData(), pr.hasData(), pr.getRemainingString());
         }
       }
-
-      System.err.print("UNION " + getName() + " failed parse 1, having failed on all of: ");
-      for (InferredType subelt: unionTypes) {
-        System.err.print("  " + subelt.getName());
-      }
-      System.err.println();
       return null;
     }
 
@@ -647,7 +616,6 @@ class UnionType extends InferredType {
     if (pr != null && (!mustConsumeStr || (mustConsumeStr && pr.getRemainingString().trim().length() == 0))) {
       return new ParseResult(pr.getData(), pr.hasData(), pr.getRemainingString());
     }
-    System.err.println("UNION failed parse 2...");
     return null;
   }
 

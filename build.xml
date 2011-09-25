@@ -232,7 +232,7 @@
   </target>
 
   <target name="test" depends="compile-test" >
-    <junit showoutput="yes"
+    <junit showoutput="no"
            printsummary="yes"
            haltonfailure="no"
            fork="yes"
