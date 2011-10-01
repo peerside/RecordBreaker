@@ -183,8 +183,12 @@ public class Tokenizer {
     case Token.STRING_TOKENCLASSID: {
       Matcher m = stringPattern.matcher(inputStr);
       if (m.lookingAt()) {
-        outputToks.add(new Token.StringToken(m.group(1)));
-        return cutChunk(m, inputStr);
+        Matcher m2 = intPattern.matcher(inputStr);
+        Matcher m3 = floatPattern.matcher(inputStr);
+        if (! (m2.lookingAt() || m3.lookingAt())) {
+          outputToks.add(new Token.StringToken(m.group(1)));
+          return cutChunk(m, inputStr);
+        }
       }
       return null;
     }
