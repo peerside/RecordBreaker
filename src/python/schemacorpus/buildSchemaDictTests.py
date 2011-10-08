@@ -2,6 +2,7 @@
 import string, sys, os, bisect, heapq, random, time, httplib
 import urllib, urllib2, simplejson, pickle
 import freebaseUtils as fb
+from avro import schema, datafile, io
 
 ##################################################################
 # This program is part of the support infrastructure for
@@ -50,11 +51,13 @@ def populateSchemaTypesFile(schemaElts, schemaNamesFile, schemaTypesFile, creden
     if len(results) > 0:
       r = results[0]
       schemaNames.append(r["name"])
-      propertyDataType = r["expected_type"][0]["id"]
-      if propertyDataType.startswith("/type/"):
-        schemaTypes.append(propertyDataType)
-      else:
-        schemaTypes.append("string")
+      stName = "string"
+
+      if len(r["expected_type"]) > 0:
+        propertyDataType = r["expected_type"][0]["id"]
+        if propertyDataType.startswith("/type/"):
+          stName = propertyDataType
+      schemaTypes.append(stName)
     else:
       schemaNames.append("")
       schemaTypes.append("")
@@ -153,12 +156,37 @@ def loadDatabases(inputDataDir, credentials):
   return allResults
 
 #
+# We need to translate data types between the Freebase universe and Avro.
+# Some types don't have a good match (e.g., there's no date/time value within Avro)
+# and others match imperfectly (e.g., the two different enums).  The translations
+# here are subject to revision
+#
+global avroTypeTranslator
+avroTypeTranslator = {}
+avroTypeTranslator["/type/boolean"] = "boolean"
+avroTypeTranslator["/type/content"] = "bytes"
+avroTypeTranslator["/type/datetime"] = "string"
+avroTypeTranslator["/type/enumeration"] = "string"
+avroTypeTranslator["/type/float"] = "float"
+avroTypeTranslator["/type/int"] = "long"
+avroTypeTranslator["/type/lang"] = "string"
+avroTypeTranslator["/type/media_type"] = "string"
+avroTypeTranslator["/type/object"] = "string"
+avroTypeTranslator["/type/rawstring"] = "bytes"
+avroTypeTranslator["/type/text"] = "string"
+avroTypeTranslator["/type/text_encoding"] = "string"
+avroTypeTranslator["/type/type"] = "string"
+avroTypeTranslator["/type/uri"] = "string"
+avroTypeTranslator["/type/user"] = "string"
+
+
+#
 # Take as input all the entire corpus databases, and output in an Avro format that
 # can be processed by SchemaDictionary.  This is useful when assembling a Schema
 # Dictionary that's part of a genuine application.
 #
 def emitAllDatabases(knownDatabases, outputDir):
-  print "Not yet implemented"
+  emitData(knownDatabases, outputDir, None, 1.0)
 
 #
 # Take as input all the entire corpus databases, and divide into two parts.  The first
@@ -175,7 +203,97 @@ def emitAllDatabases(knownDatabases, outputDir):
 # matched to its known counterpart in the known-schema-set.
 #
 def emitTestDatabases(knownDatabases, outputDir1, outputDir2):
-  print "Not yet implemented"
+  emitData(knownDatabases, outputDir1, outputDir2, 0.5)
+
+#
+# Utility method that implements both of the above publicly-usable functions
+#
+def emitData(knownDatabases, outputDir1, outputDir2, frac1):
+  for db in knownDatabases:                                  
+    typeLabel, schemaElts, schemaEltNames, schemaEltTypes, dataElts = db
+    schemaEltNames = map(lambda x: x.replace("'", "").replace('"', ''), schemaEltNames)
+    outputFilename1 = os.path.join(outputDir1, typeLabel[1:].replace("/", "-").replace(" ", "_") + ".avro")
+    outputFilename2 = os.path.join(outputDir2, typeLabel[1:].replace("/", "-").replace(" ", "_") + ".avro")
+
+    # Use the input schema to Build the Avro schema description 
+    schemaStr = '''{
+        "type": "record",
+        "name": "''' + typeLabel + '''",
+        "namespace": "AVRO",
+        "fields": ['''
+
+    seenFields = set()
+    for idx, schemaPair in enumerate(zip(schemaEltNames, schemaEltTypes)):
+      eltName, eltType = schemaPair
+      if eltName in seenFields:
+        continue
+
+      if len(seenFields) > 0:
+        schemaStr += ","
+        schemaStr += "\n"
+      seenFields.add(eltName)
+      schemaStr += '\t{ "name": "' + eltName + '", "type": "' + avroTypeTranslator.get(eltType, "string") + '"}'
+
+    schemaStr += '''\n\t]
+    }'''
+
+    # Build the Avro data writer
+    avroSchema = schema.parse(schemaStr)    
+    record_writer1 = io.DatumWriter(avroSchema)
+    avroWriter1 = datafile.DataFileWriter(open(outputFilename1, 'wb'),
+                                          record_writer1,
+                                          writers_schema=avroSchema,
+                                          codec = 'null')
+    avroWriter2 = None
+    if frac1 < 1.0:
+      record_writer2 = io.DatumWriter(avroSchema)
+      avroWriter2 = datafile.DataFileWriter(open(outputFilename2, 'wb'),
+                                            record_writer2,
+                                            writers_schema=avroSchema,
+                                            codec = 'null')
+      
+    # Emit the data, close down the stream
+    curDataList = []
+    for dataElt in dataElts:
+      data = {}
+      seenFields = set()
+      for eltName, eltVal, eltType in zip(schemaEltNames, dataElt, schemaEltTypes):
+        if eltName in seenFields:
+          continue
+        seenFields.add(eltName)
+        eltType = avroTypeTranslator.get(eltType, eltType)
+        if eltType == "string":
+          data[eltName] = eltVal
+        elif eltType == "long":
+          if len(eltVal) == 0:
+            data[eltName] = 0
+          else:
+            data[eltName] = long(eltVal)
+        elif eltType == "float":
+          if len(eltVal) == 0:
+            data[eltName] = 0.0
+          else:
+            data[eltName] = float(eltVal)
+        elif eltType == "boolean":
+          data[eltName] = bool(eltVal)
+        elif eltType == "bytes":
+          data[eltName] = bytes(eltVal)
+        else:
+          data[eltName] = eltVal
+      curDataList.append(data)
+
+    numDataIn1 = int(round(frac1 * len(curDataList)))
+
+    for d in curDataList[0:numDataIn1]:
+      avroWriter1.append(d)
+    if len(curDataList) - numDataIn1 > 0:
+      for d in curDataList[numDataIn1:]:
+        avroWriter2.append(d)
+
+    avroWriter1.close()
+    if not avroWriter2 is None:
+      avroWriter2.close()
+
 
 ##################################################################
 # main
@@ -198,6 +316,9 @@ if __name__ == "__main__":
     credentials = fb.login(username, password)
 
     knownDatabases = loadDatabases(inputDir, credentials)
+    if not os.path.exists(outputDir):
+      os.mkdir(outputDir)
+      
     emitAllDatabases(knownDatabases, outputDir)
   elif "-testCorpus" == directive:
     outputDir1 = sys.argv[3]
@@ -207,6 +328,11 @@ if __name__ == "__main__":
     credentials = fb.login(username, password)
     
     knownDatabases = loadDatabases(inputDir, credentials)
+    if not os.path.exists(outputDir1):
+      os.mkdir(outputDir1)
+    if not os.path.exists(outputDir2):
+      os.mkdir(outputDir2)
+
     emitTestDatabases(knownDatabases, outputDir1, outputDir2)
   else:
     print "Must indicate -entireCorpus or -testCorpus"
