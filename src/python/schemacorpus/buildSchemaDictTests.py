@@ -186,7 +186,7 @@ avroTypeTranslator["/type/user"] = "string"
 # Dictionary that's part of a genuine application.
 #
 def emitAllDatabases(knownDatabases, outputDir):
-  emitData(knownDatabases, outputDir, None, 1.0)
+  _emitData(knownDatabases, outputDir, None, 1.0)
 
 #
 # Take as input all the entire corpus databases, and divide into two parts.  The first
@@ -203,17 +203,31 @@ def emitAllDatabases(knownDatabases, outputDir):
 # matched to its known counterpart in the known-schema-set.
 #
 def emitTestDatabases(knownDatabases, outputDir1, outputDir2):
-  emitData(knownDatabases, outputDir1, outputDir2, 0.5)
+  _emitData(knownDatabases, outputDir1, outputDir2, 0.5)
+
+
+#
+# Util method that modifies Freebase attribute names to make them suitable Avro-format
+# attribute names.  Takes an attr returns the scrubbed version.
+#
+def _cleanAttribute(schemaEltName):
+  schemaEltName = schemaEltName.replace("'", "").replace('"', '').replace(" ", "_").replace("(", "").replace(")", "").replace(".", "_").replace("-", "_").replace("#", "No").replace("/", "_").replace("%", "pct").replace(":", "_").replace(",", "_").replace("*", "_").replace("?", "").replace("+","and")
+
+  if schemaEltName[0].isdigit():
+    schemaEltName = "n" + schemaEltName
+  return schemaEltName
+
 
 #
 # Utility method that implements both of the above publicly-usable functions
 #
-def emitData(knownDatabases, outputDir1, outputDir2, frac1):
+def _emitData(knownDatabases, outputDir1, outputDir2, frac1):
   for db in knownDatabases:                                  
     typeLabel, schemaElts, schemaEltNames, schemaEltTypes, dataElts = db
-    schemaEltNames = map(lambda x: x.replace("'", "").replace('"', ''), schemaEltNames)
+    schemaEltNames = map(lambda x: _cleanAttribute(x), schemaEltNames)
     outputFilename1 = os.path.join(outputDir1, typeLabel[1:].replace("/", "-").replace(" ", "_") + ".avro")
     outputFilename2 = os.path.join(outputDir2, typeLabel[1:].replace("/", "-").replace(" ", "_") + ".avro")
+    typeLabel = typeLabel.replace("/", "_")
 
     # Use the input schema to Build the Avro schema description 
     schemaStr = '''{
