@@ -107,14 +107,8 @@ public class SchemaDictionaryEntry {
     this.schema = Schema.parse(schemaFile);
 
     in = new DataInputStream(new FileInputStream(infoTextFile));
-    StringBuffer buf = new StringBuffer();
     try {
-      String s = null;
-      while ((s = in.readLine()) != null) {
-        buf.append(s);
-        buf.append("\n");
-      }
-      this.info = buf.toString().trim();
+      this.info = in.readUTF();
     } finally {
       in.close();
     }
