@@ -74,9 +74,9 @@ public class TestSchemaDictionary {
     workingDir = tmpOutDir.newFolder("workingdir");
   }
 
-  @Test(timeout=100000)
+  @Test(timeout=200000)
   public void testSchemaDictionary() throws IOException {
-    int maxDictSize = 500;
+    int maxDictSize = 2000;
     int maxTestSize = Math.min(10, maxDictSize);
     int MAX_MAPPINGS = 5;
     double MINIMUM_MEAN_RECIPROCAL_RANK = 0.75;
