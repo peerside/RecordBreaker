@@ -50,7 +50,6 @@ import org.apache.avro.generic.GenericRecord;
  * @author mjc
  ****************************************************************/
 public class SchemaSuggest {
-  int MIN_ELTS_SUGGESTED = 10;
   int NUM_BUCKETS = 20;
   SchemaDictionary dict;
   List<List<SchemaDictionaryEntry>> dictBySize;
@@ -150,12 +149,12 @@ public class SchemaSuggest {
                                        SchemaStatisticalSummary.getMinimumMappingCost(srcSchemaSize, highestSize));
         }
         // Grab from the Sorter the elt that is MIN_ELTS_SUGGESTED into the sorted list
-        if (sorter.size() >= MIN_ELTS_SUGGESTED) {
+        if (sorter.size() >= k) {
           DictionaryMapping testDictMapping = null;
           int idx = 0;
           for (DictionaryMapping cur: sorter) {
             idx++;
-            if (idx == MIN_ELTS_SUGGESTED) {
+            if (idx == k) {
               testDictMapping = cur;
               break;
             }
