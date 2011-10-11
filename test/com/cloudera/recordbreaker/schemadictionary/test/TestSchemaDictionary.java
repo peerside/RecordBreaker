@@ -76,7 +76,7 @@ public class TestSchemaDictionary {
 
   @Test(timeout=100000)
   public void testSchemaDictionary() throws IOException {
-    int maxDictSize = 100;
+    int maxDictSize = 500;
     int maxTestSize = Math.min(10, maxDictSize);
     int MAX_MAPPINGS = 5;
     double MINIMUM_MEAN_RECIPROCAL_RANK = 0.75;
@@ -113,6 +113,7 @@ public class TestSchemaDictionary {
     int i = 0;
 
     // Iterate through all files in the test dir
+    System.err.println("Examining: " + testDbDir);
     for (File f: testDbDir.listFiles()) {
       if (f.getName().endsWith(".avro")) {
         String testName = f.getName();

@@ -50,13 +50,34 @@ import org.apache.avro.generic.GenericRecord;
  * @author mjc
  ****************************************************************/
 public class SchemaSuggest {
+  int MIN_ELTS_SUGGESTED = 10;
+  int NUM_BUCKETS = 20;
   SchemaDictionary dict;
-
+  List<List<SchemaDictionaryEntry>> dictBySize;
+  
   /**
    * Load in the Schema Dictionary from the indicated file.
    */
   public SchemaSuggest(File dataDir) throws IOException {
     this.dict = new SchemaDictionary(dataDir);
+
+    // The 'dictBySize' structure allows us to perform schema inference
+    // more quickly, by avoiding examination of schemas that can't possibly
+    // be returned by inferSchemaMapping().
+    this.dictBySize = new ArrayList<List<SchemaDictionaryEntry>>();
+    for (int i = 0; i < NUM_BUCKETS; i++) {
+      dictBySize.add(new ArrayList<SchemaDictionaryEntry>());
+    }
+
+    for (SchemaDictionaryEntry elt: dict.contents()) {
+      Schema comparisonSchema = elt.getSchema();
+      int comparisonSchemaSize = comparisonSchema.getFields().size();
+      if (comparisonSchemaSize < dictBySize.size()-1) {
+        dictBySize.get(comparisonSchemaSize-1).add(elt);
+      } else {
+        dictBySize.get(dictBySize.size()-1).add(elt);
+      }
+    }
   }
 
   /**
@@ -75,12 +96,78 @@ public class SchemaSuggest {
     // Compare the statistics to the database of schema statistics.  Find the closest matches, both
     // on a per-attribute basis and structurally.
     //
+    int schemaSize = srcSchema.getFields().size();
+    //
+    // We start testing the input database against known schemas that have an identical
+    // number of attributes, which should allow for the best matches.  This gives us an
+    // initial set of distances.  We then expand the search to schemas of greater or fewer
+    // attributes, as long as a given bucket of size-k schemas has a min-distance of less
+    // than the current top-k matches.
+    //
+    //
     TreeSet<DictionaryMapping> sorter = new TreeSet<DictionaryMapping>();
-    for (SchemaDictionaryEntry elt: dict.contents()) {
-      SchemaMapping mapping = srcSummary.getBestMapping(elt.getSummary());
-      sorter.add(new DictionaryMapping(mapping, elt));
-    }
+    int numMatches = 0;
+    List<Integer> seenIndexes = new ArrayList<Integer>();
+    int searchRadius = 0;
+    boolean seenAllCandidates = false;
+    int srcSchemaSize = srcSchema.getFields().size();      
+    
+    while (! seenAllCandidates) {
+      // Examine the relevant schema buckets, compute all matches to those schemas
+      for (int j = Math.max(0, srcSchemaSize - searchRadius);
+           j <= Math.min(NUM_BUCKETS, srcSchemaSize + searchRadius); j++) {
 
+        if (seenIndexes.contains(j-1)) {
+          continue;
+        }
+        for (SchemaDictionaryEntry elt: dictBySize.get(j-1)) {
+          SchemaMapping mapping = srcSummary.getBestMapping(elt.getSummary());
+          sorter.add(new DictionaryMapping(mapping, elt));
+          if (numMatches % 10 == 0) {
+            //System.err.println("  Matched object " + numMatches);
+          }
+          numMatches++;
+        }
+        seenIndexes.add(j-1);
+      }
+
+      // Have we examined the entire corpus of known schemas?
+      if ((srcSchemaSize - searchRadius) <= 0 && (srcSchemaSize + searchRadius) >= NUM_BUCKETS) {
+        seenAllCandidates = true;
+      } else {
+        // Test to see if the best matches are good enough that we can stop looking.
+        // We compare the lowest known match distance to the minimum distance for matches
+        // in the closest non-examined buckets.
+        int lowestSize = srcSchemaSize - searchRadius - 1;
+        int highestSize = srcSchemaSize + searchRadius + 1;
+        double minNearbyDistance = Double.MAX_VALUE;
+        if (lowestSize >= 1) {
+          minNearbyDistance = Math.min(minNearbyDistance,
+                                       SchemaStatisticalSummary.getMinimumMappingCost(srcSchemaSize, lowestSize));
+        }
+        if (highestSize <= NUM_BUCKETS) {
+          minNearbyDistance = Math.min(minNearbyDistance,
+                                       SchemaStatisticalSummary.getMinimumMappingCost(srcSchemaSize, highestSize));
+        }
+        // Grab from the Sorter the elt that is MIN_ELTS_SUGGESTED into the sorted list
+        if (sorter.size() >= MIN_ELTS_SUGGESTED) {
+          DictionaryMapping testDictMapping = null;
+          int idx = 0;
+          for (DictionaryMapping cur: sorter) {
+            idx++;
+            if (idx == MIN_ELTS_SUGGESTED) {
+              testDictMapping = cur;
+              break;
+            }
+          }
+          if (testDictMapping.getMapping().getDist() < minNearbyDistance) {
+            seenAllCandidates = true;
+          }
+        }
+      }
+      searchRadius++;
+    }
+      
     // Return the k best schema mappings
     List<DictionaryMapping> dsts = new ArrayList<DictionaryMapping>();
     for (DictionaryMapping dp: sorter) {

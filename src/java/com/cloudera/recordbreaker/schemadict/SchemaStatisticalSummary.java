@@ -1476,6 +1476,19 @@ public class SchemaStatisticalSummary implements Writable {
   /////////////////////////////////////////////////////////
   // Schema distance computation
   /////////////////////////////////////////////////////////
+  /**
+   * Get the minimum mapping cost from a schema of size k to one of size m.
+   * This helps us avoid mapping computations that couldn't possibly produce
+   * a low-distance mapping.
+   */
+  public static double getMinimumMappingCost(int k, int m) {
+    return Math.abs(k - m) * Math.min(MATCHCOST_CREATE, MATCHCOST_DELETE);
+  }
+
+  /**
+   * Find the best mapping between the current schema summary and the one provided
+   * by the parameter.
+   */
   public SchemaMapping getBestMapping(SchemaStatisticalSummary other) {
     SummaryNode t1 = root;
     SummaryNode t2 = other.root;
