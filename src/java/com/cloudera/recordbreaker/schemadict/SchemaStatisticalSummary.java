@@ -23,6 +23,9 @@ import java.util.Iterator;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.HashSet;
+import java.util.TreeSet;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.Hashtable;
 import java.util.Map;
 import java.lang.Math;
@@ -758,13 +761,7 @@ public class SchemaStatisticalSummary implements Writable {
         // Currently, simply return difference of means as measure of integer set agreement.
         // This is a terrible measure that will fail for many comparisons (eg, it ignores 
         // distribution family entirely).  A placeholder for something better, soon.
-        double cost = Math.abs(thisAvg - otherAvg);
-        /**
-        System.err.println("------------------------------------------------");
-        System.err.println("LOCAL INT: " + dumpSummary(0) + " VS " + other.dumpSummary(0));
-        System.err.println("INT compare: " + thisAvg + " vs " + otherAvg + ", cost: " + cost);
-        **/
-        return cost;
+        return Math.abs(thisAvg - otherAvg);
       } else {
         return MATCHCOST_TYPE_CLASH;
       }
@@ -1031,19 +1028,9 @@ public class SchemaStatisticalSummary implements Writable {
       }
       return getLabel() + ": " + desc;
     }
-    /**
-    public String getLabel() {
-      if (parent != null) {
-        return parent.getLabel("", this);
-      } else {
-        return "<root>";
-      }
-    }
-    **/
     public String getLabel(String labelSoFar, SummaryNode src) {
       for (String fname: recordSummary.keySet()) {
         SummaryNode candidate = recordSummary.get(fname);
-        //System.err.println("FNAME: " + fname + ", " + candidate.getClass() + " vs " + src.getClass());
         if (src == candidate) {
           labelSoFar = (labelSoFar.length() > 0) ? fname + "." + labelSoFar : fname;
           if (parent != null) {
@@ -1519,6 +1506,8 @@ public class SchemaStatisticalSummary implements Writable {
     // Start by computing all the potential 1:1 leaf-level match costs.
     //
     List<DistancePair[]> allCosts = new ArrayList<DistancePair[]>();
+    Set<DistancePair> allKnownCostPairs = new TreeSet<DistancePair>();
+
     for (SummaryNode iNode: t1.preorder()) {
       int iIdx = iNode.preorderCount();
       DistancePair fromI[] = null;
@@ -1527,22 +1516,43 @@ public class SchemaStatisticalSummary implements Writable {
         for (SummaryNode jNode: t2.preorder()) {
           int jIdx = jNode.preorderCount();
           if (t2NonLeafs.get(jIdx) == null) {
-            costs.add(new DistancePair(iNode.transformCost(jNode), jNode));
+            DistancePair dp = new DistancePair(iNode.transformCost(jNode), iNode, jNode);
+            costs.add(dp);
+            allKnownCostPairs.add(dp);
           }
         }
-        costs.add(new DistancePair(iNode.deleteCost(), null));
+        costs.add(new DistancePair(iNode.deleteCost(), iNode, null));
         fromI = costs.toArray(new DistancePair[costs.size()]);
         Arrays.sort(fromI);
       }
       allCosts.add(fromI);
     }
 
+
+    //
+    // Now pass those costs to the mapping algorithm.
+    // Select which mapping algorithm we want to use.  For now, it's 'greedy'.
+    //
+    boolean performTraditionalMapping = false;
+    if (performTraditionalMapping) {
+      return findTraditionalMapping(other, t1, t2, t1Leafs, t2Leafs, t1NonLeafs, t2NonLeafs, allCosts);
+    } else {
+      return findGreedyMapping(other, t1, t2, t1Leafs, t2Leafs, t1NonLeafs, t2NonLeafs, allKnownCostPairs);      
+    }
+  }
+
+  /**
+   * findTraditionalMapping() tries the best k permutations of matches and returns the best one.
+   * The number of permutations can grow rapidly as the sizes of the two schemas grow, so this method
+   * can be very time-consuming.
+   */
+  SchemaMapping findTraditionalMapping(SchemaStatisticalSummary other, SummaryNode t1, SummaryNode t2, Map<Integer, SummaryNode> t1Leafs, Map<Integer, SummaryNode> t2Leafs, Map<Integer, SummaryNode> t1NonLeafs, Map<Integer, SummaryNode> t2NonLeafs, List<DistancePair[]> allCosts) {
     //
     // Figure out how far down into each attr's match-list we can go while only evaluating the
     // estimated top-k-scoring schema matches.  (Estimated by combining independent 1:1 match scores;
     // no enforcement of the pigeonhole constraint.)
     //
-    int MAX_TRIES = 40000;
+    int MAX_CANDIDATES = 100000;
     int numToPeek[] = new int[allCosts.size()];
     for (int i = 0; i < numToPeek.length; i++) {
       if (allCosts.get(i) == null) {
@@ -1552,6 +1562,7 @@ public class SchemaStatisticalSummary implements Writable {
       }
     }
     int numCandidates = 1;
+    System.err.println("Num elts: " + numToPeek.length);
     do {
       int peekIndex = -1;
       double cheapestPeek = Double.MAX_VALUE;
@@ -1571,12 +1582,16 @@ public class SchemaStatisticalSummary implements Writable {
         break;
       }
       numCandidates = 1;
-      for (int i = 0; i < numToPeek.length; i++) {      
+      for (int i = 0; i < numToPeek.length; i++) {
         if (numToPeek[i] >= 1) {
           numCandidates *= numToPeek[i];
         }
       }
-    } while (numCandidates < MAX_TRIES);
+    } while (numCandidates < MAX_CANDIDATES);
+
+    System.err.println("All cost size: " + allCosts.size() + ", number of candidates examined: " + numCandidates);
+    System.err.println();
+    numCandidates = Math.max(MAX_CANDIDATES, numCandidates);
 
     //
     // Now the numToPeek vector tells us how many steps down to go in each attr's
@@ -1592,13 +1607,19 @@ public class SchemaStatisticalSummary implements Writable {
     }
 
     //
-    // Now go through all the possible configurations of top-k mappings
+    // Now go through all the possible configurations of top-k mappings.
+    // 
+    // We optimize for the common case in which we have two near-flat hierarchies
     //
     DistancePair bestMatchConfig[] = new DistancePair[curPeek.length];
     DistancePair matchConfig[] = new DistancePair[curPeek.length];
     double bestCost = Double.MAX_VALUE;
     boolean peeksRemain = numCandidates > 0;
+    long startTime = System.currentTimeMillis();
+    int numIters = 0;
     while (peeksRemain) {
+      numIters++;
+
       ////////////////////////////////////////
       // Evaluate this configuration ("peek")
       ////////////////////////////////////////
@@ -1649,7 +1670,7 @@ public class SchemaStatisticalSummary implements Writable {
           int matchIdx = observedMatchParents.firstKey().intValue();
           if (matchIdx >= 0) {
             SummaryNode jMatchParent = observedMatchParents.get(matchIdx);
-            matchConfig[iNode.preorderCount()] = new DistancePair(0, jMatchParent);
+            matchConfig[iNode.preorderCount()] = new DistancePair(0, iNode, jMatchParent);
           }
         }
       }
@@ -1706,16 +1727,21 @@ public class SchemaStatisticalSummary implements Writable {
       
       //
       // Is it the best mapping so far?
-      // 
+      //
       if (total < bestCost) {
         bestCost = total;
         System.arraycopy(matchConfig, 0, bestMatchConfig, 0, bestMatchConfig.length);
       }
 
       /////////////////////////////////////////////
-      // Find the next configuration to evaluate (leaf-level "peek")
+      // Find the next configuration to evaluate (leaf-level "peek").
+      // We try to do a 'breadth-first search' rather than go deep on
+      // a single peeklist.  This makes it easier to find the best match sooner,
+      // and thus abort the process early.
       /////////////////////////////////////////////
       peeksRemain = false;
+      int minSeen = Integer.MAX_VALUE;
+      int minIndex = -1;
       for (int i = 0; i < curPeek.length; i++) {
         if (curPeek[i] == 0) {
           continue;
@@ -1733,7 +1759,9 @@ public class SchemaStatisticalSummary implements Writable {
         }
       }
     }
-
+    long endTime = System.currentTimeMillis();
+    System.err.println("Evaluting peeks: " + ((endTime - startTime) / 1000.0) + " over " + numIters + " iterations.");
+    
     //
     // ALMOST DONE: We have the best match.  Now we translate it into a series of SchemaMappingOps 
     //
@@ -1754,18 +1782,104 @@ public class SchemaStatisticalSummary implements Writable {
         bestOps.add(new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jIdx));
       }
     }
-
     //
     // All done!
     //
     return new SchemaMapping(this, other, bestCost, bestOps);
   }
 
+  /**
+   * Greedy Mapping is sloppy, but very fast.  It repeatedly accepts the best-looking pairwise match, until
+   * there is nothing left to match.  Seems to work well so far, but needs to be tested more.
+   */
+  SchemaMapping findGreedyMapping(SchemaStatisticalSummary other, SummaryNode t1, SummaryNode t2, Map<Integer, SummaryNode> t1Leafs, Map<Integer, SummaryNode> t2Leafs, Map<Integer, SummaryNode> t1NonLeafs, Map<Integer, SummaryNode> t2NonLeafs, Set<DistancePair> allKnownCostPairs) {
+    int totalSrcs = t1Leafs.size();
+    int totalDsts = t2Leafs.size();
+    Set<Integer> observedSrcs = new TreeSet<Integer>();
+    Set<Integer> observedDsts = new TreeSet<Integer>();    
+    List<DistancePair> matching = new ArrayList<DistancePair>();
+    List<SchemaMappingOp> outputOps = new ArrayList<SchemaMappingOp>();
+    double totalCost = 0;
+
+    //
+    // Find all the leaf-level matches
+    //
+    Map<Integer, SummaryNode> transformMap = new TreeMap<Integer, SummaryNode>();
+    for (DistancePair dp: allKnownCostPairs) {
+      int srcId = dp.getSrc().preorderCount();
+      int dstId = dp.getNode().preorderCount();
+
+      if ((! observedSrcs.contains(srcId)) && (! observedDsts.contains(dstId))) {
+        matching.add(dp);
+        observedSrcs.add(srcId);
+        observedDsts.add(dstId);
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, srcId, other, dstId));
+        transformMap.put(srcId, dp.getNode());
+        totalCost += dp.getCost();
+        if (matching.size() >= Math.min(totalSrcs, totalDsts)) {
+          break;
+        }
+      }
+    }
+
+    //
+    // Look for internal nodes that should be matched.  If ALL of an internal node's children
+    // match ALL of another internal node's children, then the two internal nodes also match.
+    //
+    for (Map.Entry<Integer, SummaryNode> elt: t1NonLeafs.entrySet()) {
+      SummaryNode iNode = elt.getValue();
+      SortedSet<Integer> knownDstParents = new TreeSet<Integer>();
+      for (SummaryNode iChild: iNode.children()) {
+        int iChildIdx = iChild.preorderCount();
+        SummaryNode dstNode = transformMap.get(iChildIdx);
+        if (dstNode != null) {
+          knownDstParents.add(dstNode.getParent().preorderCount());
+        }        
+      }
+
+      // There's just one parent of the destination nodes, so we have found an internal node match.
+      if (knownDstParents.size() == 1) {
+        Integer dstIdx = knownDstParents.first();
+        SummaryNode dstNode = t2NonLeafs.get(dstIdx);
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, iNode.preorderCount(), other, dstIdx));
+        observedSrcs.add(iNode.preorderCount());
+        observedDsts.add(dstIdx);
+      }
+    }
+
+    //
+    // If a node is in the source, but not the dest, then we need to DELETE it.
+    // Compute the DELETE costs here.
+    //
+    for (SummaryNode iNode: t1.preorder()) {
+      int iNodeIdx = iNode.preorderCount();
+      if (! observedSrcs.contains(iNodeIdx)) {
+        totalCost += iNode.deleteCost();
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, iNodeIdx));
+      }
+    }
+
+    //
+    // If a node is in the dest, but not the source, then we need to CREATE it.
+    // Compute the CREATE costs here.
+    // 
+    for (SummaryNode jNode: t2.preorder()) {
+      int jNodeIdx = jNode.preorderCount();
+      if (! observedDsts.contains(jNodeIdx)) {
+        totalCost += jNode.createCost();
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jNodeIdx));
+      }
+    }
+    return new SchemaMapping(this, other, totalCost, outputOps);
+  }
+
   class DistancePair implements Comparable {
     double cost;
+    SummaryNode src;
     SummaryNode target;
-    public DistancePair(double cost, SummaryNode target) {
+    public DistancePair(double cost, SummaryNode src, SummaryNode target) {
       this.cost = cost;
+      this.src = src;
       this.target = target;
     }
     public int compareTo(Object o) {
@@ -1774,10 +1888,19 @@ public class SchemaStatisticalSummary implements Writable {
         return -1;
       } else if (cost > other.cost) {
         return 1;
-      } else return target.preorderCount() - other.target.preorderCount();
+      } else {
+        int cmp = src.preorderCount() - other.src.preorderCount();
+        if (cmp == 0) {
+          cmp = target.preorderCount() - other.target.preorderCount();
+        }
+        return cmp;
+      }
     }
     public double getCost() {
       return cost;
+    }
+    public SummaryNode getSrc() {
+      return src;
     }
     public SummaryNode getNode() {
       return target;

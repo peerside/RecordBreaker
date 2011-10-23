@@ -90,7 +90,8 @@ public class SchemaSuggest {
       srcSchema = srcSummary.createSummaryFromData(avroFile);
     } finally {
     }
-
+    System.err.println("Schema size is " + srcSchema.getFields().size());
+    
     //
     // Compare the statistics to the database of schema statistics.  Find the closest matches, both
     // on a per-attribute basis and structurally.
@@ -109,11 +110,12 @@ public class SchemaSuggest {
     List<Integer> seenIndexes = new ArrayList<Integer>();
     int searchRadius = 0;
     boolean seenAllCandidates = false;
-    int srcSchemaSize = srcSchema.getFields().size();      
+    int srcSchemaSize = srcSchema.getFields().size();
+    int totalSchemasExamined = 0;
     
     while (! seenAllCandidates) {
       // Examine the relevant schema buckets, compute all matches to those schemas
-      for (int j = Math.max(0, srcSchemaSize - searchRadius);
+      for (int j = Math.max(1, srcSchemaSize - searchRadius);
            j <= Math.min(NUM_BUCKETS, srcSchemaSize + searchRadius); j++) {
 
         if (seenIndexes.contains(j-1)) {
@@ -121,17 +123,15 @@ public class SchemaSuggest {
         }
         for (SchemaDictionaryEntry elt: dictBySize.get(j-1)) {
           SchemaMapping mapping = srcSummary.getBestMapping(elt.getSummary());
+          totalSchemasExamined++;
           sorter.add(new DictionaryMapping(mapping, elt));
-          if (numMatches % 10 == 0) {
-            //System.err.println("  Matched object " + numMatches);
-          }
           numMatches++;
         }
         seenIndexes.add(j-1);
       }
 
       // Have we examined the entire corpus of known schemas?
-      if ((srcSchemaSize - searchRadius) <= 0 && (srcSchemaSize + searchRadius) >= NUM_BUCKETS) {
+      if ((srcSchemaSize - searchRadius) <= 1 && (srcSchemaSize + searchRadius) >= NUM_BUCKETS) {
         seenAllCandidates = true;
       } else {
         // Test to see if the best matches are good enough that we can stop looking.
@@ -168,14 +168,16 @@ public class SchemaSuggest {
     }
       
     // Return the k best schema mappings
+    double smallestDistance = sorter.first().getMapping().getDist();
     List<DictionaryMapping> dsts = new ArrayList<DictionaryMapping>();
     for (DictionaryMapping dp: sorter) {
-      dsts.add(dp);
-      if (dsts.size() >= k) {
+      if (dsts.size() > k && dp.getMapping().getDist() > smallestDistance) {
         break;
       }
+      dsts.add(dp);
     }
-
+    double pct = totalSchemasExamined / (1.0 * dict.contents().size());
+    System.err.println("Final search radius of " + searchRadius + " yielded a search over " + pct + " of all known databases.");
     return dsts;
   }
 

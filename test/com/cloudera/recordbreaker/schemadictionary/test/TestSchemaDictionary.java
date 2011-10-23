@@ -76,95 +76,107 @@ public class TestSchemaDictionary {
 
   @Test(timeout=200000)
   public void testSchemaDictionary() throws IOException {
-    int maxDictSize = 2000;
-    int maxTestSize = Math.min(10, maxDictSize);
-    int MAX_MAPPINGS = 5;
-    double MINIMUM_MEAN_RECIPROCAL_RANK = 0.75;
-    Random r = new Random();
-    
-    //
-    // Build schema dictionary out of the "train" set
-    //
-    File dictDir = new File(workingDir, "dict");
-    SchemaDictionary sd = new SchemaDictionary(dictDir);
-    System.err.println("Building schema dictionary...");
     try {
-      // Insert the files
-      File targetList[] = trainDbDir.listFiles();
-      for (int i = 0; i < targetList.length; i++) {
-        File f = targetList[i];
-        if (f.getName().endsWith(".avro")) {
-          sd.addDictionaryElt(f, f.getName());
-          if (i >= maxDictSize) {
-            break;
+      int maxDictSize = 3000;
+      int maxTestSize = maxDictSize;
+      int MAX_MAPPINGS = 10;
+      double MINIMUM_MEAN_RECIPROCAL_RANK = 0.75;
+      Random r = new Random();
+    
+      //
+      // Build schema dictionary out of the "train" set
+      //
+      File dictDir = new File(workingDir, "dict");
+      SchemaDictionary sd = new SchemaDictionary(dictDir);
+      System.err.println("Building schema dictionary...");
+      try {
+        // Insert the files
+        File targetList[] = trainDbDir.listFiles();
+        for (int i = 0; i < targetList.length; i++) {
+          File f = targetList[i];
+          if (f.getName().endsWith(".avro")) {
+            sd.addDictionaryElt(f, f.getName());
+            if (i >= maxDictSize) {
+              break;
+            }
           }
         }
+      } catch (Exception iex) {
+        iex.printStackTrace();
       }
+
+      //
+      // Now evaluate the dictionary using the "test" set
+      //
+      System.err.println("Testing schema dictionary...");
+      SchemaSuggest ss = new SchemaSuggest(dictDir);
+      double totalReciprocalRank = 0;
+      int i = 0;
+
+      // Iterate through all files in the test dir
+      System.err.println("Examining: " + testDbDir);
+      for (File f: testDbDir.listFiles()) {
+        try {
+          if (f.getName().endsWith(".avro")) {
+            String testName = f.getName();
+            System.err.println("Testing against " + testName);
+
+            // Go through the top-MAX_MAPPINGS related schemas, as returned by SchemaDictionary
+            int rank = 1;
+            long startTime = System.currentTimeMillis();
+            List<DictionaryMapping> mappings = ss.inferSchemaMapping(f, MAX_MAPPINGS);
+            long endTime = System.currentTimeMillis();
+            System.err.println("  it took " + ((endTime - startTime) / 1000.0));
+        
+            double scores[] = new double[mappings.size()];
+            for (DictionaryMapping mapping: mappings) {
+              SchemaDictionaryEntry dictEntry = mapping.getDictEntry();
+              SchemaMapping smap = mapping.getMapping();
+              scores[rank-1] = smap.getDist();
+
+              // Did the query database match one of the returned results?
+              //System.err.println("  " + rank + ".  (" + smap.getDist() + ") " + mapping.getDictEntry().getInfo() + " (size=" + mapping.getDictEntry().getSchema().getFields().size() + ")");
+              if (dictEntry.getInfo().equals(testName)) {
+                // If so, find the max rank of any object that had the match's score.
+                // (This is necessary because multiple objects can have the same match score.
+                //   The current match's rank isn't necessarily the one to use.)
+                double currentScore = smap.getDist();
+                int correctRank = rank;
+                for (int j = 0; j < rank; j++) {
+                  if (scores[j] == currentScore) {
+                    correctRank = j+1;
+                    break;
+                  }
+                }
+
+                // Now that we know the correct rank, compute this database's reciprocal rank result
+                double reciprocalRank = 1.0 / correctRank;
+                totalReciprocalRank += reciprocalRank;
+                break;
+              }
+              rank++;
+            }
+            i++;        
+            System.err.println("After " + i + " tests, MRR is " + (totalReciprocalRank / i));
+            System.err.println();
+
+            if (i >= maxTestSize) {
+              break;
+            }
+          }
+        } catch (IOException iex) {
+          continue;
+        }
+      }
+      double meanReciprocalRank = totalReciprocalRank / i;
+      System.err.println("Mean reciprocal rank: " + meanReciprocalRank);
+
+      // Since we're testing on data that is drawn directly from dbs already known to
+      // SchemaDictionary, we expect very good results from the mapping ranking.
+      Assert.assertTrue(meanReciprocalRank >=  0.75);
     } catch (Exception iex) {
       iex.printStackTrace();
     }
-
-    //
-    // Now evaluate the dictionary using the "test" set
-    //
-    System.err.println("Testing schema dictionary...");
-    SchemaSuggest ss = new SchemaSuggest(dictDir);
-    double totalReciprocalRank = 0;
-    int i = 0;
-
-    // Iterate through all files in the test dir
-    System.err.println("Examining: " + testDbDir);
-    for (File f: testDbDir.listFiles()) {
-      if (f.getName().endsWith(".avro")) {
-        String testName = f.getName();
-        System.err.println("Testing against " + testName + "...");
-
-        // Go through the top-MAX_MAPPINGS related schemas, as returned by SchemaDictionary
-        int rank = 1;
-        List<DictionaryMapping> mappings = ss.inferSchemaMapping(f, MAX_MAPPINGS);
-        double scores[] = new double[MAX_MAPPINGS];
-        for (DictionaryMapping mapping: mappings) {
-          SchemaDictionaryEntry dictEntry = mapping.getDictEntry();
-          SchemaMapping smap = mapping.getMapping();
-          scores[rank-1] = smap.getDist();
-
-          // Did the query database match one of the returned results?
-          System.err.println("  " + rank + ".  (" + smap.getDist() + ") " + mapping.getDictEntry().getInfo());
-          if (dictEntry.getInfo().equals(testName)) {
-            // If so, find the max rank of any object that had the match's score.
-            // (This is necessary because multiple objects can have the same match score.
-            //   The current match's rank isn't necessarily the one to use.)
-            double currentScore = smap.getDist();
-            int correctRank = rank;
-            for (int j = 0; j < rank; j++) {
-              if (scores[j] == currentScore) {
-                correctRank = j+1;
-                break;
-              }
-            }
-
-            // Now that we know the correct rank, compute this database's reciprocal rank result
-            double reciprocalRank = 1.0 / correctRank;
-            totalReciprocalRank += reciprocalRank;
-            break;
-          }
-          rank++;
-        }
-        i++;        
-        System.err.println("After " + i + " tests, MRR is " + (totalReciprocalRank / i));
-        System.err.println();
-
-        if (i >= maxTestSize) {
-          break;
-        }
-      }
-    }
-    double meanReciprocalRank = totalReciprocalRank / i;
-    System.err.println("Mean reciprocal rank: " + meanReciprocalRank);
-
-    // Since we're testing on data that is drawn directly from dbs already known to
-    // SchemaDictionary, we expect very good results from the mapping ranking.
-    Assert.assertTrue(meanReciprocalRank >=  0.75);
   }
 
   @After
