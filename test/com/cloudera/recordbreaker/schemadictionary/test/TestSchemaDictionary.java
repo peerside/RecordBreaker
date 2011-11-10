@@ -126,7 +126,7 @@ public class TestSchemaDictionary {
             long startTime = System.currentTimeMillis();
             List<DictionaryMapping> mappings = ss.inferSchemaMapping(f, MAX_MAPPINGS);
             long endTime = System.currentTimeMillis();
-            System.err.println("  it took " + ((endTime - startTime) / 1000.0));
+            System.err.println("  it took " + ((endTime - startTime) / 1000.0) + ", returned " + mappings.size() + " elts");
         
             double scores[] = new double[mappings.size()];
             for (DictionaryMapping mapping: mappings) {
@@ -135,11 +135,17 @@ public class TestSchemaDictionary {
               scores[rank-1] = smap.getDist();
 
               // Did the query database match one of the returned results?
-              //System.err.println("  " + rank + ".  (" + smap.getDist() + ") " + mapping.getDictEntry().getInfo() + " (size=" + mapping.getDictEntry().getSchema().getFields().size() + ")");
+              System.err.println("  " + rank + ".  (" + smap.getDist() + ") " + mapping.getDictEntry().getInfo() + " (size=" + mapping.getDictEntry().getSchema().getFields().size() + ")");
               if (dictEntry.getInfo().equals(testName)) {
                 // If so, find the max rank of any object that had the match's score.
                 // (This is necessary because multiple objects can have the same match score.
                 //   The current match's rank isn't necessarily the one to use.)
+
+                // EMIT THE MAPPING BECAUSE IT IS AN ERROR IF MATCHCOST IS NONZERO
+                if (smap.getDist() > 0) {
+                  System.err.println("Found mapping: " + smap.toString());
+                }
+                
                 double currentScore = smap.getDist();
                 int correctRank = rank;
                 for (int j = 0; j < rank; j++) {

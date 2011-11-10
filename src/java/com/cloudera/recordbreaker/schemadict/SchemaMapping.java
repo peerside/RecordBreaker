@@ -65,6 +65,11 @@ public class SchemaMapping {
   /**
    */
   public String toString() {
-    return "<mapping>";
+    StringBuffer sbuf = new StringBuffer();
+    sbuf.append("<mapping> distance=" + dist + "\n");
+    for (SchemaMappingOp op: mapping) {
+      sbuf.append("\t" + op.toString() + "\n");
+    }
+    return sbuf.toString();
   }
 }

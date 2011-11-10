@@ -224,6 +224,62 @@ public class SchemaStatisticalSummary implements Writable {
       return path;
     }
 
+    /**
+     * Useful in testing whether two fields are referring to the same thing.
+     * We would like a value that ranges 0..1.
+     *
+     * To compute this, note that the LD is at least abs(len(s1)-len(s2)).  It is also at
+     * most max(len(s1), len(s2)).
+     */
+    double normalizedLevenshteinDistance(String s1, String s2) {
+      int rawLD = computeLevenshteinDistance(s1, s2);
+      int range = Math.abs(Math.max(s1.length(), s2.length()) - Math.abs(s1.length() - s2.length()));
+      return (rawLD / (1.0 * range));
+    }
+
+    /**
+     * The classic string edit distance algorithm rides again.
+     */
+    int computeLevenshteinDistance(String s1, String s2) {
+      int s1Length = s1.length();
+      int s2Length = s2.length();
+      int s1pos;
+      int s2pos;
+
+      if (s1Length == 0) {
+        return s2Length;
+      }
+      if (s2Length == 0) {
+        return s1Length;
+      }
+
+      int d[][] = new int[s1Length + 1][];
+      for (int i = 0; i <= s1Length; i++) {
+        d[i] = new int[s2Length + 1];
+      }
+      for (int i = 0; i <= s1Length; i++) {
+        d[i][0] = i;
+      }
+      for (int j = 0; j <= s2Length; j++) {
+        d[0][j] = j;
+      }
+
+      for (int i = 1; i <= s1Length; i++) {
+        char s1Char = s1.charAt(i-1);
+        for (int j = 1; j <= s2Length; j++) {
+          char s2Char = s2.charAt(j-1);
+
+          int cost = 0;
+          if (s1Char != s2Char) {
+            cost = 1;
+          }
+          d[i][j] = Math.min(d[i-1][j]+1,
+                             Math.min(d[i][j-1]+1, d[i-1][j-1] + cost));
+        }
+      }
+      return d[s1Length][s2Length];
+    }
+    
     ///////////////////////////////////////////////
     // Methods for string representation
     ///////////////////////////////////////////////
@@ -332,7 +388,16 @@ public class SchemaStatisticalSummary implements Writable {
      */
     public double transformCost(SummaryNode other) {
       if (this.getClass() == other.getClass()) {
-        return 0.5;
+        // Examine the field name for a schema-label distance
+        String l1 = this.getLabel();
+        String l2 = other.getLabel();
+        if (l1.indexOf(".") >= 0) {
+          l1 = l1.substring(l1.lastIndexOf(".")+1);
+        }
+        if (l2.indexOf(".") >= 0) {
+          l2 = l2.substring(l2.lastIndexOf(".")+1);
+        }
+        return normalizedLevenshteinDistance(l1, l2);
       } else {
         return MATCHCOST_TYPE_CLASH;
       }
@@ -1090,13 +1155,9 @@ public class SchemaStatisticalSummary implements Writable {
     ///////////////////////////////////////////////
     // Cost functions for schema matching
     ///////////////////////////////////////////////
-    public double transformCost(SummaryNode other) {
-      if (this.getClass() == other.getClass()) {
-        return 0.5;
-      } else {
-        return MATCHCOST_TYPE_CLASH;
-      }      
-    }
+    // NOTE: right now for strings, just do default schema-only testing.
+    // We don't yet look at the actual string value distributions, but we should do so soon...
+
 
     /////////////////////////////
     // String representation
