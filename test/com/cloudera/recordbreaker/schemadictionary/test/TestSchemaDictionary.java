@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -41,6 +42,7 @@ import com.cloudera.recordbreaker.schemadict.SchemaSuggest;
 import com.cloudera.recordbreaker.schemadict.SchemaDictionary;
 import com.cloudera.recordbreaker.schemadict.DictionaryMapping;
 import com.cloudera.recordbreaker.schemadict.SchemaDictionaryEntry;
+import com.cloudera.recordbreaker.schemadict.SchemaStatisticalSummary;
 
 
 /**
@@ -74,6 +76,8 @@ public class TestSchemaDictionary {
     workingDir = tmpOutDir.newFolder("workingdir");
   }
 
+  /**
+   */
   @Test(timeout=200000)
   public void testSchemaDictionary() throws IOException {
     try {
@@ -106,20 +110,35 @@ public class TestSchemaDictionary {
       }
 
       //
-      // Now evaluate the dictionary using the "test" set
+      // Now evaluate the dictionary using the "test" set.
+      // Be sure to keep a lot of statistics about match failures
       //
       System.err.println("Testing schema dictionary...");
       SchemaSuggest ss = new SchemaSuggest(dictDir);
+      ss.setUseAttributeLabels(false);
+      TreeMap<Integer, Integer> overallSizes = new TreeMap<Integer, Integer>();
+      TreeMap<Integer, Integer> failureSizes = new TreeMap<Integer, Integer>();
       double totalReciprocalRank = 0;
       int i = 0;
+      int failures = 0;
 
-      // Iterate through all files in the test dir
+      // Iterate through all files in the test dir      
       System.err.println("Examining: " + testDbDir);
       for (File f: testDbDir.listFiles()) {
         try {
           if (f.getName().endsWith(".avro")) {
             String testName = f.getName();
+            SchemaStatisticalSummary testSummary = new SchemaStatisticalSummary("input");
+            Schema testSchema = testSummary.createSummaryFromData(f);
+            int schemaSize = testSchema.getFields().size();
+            Integer sizeCount = overallSizes.get(schemaSize);
+            if (sizeCount == null) {
+              sizeCount = new Integer(0);
+            }
+            overallSizes.put(schemaSize, new Integer(sizeCount.intValue() + 1));
+
             System.err.println("Testing against " + testName);
+            System.err.println("Schema size is " + schemaSize);
 
             // Go through the top-MAX_MAPPINGS related schemas, as returned by SchemaDictionary
             int rank = 1;
@@ -129,6 +148,7 @@ public class TestSchemaDictionary {
             System.err.println("  it took " + ((endTime - startTime) / 1000.0) + ", returned " + mappings.size() + " elts");
         
             double scores[] = new double[mappings.size()];
+            boolean foundGoal = false;
             for (DictionaryMapping mapping: mappings) {
               SchemaDictionaryEntry dictEntry = mapping.getDictEntry();
               SchemaMapping smap = mapping.getMapping();
@@ -136,16 +156,13 @@ public class TestSchemaDictionary {
 
               // Did the query database match one of the returned results?
               System.err.println("  " + rank + ".  (" + smap.getDist() + ") " + mapping.getDictEntry().getInfo() + " (size=" + mapping.getDictEntry().getSchema().getFields().size() + ")");
+
               if (dictEntry.getInfo().equals(testName)) {
                 // If so, find the max rank of any object that had the match's score.
                 // (This is necessary because multiple objects can have the same match score.
                 //   The current match's rank isn't necessarily the one to use.)
+                System.err.println("Found mapping: " + smap.toString());              
 
-                // EMIT THE MAPPING BECAUSE IT IS AN ERROR IF MATCHCOST IS NONZERO
-                if (smap.getDist() > 0) {
-                  System.err.println("Found mapping: " + smap.toString());
-                }
-                
                 double currentScore = smap.getDist();
                 int correctRank = rank;
                 for (int j = 0; j < rank; j++) {
@@ -158,9 +175,18 @@ public class TestSchemaDictionary {
                 // Now that we know the correct rank, compute this database's reciprocal rank result
                 double reciprocalRank = 1.0 / correctRank;
                 totalReciprocalRank += reciprocalRank;
+                foundGoal = true;
                 break;
               }
               rank++;
+            }
+            if (! foundGoal) {
+              failures++;
+              sizeCount = failureSizes.get(schemaSize);
+              if (sizeCount == null) {
+                sizeCount = new Integer(0);
+              }
+              failureSizes.put(schemaSize, new Integer(sizeCount.intValue() + 1));
             }
             i++;        
             System.err.println("After " + i + " tests, MRR is " + (totalReciprocalRank / i));
@@ -176,7 +202,33 @@ public class TestSchemaDictionary {
       }
       double meanReciprocalRank = totalReciprocalRank / i;
       System.err.println("Mean reciprocal rank: " + meanReciprocalRank);
+      System.err.println();
+      System.err.println("*** Overall Distribution ***");
+      int cumulativeFrequency = 0;
+      for (Integer size: overallSizes.keySet()) {
+        int frequency = overallSizes.get(size);
+        cumulativeFrequency += frequency;
+        double ratio = frequency / (1.0 * i);
+        double cumulativeRatio = cumulativeFrequency / (1.0 * i);
+        System.err.println("  " + size + ":  " + frequency + " (" + ratio + ")  (cumulative=" + cumulativeRatio + ")");
+      }
+      System.err.println();
+      
+      System.err.println("*** Failure Distribution ***");
+      cumulativeFrequency = 0;
+      for (Integer size: failureSizes.keySet()) {
+        int frequency = failureSizes.get(size);
+        cumulativeFrequency += frequency;
+        double ratio = frequency / (1.0 * failures);
+        double cumulativeRatio = cumulativeFrequency / (1.0 * failures);
+        System.err.println("  " + size + ":  " + frequency + " (" + ratio + ")  (cumulative=" + cumulativeRatio + ")");
+      }
+      System.err.println();
 
+      System.err.println("Number of match tests: " + i);
+      double ratio = failures / (1.0 * i);      
+      System.err.println("Number of match test failures: " + failures + " (" + ratio + ")");
+      
       // Since we're testing on data that is drawn directly from dbs already known to
       // SchemaDictionary, we expect very good results from the mapping ranking.
       Assert.assertTrue(meanReciprocalRank >=  0.75);
