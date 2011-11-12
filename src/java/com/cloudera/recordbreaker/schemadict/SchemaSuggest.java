@@ -52,6 +52,7 @@ import org.apache.avro.generic.GenericRecord;
 public class SchemaSuggest {
   int NUM_BUCKETS = 20;
   SchemaDictionary dict;
+  boolean useAttributeLabels = true;
   List<List<SchemaDictionaryEntry>> dictBySize;
   
   /**
@@ -80,18 +81,23 @@ public class SchemaSuggest {
   }
 
   /**
+   * Should SchemaSuggest examine attribute labels when trying to find a match?
+   * Typically this should be set to true.  However, it can be useful to turn off
+   * this feature for testing purposes.
+   */
+  public void setUseAttributeLabels(boolean useAttributeLabels) {
+    this.useAttributeLabels = useAttributeLabels;
+  }
+
+  /**
    * This method infers new schema labels for each element in the input.  It returns a Schema object that
    * has the identical format as the input file's Schema object, but the labels may be changed.
    */
   public List<DictionaryMapping> inferSchemaMapping(File avroFile, int k) throws IOException {
     SchemaStatisticalSummary srcSummary = new SchemaStatisticalSummary("input");
-    Schema srcSchema = null;
-    try {
-      srcSchema = srcSummary.createSummaryFromData(avroFile);
-    } finally {
-    }
-    System.err.println("Schema size is " + srcSchema.getFields().size());
-    
+    Schema srcSchema = srcSummary.createSummaryFromData(avroFile);
+    srcSummary.setUseAttributeLabels(useAttributeLabels);    
+
     //
     // Compare the statistics to the database of schema statistics.  Find the closest matches, both
     // on a per-attribute basis and structurally.

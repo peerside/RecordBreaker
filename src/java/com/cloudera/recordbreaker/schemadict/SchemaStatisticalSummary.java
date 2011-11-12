@@ -62,8 +62,8 @@ import org.apache.hadoop.io.Text;
  *
  ********************************************/
 public class SchemaStatisticalSummary implements Writable {
-  static byte MAGIC = (byte) 0xa1;
-  static byte VERSION = (byte) 1;
+  final static byte MAGIC = (byte) 0xa1;
+  final static byte VERSION = (byte) 1;
 
   final static int MAX_SUMMARY_SAMPLES = 50;
 
@@ -228,10 +228,10 @@ public class SchemaStatisticalSummary implements Writable {
 
     /**
      * Useful in testing whether two fields are referring to the same thing.
-     * We would like a value that ranges 0..1.
+     * Levenshtein edit distance is great, but we would like a value that ranges 0..1.
      *
      * To compute this, note that the LD is at least abs(len(s1)-len(s2)).  It is also at
-     * most max(len(s1), len(s2)).
+     * most max(len(s1), len(s2)).  So we normalize LD by that range.
      */
     double normalizedLevenshteinDistance(String s1, String s2) {
       int rawLD = computeLevenshteinDistance(s1, s2);
@@ -385,21 +385,26 @@ public class SchemaStatisticalSummary implements Writable {
     ///////////////////////////////////////////////
     /**
      * Figure out basic normalized string edit distance to
-     * see if the schema labels match
+     * see if the schema labels match.  If 'useAttributeLabels'
+     * is set to false, then this distance is always zero.
      */
     double computeSchemaLabelDistance(String l1, String l2) {
-      if (l1.indexOf(".") >= 0) {
-        l1 = l1.substring(l1.lastIndexOf(".")+1);
+      if (! useAttributeLabels) {
+        return 0;
+      } else {
+        if (l1.indexOf(".") >= 0) {
+          l1 = l1.substring(l1.lastIndexOf(".")+1);
+        }
+        if (l2.indexOf(".") >= 0) {
+          l2 = l2.substring(l2.lastIndexOf(".")+1);
+        }
+        return normalizedLevenshteinDistance(l1, l2);
       }
-      if (l2.indexOf(".") >= 0) {
-        l2 = l2.substring(l2.lastIndexOf(".")+1);
-      }
-      return normalizedLevenshteinDistance(l1, l2);
     }
     /**
-     * Right now we do a REALLY brain-dead type-only schema matching.
-     * We're collecting statistics on the input data; we just haven't yet hooked them up
-     * to the transformation cost metric.
+     * The default non-type-specific way of performing schema matching is to
+     * just compare the attribute labels.  We can also examine data distributions,
+     * but this is only possible in the subclasses' overriding transformCost() methods.
      */
     public double transformCost(SummaryNode other) {
       if (this.getClass() == other.getClass()) {
@@ -841,8 +846,9 @@ public class SchemaStatisticalSummary implements Writable {
     }
 
     /**
-     * This computes the Kullback-Leibler divergence between two int distributions.  It measures how much the two integer
-     * distributions differ.  Useful for testing whether they should be matched.
+     * This computes the Kullback-Leibler divergence between two int distributions.  It
+     * measures how much the two integer distributions differ.  Useful for testing whether
+     * they should be matched.
      * 
      * Assumes the two distributions are gaussians.
      */
@@ -858,7 +864,8 @@ public class SchemaStatisticalSummary implements Writable {
 
     /**
      * Compute the standard deviation of the distribution of integers in this summary node.
-     * Note that if the sample is smaller than the genuine data, we take the "sample standard deviation", not the true stddev.
+     * Note that if the sample is smaller than the genuine data, we take the
+     * "sample standard deviation", not the true stddev.
      */
     public double computeStddev() {
       double mean = total / (1.0 * numData);
@@ -868,6 +875,8 @@ public class SchemaStatisticalSummary implements Writable {
       }
       double normalizer = 1 / (1.0 * numData);
       if (samples.size() < numData) {
+        // This here's what makes the "sample std deviation" in case we're not
+        // looking at the full dataset.
         normalizer = 1 / (1.0 * (numData-1));
       }
       double variance = normalizer * total;
@@ -1422,6 +1431,7 @@ public class SchemaStatisticalSummary implements Writable {
   // Members
   /////////////////////////////////////////////////
   SummaryNode root = null;
+  boolean useAttributeLabels = true;
   String datasetLabel = "";
 
   /////////////////////////////////////////////////
@@ -1432,7 +1442,9 @@ public class SchemaStatisticalSummary implements Writable {
   public SchemaStatisticalSummary(String datasetLabel) throws IOException {
     this.datasetLabel = datasetLabel;
   }
-
+  public void setUseAttributeLabels(boolean useAttributeLabels) {
+    this.useAttributeLabels = useAttributeLabels;
+  }
   /**
    * Create the statistical summary object from data.
    */
@@ -1932,8 +1944,9 @@ public class SchemaStatisticalSummary implements Writable {
   }
 
   /**
-   * Greedy Mapping is sloppy, but very fast.  It repeatedly accepts the best-looking pairwise match, until
-   * there is nothing left to match.  Seems to work well so far, but needs to be tested more.
+   * Greedy Mapping is sloppy, but very fast.  It repeatedly accepts the best-looking pairwise
+   * match, until there is nothing left to match.  Seems to work well so far, but needs to be
+   * tested more.
    */
   SchemaMapping findGreedyMapping(SchemaStatisticalSummary other, SummaryNode t1, SummaryNode t2, Map<Integer, SummaryNode> t1Leafs, Map<Integer, SummaryNode> t2Leafs, Map<Integer, SummaryNode> t1NonLeafs, Map<Integer, SummaryNode> t2NonLeafs, Set<DistancePair> allKnownCostPairs) {
     int totalSrcs = t1Leafs.size();
