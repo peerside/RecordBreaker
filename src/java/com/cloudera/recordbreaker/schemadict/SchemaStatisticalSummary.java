@@ -65,6 +65,8 @@ public class SchemaStatisticalSummary implements Writable {
   static byte MAGIC = (byte) 0xa1;
   static byte VERSION = (byte) 1;
 
+  final static int MAX_SUMMARY_SAMPLES = 50;
+
   final static double MATCHCOST_TYPE_CLASH = 1 * 10 * 1000;
   final static double MATCHCOST_CREATE = 1 * 1000;
   final static double MATCHCOST_DELETE = 1 * 1000;
@@ -382,6 +384,19 @@ public class SchemaStatisticalSummary implements Writable {
     // Cost functions for schema matching
     ///////////////////////////////////////////////
     /**
+     * Figure out basic normalized string edit distance to
+     * see if the schema labels match
+     */
+    double computeSchemaLabelDistance(String l1, String l2) {
+      if (l1.indexOf(".") >= 0) {
+        l1 = l1.substring(l1.lastIndexOf(".")+1);
+      }
+      if (l2.indexOf(".") >= 0) {
+        l2 = l2.substring(l2.lastIndexOf(".")+1);
+      }
+      return normalizedLevenshteinDistance(l1, l2);
+    }
+    /**
      * Right now we do a REALLY brain-dead type-only schema matching.
      * We're collecting statistics on the input data; we just haven't yet hooked them up
      * to the transformation cost metric.
@@ -389,15 +404,7 @@ public class SchemaStatisticalSummary implements Writable {
     public double transformCost(SummaryNode other) {
       if (this.getClass() == other.getClass()) {
         // Examine the field name for a schema-label distance
-        String l1 = this.getLabel();
-        String l2 = other.getLabel();
-        if (l1.indexOf(".") >= 0) {
-          l1 = l1.substring(l1.lastIndexOf(".")+1);
-        }
-        if (l2.indexOf(".") >= 0) {
-          l2 = l2.substring(l2.lastIndexOf(".")+1);
-        }
-        return normalizedLevenshteinDistance(l1, l2);
+        return computeSchemaLabelDistance(this.getLabel(), other.getLabel());
       } else {
         return MATCHCOST_TYPE_CLASH;
       }
@@ -800,10 +807,12 @@ public class SchemaStatisticalSummary implements Writable {
   }
 
   /*****************************************************
-   * Store statistical summary of observed Integer field.  Store # times seen and total value
+   * Store statistical summary of observed Integer field.
+   * Store total value, num data elements, and a sample of actual data elts
    ****************************************************/
   class IntegerSummaryNode extends SummaryNode {
     int total;
+    List<Integer> samples = new ArrayList<Integer>();
     public IntegerSummaryNode() {
     }
     public IntegerSummaryNode(String docStr) {
@@ -812,6 +821,9 @@ public class SchemaStatisticalSummary implements Writable {
     public void addData(Integer i) {
       numData++;
       total += i.intValue();
+      if (samples.size() < MAX_SUMMARY_SAMPLES) {
+        samples.add(i);
+      }
     }
 
     ///////////////////////////////////////////////
@@ -819,17 +831,47 @@ public class SchemaStatisticalSummary implements Writable {
     ///////////////////////////////////////////////
     public double transformCost(SummaryNode other) {
       if (this.getClass() == other.getClass()) {
-        IntegerSummaryNode iother = (IntegerSummaryNode) other;
-        double thisAvg = total / (1.0 * numData);
-        double otherAvg = iother.total / (1.0 * iother.numData);
+        double schemaLabelDistance = computeSchemaLabelDistance(this.getLabel(), other.getLabel());
+        double klDivergence = computeSampleKLDivergence((IntegerSummaryNode) other);
 
-        // Currently, simply return difference of means as measure of integer set agreement.
-        // This is a terrible measure that will fail for many comparisons (eg, it ignores 
-        // distribution family entirely).  A placeholder for something better, soon.
-        return Math.abs(thisAvg - otherAvg);
+        return schemaLabelDistance + klDivergence;
       } else {
         return MATCHCOST_TYPE_CLASH;
       }
+    }
+
+    /**
+     * This computes the Kullback-Leibler divergence between two int distributions.  It measures how much the two integer
+     * distributions differ.  Useful for testing whether they should be matched.
+     * 
+     * Assumes the two distributions are gaussians.
+     */
+    public double computeSampleKLDivergence(IntegerSummaryNode other) {
+      double mean1 = total / (1.0 * numData);
+      double mean2 = other.total / (1.0 * other.numData);
+      double stddev1 = computeStddev();
+      double stddev2 = other.computeStddev();
+      double variance1 = Math.pow(stddev1, 2);
+      double variance2 = Math.pow(stddev2, 2);
+      return Math.log(stddev2 / stddev1) + ((variance1 + Math.pow(mean1 - mean2, 2)) / (2 * Math.pow(variance2, 2))) - 0.5;
+    }
+
+    /**
+     * Compute the standard deviation of the distribution of integers in this summary node.
+     * Note that if the sample is smaller than the genuine data, we take the "sample standard deviation", not the true stddev.
+     */
+    public double computeStddev() {
+      double mean = total / (1.0 * numData);
+      double total = 0;
+      for (Integer sample: samples) {
+        total += Math.pow(sample.intValue() - mean, 2);
+      }
+      double normalizer = 1 / (1.0 * numData);
+      if (samples.size() < numData) {
+        normalizer = 1 / (1.0 * (numData-1));
+      }
+      double variance = normalizer * total;
+      return Math.sqrt(variance);
     }
 
     /////////////////////////////
@@ -857,11 +899,20 @@ public class SchemaStatisticalSummary implements Writable {
       out.writeInt(numData);
       UTF8.writeString(out, (docStr == null) ? "" : docStr);
       out.writeInt(total);
+      out.writeInt(samples.size());
+      for (Integer sample: samples) {
+        out.writeInt(sample.intValue());
+      }
     }
     public void readFields(DataInput in) throws IOException {
       this.numData = in.readInt();
       this.docStr = UTF8.readString(in);
       this.total = in.readInt();
+      this.samples.clear();
+      int numSamples = in.readInt();
+      for (int i = 0; i < numSamples; i++) {
+        this.samples.add(in.readInt());
+      }
     }    
   }
 
@@ -1140,7 +1191,7 @@ public class SchemaStatisticalSummary implements Writable {
    ****************************************************/
   class StringSummaryNode extends SummaryNode {
     int totalLength;
-    List<Utf8> observedStrings = new ArrayList<Utf8>();
+    Set<Utf8> observedStrings = new TreeSet<Utf8>();
     public StringSummaryNode() {
     }
     public StringSummaryNode(String docStr) {
@@ -1155,9 +1206,36 @@ public class SchemaStatisticalSummary implements Writable {
     ///////////////////////////////////////////////
     // Cost functions for schema matching
     ///////////////////////////////////////////////
-    // NOTE: right now for strings, just do default schema-only testing.
-    // We don't yet look at the actual string value distributions, but we should do so soon...
+    public double transformCost(SummaryNode other) {
+      if (this.getClass() == other.getClass()) {
+        double schemaLabelDistance = computeSchemaLabelDistance(this.getLabel(), other.getLabel());
+        double jaccardSimilarity = computeJaccardSimilarity((StringSummaryNode) other);
+        double jaccardDistance = 1 - jaccardSimilarity;
 
+        return schemaLabelDistance + jaccardDistance;
+      } else {
+        return MATCHCOST_TYPE_CLASH;
+      }
+    }
+
+    /**
+     * This is a useful score for determining whether two sets of objects are similar
+     */
+    public double computeJaccardSimilarity(StringSummaryNode other) {
+      Set<Utf8> larger = (this.numData >= other.numData ? this.observedStrings : other.observedStrings);
+      Set<Utf8> smaller = (this.numData < other.numData ? this.observedStrings : other.observedStrings);
+
+      int unionSize = larger.size();
+      int intersectionSize = 0;
+      for (Utf8 smallElt: smaller) {
+        if (larger.contains(smallElt)) {
+          intersectionSize++;
+        } else {
+          unionSize++;
+        }
+      }
+      return intersectionSize / (1.0 * unionSize);
+    }
 
     /////////////////////////////
     // String representation
@@ -1184,6 +1262,8 @@ public class SchemaStatisticalSummary implements Writable {
       out.writeInt(numData);
       UTF8.writeString(out, docStr == null ? "" : docStr);
       out.writeInt(totalLength);
+
+      out.writeInt(observedStrings.size());
       for (Utf8 s: observedStrings) {
         UTF8.writeString(out, s.toString());
       }
@@ -1192,8 +1272,10 @@ public class SchemaStatisticalSummary implements Writable {
       this.numData = in.readInt();
       this.docStr = UTF8.readString(in);
       this.totalLength = in.readInt();
+
       observedStrings.clear();
-      for (int i = 0; i < numData; i++) {
+      int numInts = in.readInt();
+      for (int i = 0; i < numInts; i++) {
         observedStrings.add(new Utf8(UTF8.readString(in)));
       }
     }    
