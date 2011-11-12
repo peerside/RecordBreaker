@@ -1235,15 +1235,25 @@ public class SchemaStatisticalSummary implements Writable {
       Set<Utf8> smaller = (this.numData < other.numData ? this.observedStrings : other.observedStrings);
 
       int unionSize = larger.size();
+      if (larger.contains(new Utf8(""))) {
+        unionSize -= 1;
+      }
       int intersectionSize = 0;
       for (Utf8 smallElt: smaller) {
+        if (smallElt.length() == 0) {
+          continue;
+        }
         if (larger.contains(smallElt)) {
           intersectionSize++;
         } else {
           unionSize++;
         }
       }
-      return intersectionSize / (1.0 * unionSize);
+      if (unionSize == 0) {
+        return 0;
+      } else {
+        return intersectionSize / (1.0 * unionSize);
+      }
     }
 
     /////////////////////////////
@@ -1688,12 +1698,15 @@ public class SchemaStatisticalSummary implements Writable {
     // Now pass those costs to the mapping algorithm.
     // Select which mapping algorithm we want to use.  For now, it's 'greedy'.
     //
+    return findGreedyMapping(other, t1, t2, t1Leafs, t2Leafs, t1NonLeafs, t2NonLeafs, allKnownCostPairs);
+    /**
     boolean performTraditionalMapping = false;
     if (performTraditionalMapping) {
       return findTraditionalMapping(other, t1, t2, t1Leafs, t2Leafs, t1NonLeafs, t2NonLeafs, allCosts);
     } else {
       return findGreedyMapping(other, t1, t2, t1Leafs, t2Leafs, t1NonLeafs, t2NonLeafs, allKnownCostPairs);      
     }
+    **/
   }
 
   /**
@@ -1701,6 +1714,7 @@ public class SchemaStatisticalSummary implements Writable {
    * The number of permutations can grow rapidly as the sizes of the two schemas grow, so this method
    * can be very time-consuming.
    */
+  /**
   SchemaMapping findTraditionalMapping(SchemaStatisticalSummary other, SummaryNode t1, SummaryNode t2, Map<Integer, SummaryNode> t1Leafs, Map<Integer, SummaryNode> t2Leafs, Map<Integer, SummaryNode> t1NonLeafs, Map<Integer, SummaryNode> t2NonLeafs, List<DistancePair[]> allCosts) {
     //
     // Figure out how far down into each attr's match-list we can go while only evaluating the
@@ -1942,6 +1956,7 @@ public class SchemaStatisticalSummary implements Writable {
     //
     return new SchemaMapping(this, other, bestCost, bestOps);
   }
+  **/
 
   /**
    * Greedy Mapping is sloppy, but very fast.  It repeatedly accepts the best-looking pairwise
@@ -1969,7 +1984,7 @@ public class SchemaStatisticalSummary implements Writable {
         matching.add(dp);
         observedSrcs.add(srcId);
         observedDsts.add(dstId);
-        outputOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, srcId, other, dstId));
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, srcId, other, dstId, dp.getCost()));
         transformMap.put(srcId, dp.getNode());
         totalCost += dp.getCost();
         if (matching.size() >= Math.min(totalSrcs, totalDsts)) {
@@ -1997,7 +2012,7 @@ public class SchemaStatisticalSummary implements Writable {
       if (knownDstParents.size() == 1) {
         Integer dstIdx = knownDstParents.first();
         SummaryNode dstNode = t2NonLeafs.get(dstIdx);
-        outputOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, iNode.preorderCount(), other, dstIdx));
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.TRANSFORM_OP, this, iNode.preorderCount(), other, dstIdx, 0));
         observedSrcs.add(iNode.preorderCount());
         observedDsts.add(dstIdx);
       }
@@ -2011,7 +2026,7 @@ public class SchemaStatisticalSummary implements Writable {
       int iNodeIdx = iNode.preorderCount();
       if (! observedSrcs.contains(iNodeIdx)) {
         totalCost += iNode.deleteCost();
-        outputOps.add(new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, iNodeIdx));
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.DELETE_OP, this, iNodeIdx, iNode.deleteCost()));
       }
     }
 
@@ -2023,7 +2038,7 @@ public class SchemaStatisticalSummary implements Writable {
       int jNodeIdx = jNode.preorderCount();
       if (! observedDsts.contains(jNodeIdx)) {
         totalCost += jNode.createCost();
-        outputOps.add(new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jNodeIdx));
+        outputOps.add(new SchemaMappingOp(SchemaMappingOp.CREATE_OP, other, jNodeIdx, jNode.createCost()));
       }
     }
     return new SchemaMapping(this, other, totalCost, outputOps);

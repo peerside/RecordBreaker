@@ -30,22 +30,25 @@ public class SchemaMappingOp {
   SchemaStatisticalSummary s2;
   int nodeid1;
   int nodeid2;
+  double cost;
 
   /**
    */
   public SchemaMappingOp() {
   }
-  public SchemaMappingOp(int opcode, SchemaStatisticalSummary s, int nodeid) {
+  public SchemaMappingOp(int opcode, SchemaStatisticalSummary s, int nodeid, double cost) {
     this.opcode = opcode;
     this.s1 = s;
     this.nodeid1 = nodeid;
+    this.cost = cost;
   }
-  public SchemaMappingOp(int opcode, SchemaStatisticalSummary s1, int nodeid1, SchemaStatisticalSummary s2, int nodeid2) {
+  public SchemaMappingOp(int opcode, SchemaStatisticalSummary s1, int nodeid1, SchemaStatisticalSummary s2, int nodeid2, double cost) {
     this.opcode = opcode;
     this.s1 = s1;
     this.nodeid1 = nodeid1;
     this.s2 = s2;
     this.nodeid2 = nodeid2;
+    this.cost = cost;    
   }
   public String getS1DatasetLabel() {
     return s1.getDatasetLabel();
@@ -83,13 +86,13 @@ public class SchemaMappingOp {
   
   public String toString() {
     if (opcode == CREATE_OP) {
-      return "CREATE " + nodeid1 + "(" + s1.getDesc(nodeid1) + ")";
+      return "CREATE " + nodeid1 + "(" + s1.getDesc(nodeid1) + ")  cost=" + cost;
     } else if (opcode == DELETE_OP) {
-      return "DELETE " + nodeid1 + "(" + s1.getDesc(nodeid1) + ")";
+      return "DELETE " + nodeid1 + "(" + s1.getDesc(nodeid1) + ")  cost=" + cost;
     } else if (opcode == TRANSFORM_OP) {
-      return "TRANSFORM " + nodeid1 + " (" + s1.getDesc(nodeid1) + "," + nodeid1 + ")" + " => " + nodeid2 + " (" + s2.getDesc(nodeid2) + "," + nodeid2 + ")";
+      return "TRANSFORM " + nodeid1 + " (" + s1.getDesc(nodeid1) + "," + nodeid1 + ")" + " => " + nodeid2 + " (" + s2.getDesc(nodeid2) + "," + nodeid2 + ")  cost=" + cost;
     } else if (opcode == NEGATIVE_TRANSFORM_OP) {
-      return "NEGATIVE-TRANSFORM " + nodeid1 + " (" + s1.getDesc(nodeid1) + "," + nodeid1 + ")" + " => " + nodeid2 + " (" + s2.getDesc(nodeid2) + "," + nodeid2 + ")";
+      return "NEGATIVE-TRANSFORM " + nodeid1 + " (" + s1.getDesc(nodeid1) + "," + nodeid1 + ")" + " => " + nodeid2 + " (" + s2.getDesc(nodeid2) + "," + nodeid2 + ")  cost=" + cost;
     } else {
       return "<unknown>";
     }

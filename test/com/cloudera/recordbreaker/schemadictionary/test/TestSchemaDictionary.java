@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.util.List;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.ArrayList;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -118,6 +119,8 @@ public class TestSchemaDictionary {
       ss.setUseAttributeLabels(false);
       TreeMap<Integer, Integer> overallSizes = new TreeMap<Integer, Integer>();
       TreeMap<Integer, Integer> failureSizes = new TreeMap<Integer, Integer>();
+      List<Schema> failedSchemas = new ArrayList<Schema>();
+      List<SchemaStatisticalSummary> failedSummaries = new ArrayList<SchemaStatisticalSummary>();
       double totalReciprocalRank = 0;
       int i = 0;
       int failures = 0;
@@ -187,6 +190,8 @@ public class TestSchemaDictionary {
                 sizeCount = new Integer(0);
               }
               failureSizes.put(schemaSize, new Integer(sizeCount.intValue() + 1));
+              failedSchemas.add(testSchema);
+              failedSummaries.add(testSummary);
             }
             i++;        
             System.err.println("After " + i + " tests, MRR is " + (totalReciprocalRank / i));
@@ -228,6 +233,16 @@ public class TestSchemaDictionary {
       System.err.println("Number of match tests: " + i);
       double ratio = failures / (1.0 * i);      
       System.err.println("Number of match test failures: " + failures + " (" + ratio + ")");
+      System.err.println();
+
+      System.err.println("*** Failed Test Schemas ***");
+      for (Schema failedSchema: failedSchemas) {
+        System.err.println("FAILED SCHEMA: " + failedSchema.getName());
+        for (Schema.Field field: failedSchema.getFields()) {
+          System.err.println("  " + field.toString());
+        }
+        System.err.println();
+      }
       
       // Since we're testing on data that is drawn directly from dbs already known to
       // SchemaDictionary, we expect very good results from the mapping ranking.

@@ -128,7 +128,17 @@ public class SchemaSuggest {
           continue;
         }
         for (SchemaDictionaryEntry elt: dictBySize.get(j-1)) {
+          /////////////////////////////
+          // This is where we instrument the mapping stuff.
+          // If the pair is an interesting one, then emit the mapping that
+          // we discover.  Why are good matches going undiscovered?
+          /////////////////////////////
           SchemaMapping mapping = srcSummary.getBestMapping(elt.getSummary());
+          if (srcSchema.getName().equals(elt.getSchema().getName())) {
+            System.err.println("Comparing " + srcSchema.getName() + " with " + elt.getSchema().getName());
+            System.err.println("Obtained mapping: " + mapping.toString());
+          }
+          
           totalSchemasExamined++;
           sorter.add(new DictionaryMapping(mapping, elt));
           numMatches++;
