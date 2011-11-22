@@ -58,7 +58,7 @@ import com.cloudera.recordbreaker.schemadict.SchemaStatisticalSummary;
  * @see InferenceTest
  */
 public class TestSchemaDictionary {
-  static File inputDbDir = new File(System.getProperty("test.samples.dir", "src/samples"), "dbs");
+  static File inputDbDir = new File(System.getProperty("test.samples.dir", "src/samples/freebase"), "dbs");
   static File trainDbDir = new File(inputDbDir, "train");
   static File testDbDir = new File(inputDbDir, "test");
 
