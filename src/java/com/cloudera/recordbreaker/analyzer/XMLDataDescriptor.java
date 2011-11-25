@@ -16,60 +16,51 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.io.IOException;
-
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
-/*************************************************************************************
- * <code>CSVDataDescriptor</code> is a DataDescriptor for comma-separated-value files.
- *
- * These often come from spreadsheets or simple sensor devices.
+/******************************************************************
+ * <code>XMLDataDescriptor</code> captures information about an HDFS .xml file.
  *
  * @author "Michael Cafarella"
  * @version 1.0
  * @since 1.0
  * @see DataDescriptor
- **************************************************************************************/
-public class CSVDataDescriptor implements DataDescriptor {
+ ******************************************************************/
+public class XMLDataDescriptor implements DataDescriptor {
   File f;
   
   /**
-   * Creates a new <code>CSVDataDescriptor</code> instance.
-   *
-   * @param f a <code>File</code> value
-   * @exception IOException if an error occurs
+   * Creates a new <code>XMLDataDescriptor</code> instance.
    */
-  public CSVDataDescriptor(File f) throws IOException {
+  public XMLDataDescriptor(File f) throws IOException {
     this.f = f;
   }
 
   /**
-   * @return the <code>File</code>.
+   * @return the <code>File</code> value
    */
   public File getFilename() {
     return this.f;
   }
 
   /**
-   * @return a <code>String</code> value of 'csv'
+   * @return a <code>String</code> value that describes the filetype
    */
   public String getFileTypeIdentifier() {
-    return "csv";
+    return "xml";
   }
 
   /**
-   * Build a SchemaDescriptor for the CSV file, if possible.
-   * At the very least, this figures out the columnar types and synthesizes
-   * names.  But if topic-specific schema labels are available, we grab
-   * those instead of using syn-labels.
-   *
-   * @return a <code>List<SchemaDescriptor></code> value
+   * <code>getSchemaDescriptor</code> creates (in this case) a single
+   * instance of XMLSchemaDescriptor
    */
   public List<SchemaDescriptor> getSchemaDescriptor() {
     List<SchemaDescriptor> results = new ArrayList<SchemaDescriptor>();
     try {
-      results.add(new CSVSchemaDescriptor(f));
+      results.add(new XMLSchemaDescriptor(f));
     } catch (IOException iex) {
+      iex.printStackTrace();
     }
     return results;
   }

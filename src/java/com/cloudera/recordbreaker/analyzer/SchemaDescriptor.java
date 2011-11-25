@@ -18,7 +18,6 @@ import java.util.Iterator;
 
 import org.apache.avro.Schema;
 
-
 /*****************************************************************************
  * <code>SchemaDescriptor</code> is a container for schema-specific information.  It
  * can be implemented in several different ways, depending on whether the underlying

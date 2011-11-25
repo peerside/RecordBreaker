@@ -16,8 +16,10 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.io.IOException;
-
 import java.util.List;
+
+import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
 
 /*********************************************************************************
  * <code>FormatAnalyzer</code> takes an arbitrary input file and generates a
@@ -48,22 +50,21 @@ public class FormatAnalyzer {
    */
   public DataDescriptor describeData(File f) throws IOException {
     String fname = f.getName();
-    return new CSVDataDescriptor(f);
-//     if (fname.endsWith(".csv")) {
-//       return new CSVDataDescriptor(f);
-//     } else if (fname.endsWith(".xml")) {
-//       //return new XMLDataDescriptor(f);
-//       //} else if (fname.endsWith(".avro") || AvroDataDescriptor.detectFile(f)) {
-//       //return new AvroDataDescriptor(f);
-//       //} else if (KnownTextDataDescriptor.detectFile(f)) {
-//       //return new KnownTextDataDescriptor(f);
-//       //} else if (UnknownTextDataDescriptor.detectFile(f)) {
-//       //return UnknownTextDataDescriptor(f);
-//       //} else {
-//       //return UnstructuredDataDescriptor(f);
-//     }
-//    return null;
+    if (fname.endsWith(".csv")) {
+      return new CSVDataDescriptor(f);
+    } else if (fname.endsWith(".xml")) {
+      return new XMLDataDescriptor(f);
+    } else if (fname.endsWith(".avro")) {
+      return new AvroDataDescriptor(f);
+    } else {
+      return new UnstructuredDataDescriptor(f);
+    }
   }
+  //
+  // KnownTextDataDescriptor
+  //
+  // UnknownTextDataDescriptor
+  //
 
   /**
    * Describe <code>main</code> method here.
@@ -90,8 +91,11 @@ public class FormatAnalyzer {
       System.err.println("Num schemas found: " + schemas.size());
       System.err.println();
       for (SchemaDescriptor sd: schemas) {
-        System.err.println("Schema: " + sd.getSchema());
+        Schema s = sd.getSchema();
+        System.err.println("Got schema!");
+        System.err.println();
         System.err.println("Schema identifier: " + sd.getSchemaIdentifier());
+        System.err.println();
         System.err.println("Schema src desc: " + sd.getSchemaSourceDescription());
       }
     }
