@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 
 /**
  * <code>CSVSchemaDescriptor</code> captures the schema that we extract from a CSV file.
@@ -39,15 +40,14 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
   static int MAX_LINES = 1000;
   static Pattern pattern = Pattern.compile("(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)");
 
-  private static String CELL_TYPE_STRING = "string";
-  private static String CELL_TYPE_INT = "int";
-  private static String CELL_TYPE_DOUBLE = "double";
-  
+  File f;
+  boolean hasHeaderRow;
   Schema schema;
   String schemaIdentifier;
   String schemaSrcDesc;
   
   public CSVSchemaDescriptor(File f) throws IOException {
+    this.f = f;
     computeTypes(f);
   }
 
@@ -59,42 +59,42 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
    * @param val a <code>String</code> value
    * @return a <code>String</code> value
    */
-  private String identifyType(String val) {
+  private Schema.Type identifyType(String val) {
     try {
-      Long.parseLong(val);
-      return CELL_TYPE_INT;
+      Integer.parseInt(val);
+      return Schema.Type.INT;
     } catch (NumberFormatException nfe) {
     }
     try {
       Double.parseDouble(val);
-      return CELL_TYPE_DOUBLE;
+      return Schema.Type.DOUBLE;
     } catch (NumberFormatException nfe) {
     }
-    return CELL_TYPE_STRING;
+    return Schema.Type.STRING;
   }
 
   /**
    * <code>combineTypes()</code> finds the least-common-denominator type
    * between the two input types.
    */
-  private String combineTypes(String typeA, String typeB) {
-    if (typeA == null && typeB == null) {
-      return CELL_TYPE_STRING;
+  private Schema.Type combineTypes(Schema.Type typeA, Schema.Type typeB) {
+    if (typeA == Schema.Type.NULL && typeB == Schema.Type.NULL) {
+      return Schema.Type.STRING;
     }
-    if (typeA == null) {
+    if (typeA == Schema.Type.NULL) {
       return typeB;
     }
-    if (typeB == null) {
+    if (typeB == Schema.Type.NULL) {
       return typeA;
     }
-    if (typeA.equals(typeB)) {
+    if (typeA == typeB) {
       return typeA;
     }
-    if ((typeA.equals(CELL_TYPE_INT) || typeB.equals(CELL_TYPE_INT)) &&
-        (typeA.equals(CELL_TYPE_DOUBLE) || typeB.equals(CELL_TYPE_DOUBLE))) {
-      return CELL_TYPE_DOUBLE;
+    if ((typeA == Schema.Type.INT || typeB == Schema.Type.INT) &&
+        (typeA == Schema.Type.DOUBLE || typeB == Schema.Type.DOUBLE)) {
+      return Schema.Type.DOUBLE;
     }
-    return CELL_TYPE_STRING;
+    return Schema.Type.STRING;
   }
 
   /**
@@ -106,15 +106,16 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     // 1.  Go through all columns in the CSV and identify cell data types
     //
     int numColumns = 0;
-    List<String> firstRow = null;
-    List<List<String>> allEltTypes = new ArrayList<List<String>>();    
+    List<String> firstRow = new ArrayList<String>();
+    List<List<Schema.Type>> allEltTypes = new ArrayList<List<Schema.Type>>();    
     BufferedReader in = new BufferedReader(new FileReader(f));
     try {
       int lineno = 0;
       String s = null;
       while ((s = in.readLine()) != null) {
         Matcher m = pattern.matcher(s);
-        List<String> elts = new ArrayList<String>();
+        List<Schema.Type> schemaTypes = new ArrayList<Schema.Type>();
+        
         while (m.find()) {
           String elt = m.group();
           if (elt.startsWith(",")) {
@@ -126,17 +127,16 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
             elt = elt.trim();
           }
           if (lineno == 0) {
-            elts.add(elt);
+            firstRow.add(elt);
           } else {
-            elts.add(identifyType(elt));
+            schemaTypes.add(identifyType(elt));
           }
         }
 
         if (lineno == 0) {
-          firstRow = elts;
           numColumns = firstRow.size();
         } else {
-          allEltTypes.add(elts);
+          allEltTypes.add(schemaTypes);
         }
         lineno++;
         if (lineno >= MAX_LINES) {
@@ -152,11 +152,11 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     // If all the cells in a column have the same type, this is easy.
     // If not, figure out a type that characterizes the entire column.
     //
-    List<String> columnTypes = new ArrayList<String>();
+    List<Schema.Type> columnTypes = new ArrayList<Schema.Type>();
     for (int curCol = 0; curCol < numColumns; curCol++) {
-      String columnType = null;
-      for (List<String> rowTypes: allEltTypes) {
-        String cellType = rowTypes.get(curCol);
+      Schema.Type columnType = Schema.Type.NULL;
+      for (List<Schema.Type> rowTypes: allEltTypes) {
+        Schema.Type cellType = rowTypes.get(curCol);
         columnType = combineTypes(columnType, cellType);
       }
       columnTypes.add(columnType);
@@ -171,26 +171,26 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     boolean typeClash = false;
     for (int i = 0; i < numColumns; i++) {
       String headerValue = firstRow.get(i);
-      String headerType = identifyType(headerValue);
-      if (! headerType.equals(CSVSchemaDescriptor.CELL_TYPE_STRING)) {
+      Schema.Type headerType = identifyType(headerValue);
+      if (headerType != Schema.Type.STRING) {
         headerAllStrings = false;
       }
-      String columnType = columnTypes.get(i);
-      if (! headerType.equals(columnType)) {
+      Schema.Type columnType = columnTypes.get(i);
+      if (headerType != columnType) {
         typeClash = true;
       }
     }
 
     // Now reason about the types we see
-    boolean hasHeaderRow = false;
+    this.hasHeaderRow = false;
     if (headerAllStrings && typeClash) {
       // Definitely a header row
       hasHeaderRow = true;
     } else if (headerAllStrings && ! typeClash) {
       // Still may be a header row, but harder to say
       boolean allStringCols = true;
-      for (String columnType: columnTypes) {
-        if (! columnType.equals(CSVSchemaDescriptor.CELL_TYPE_STRING)) {
+      for (Schema.Type columnType: columnTypes) {
+        if (columnType != Schema.Type.STRING) {
           allStringCols = false;
         }
       }
@@ -206,22 +206,13 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     for (int i = 0; i < numColumns; i++) {
       String fieldName = "anon." + i;
       String fieldDoc = "csv-noheader-" + fieldName;
-      String fieldType = columnTypes.get(i);
+      Schema.Type fieldType = columnTypes.get(i);
       if (hasHeaderRow) {
         fieldName = firstRow.get(i);
         fieldName = fieldName.replaceAll(" ","_");
         fieldDoc = "csv-header-extract-" + fieldName;
       }
-
-      Schema basicSchemaType = null;
-      if (fieldType.equals(CELL_TYPE_STRING)) {
-        basicSchemaType = Schema.create(Schema.Type.STRING);
-      } else if (fieldType.equals(CELL_TYPE_INT)) {
-        basicSchemaType = Schema.create(Schema.Type.INT);
-      } else if (fieldType.equals(CELL_TYPE_DOUBLE)) {
-        basicSchemaType = Schema.create(Schema.Type.DOUBLE);
-      }
-      schemaFields.add(new Schema.Field(fieldName, basicSchemaType, fieldDoc, null));
+      schemaFields.add(new Schema.Field(fieldName, Schema.create(fieldType), fieldDoc, null));
     }
     this.schema = Schema.createRecord(schemaFields);
 
@@ -232,18 +223,116 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     this.schemaSrcDesc = "Extracted data types from CSV.  " + (hasHeaderRow ? "CSV header detected; used topic-specific field names." : "No CSV headert detected; used anonymous field names.");
   }
 
+  /**
+   * Return the CSV-derived schema
+   */
   public Schema getSchema() {
     return schema;
   }
 
+  /**
+   * Return an object to iterate through all the schema-conformant rows
+   * of the CSV.  The Iterator returns instances of Avro's GenericRecord.
+   */
   public Iterator getIterator() {
-    return null;
+    return new Iterator() {
+      int rowNum;
+      Object nextElt = null;
+      BufferedReader in = null;
+      {
+        rowNum = 0;
+        try {
+          in = new BufferedReader(new FileReader(f));
+          nextElt = lookahead();          
+        } catch (IOException iex) {
+          this.nextElt = null;
+        }
+      }
+      public boolean hasNext() {
+        return nextElt != null;
+      }
+      public synchronized Object next() {
+        Object toReturn = nextElt;
+        nextElt = lookahead();
+        return toReturn;
+      }
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+      Object lookahead() {
+        String s = null;
+        try {
+          List<Schema.Field> curFields = schema.getFields();
+          while ((s = in.readLine()) != null) {
+            rowNum++;
+            if (rowNum == 1 && hasHeaderRow) {
+              continue;
+            }
+            // Parse each line in the file
+            GenericData.Record cur = null;            
+            Matcher m = pattern.matcher(s);
+            int fieldPos = 0;
+
+            while (m.find()) {
+              if (cur == null) {
+                cur = new GenericData.Record(schema);
+              }
+              String rawFieldValue = m.group();
+              if (rawFieldValue.startsWith(",")) {
+                rawFieldValue = rawFieldValue.substring(1);
+              }
+              rawFieldValue = rawFieldValue.trim();
+              if (rawFieldValue.startsWith("\"") && rawFieldValue.endsWith("\"")) {
+                rawFieldValue = rawFieldValue.substring(1, rawFieldValue.length()-1);
+                rawFieldValue = rawFieldValue.trim();
+              }
+
+              Schema.Field curField = curFields.get(fieldPos);
+              String fieldName = curField.name();
+              Schema fieldType = curField.schema();
+              cur.put(fieldName, parseField(rawFieldValue, fieldType.getType()));
+              fieldPos++;
+            }
+            if (cur != null) {
+              return cur;
+            }
+          }
+          if (s == null) {
+            in.close();
+          }
+        } catch (IOException iex) {
+          iex.printStackTrace();
+        }
+        return null;
+      }
+
+      Object parseField(String rawFieldValue, Schema.Type fieldType) throws IOException {
+        Object fieldValue = null;
+        if (fieldType == Schema.Type.INT) {
+          fieldValue = Integer.parseInt(rawFieldValue);
+        } else if (fieldType == Schema.Type.FLOAT) {
+          fieldValue = Float.parseFloat(rawFieldValue);
+        } else if (fieldType == Schema.Type.STRING) {
+          fieldValue = rawFieldValue;
+        } else {
+          throw new IOException("Unexpected field-level schema type: " + fieldType);
+        }
+        return fieldValue;
+      }
+    };
   }
   
+  /**
+   * A string that uniquely identifies the file's schema.  Not necessarily
+   * human-readable.
+   */
   public String getSchemaIdentifier() {
     return schemaIdentifier;
   }
 
+  /**
+   * Human-readable string that summarizes the file's structure
+   */
   public String getSchemaSourceDescription() {
     return schemaSrcDesc;
   }

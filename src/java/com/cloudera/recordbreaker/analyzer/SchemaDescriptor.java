@@ -58,4 +58,11 @@ public interface SchemaDescriptor {
    * @return a <code>String</code> value
    */
   public String getSchemaSourceDescription();
+
+  //////////////////////////////////////////////////////////////////////////////
+  // It would be nice to have future direct support for Pig and Hive queries.
+  // That way, someone could obtain the structure for a file and write an
+  // "interactive-speed" query on it.
+  // e.g., getPigDeserializer()
+  //////////////////////////////////////////////////////////////////////////////
 }

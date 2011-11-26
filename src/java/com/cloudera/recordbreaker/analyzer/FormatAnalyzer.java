@@ -17,9 +17,11 @@ package com.cloudera.recordbreaker.analyzer;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Iterator;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
+import org.apache.avro.generic.GenericData;
 
 /*********************************************************************************
  * <code>FormatAnalyzer</code> takes an arbitrary input file and generates a
@@ -32,11 +34,15 @@ import org.apache.avro.Schema.Field;
  * @since 1.0
  **********************************************************************************/
 public class FormatAnalyzer {
-
+  File schemaDbDir;
+  KnownTextFormatLibrary formatLibrary;
+  
   /**
    * Creates a new <code>FormatAnalyzer</code> instance.
    */
-  public FormatAnalyzer() {
+  public FormatAnalyzer(File schemaDbDir) {
+    this.schemaDbDir = schemaDbDir;
+    this.formatLibrary = new KnownTextFormatLibrary();
   }
 
   /**
@@ -50,6 +56,7 @@ public class FormatAnalyzer {
    */
   public DataDescriptor describeData(File f) throws IOException {
     String fname = f.getName();
+    // Test to see if the file is one of a handful of known structured formats.
     if (fname.endsWith(".csv")) {
       return new CSVDataDescriptor(f);
     } else if (fname.endsWith(".xml")) {
@@ -57,14 +64,27 @@ public class FormatAnalyzer {
     } else if (fname.endsWith(".avro")) {
       return new AvroDataDescriptor(f);
     } else {
-      return new UnstructuredDataDescriptor(f);
+      // Even if it's text, it could have a regular and expected structure
+      // (e.g., Apache access logs).  The formatLibrary object keeps a list
+      // of these cases.  Ask the formatLibrary to test the input data and
+      // see if it corresponds to one of the known formats.
+      //
+      DataDescriptor retval = formatLibrary.createDescriptorForKnownFormat(f);
+      if (retval != null) {
+        return retval;
+      } else {
+        try {
+          // It's not one of the known formats.
+          // Can we recover the format via LearnStructure and SchemaDictionary?
+          return new UnknownTextDataDescriptor(f, schemaDbDir);
+        } catch (Exception iex) {
+          //iex.printStackTrace();
+          // If not, then we finally give up and call it unstructured
+          return new UnstructuredFileDescriptor(f);
+        }
+      }
     }
   }
-  //
-  // KnownTextDataDescriptor
-  //
-  // UnknownTextDataDescriptor
-  //
 
   /**
    * Describe <code>main</code> method here.
@@ -74,12 +94,13 @@ public class FormatAnalyzer {
    */
   public static void main(String argv[]) throws IOException {
     if (argv.length < 1) {
-      System.err.println("Usage: FormatAnalyzer <inputfile>");
+      System.err.println("Usage: FormatAnalyzer <inputfile> <schemaDbDir>");
       return;
     }
 
     File inputFile = new File(argv[0]);
-    FormatAnalyzer fa = new FormatAnalyzer();
+    File schemaDbDir = new File(argv[1]);
+    FormatAnalyzer fa = new FormatAnalyzer(schemaDbDir);
 
     DataDescriptor descriptor = fa.describeData(inputFile);
     System.err.println("Filename: " + descriptor.getFilename());
@@ -97,6 +118,12 @@ public class FormatAnalyzer {
         System.err.println("Schema identifier: " + sd.getSchemaIdentifier());
         System.err.println();
         System.err.println("Schema src desc: " + sd.getSchemaSourceDescription());
+        System.err.println();
+        //System.err.println("Schema iterator: " + 
+        for (Iterator it = sd.getIterator(); it.hasNext(); ) {
+          GenericData.Record curRow = (GenericData.Record) it.next();
+          System.err.println("Cur row: " + curRow);
+        }
       }
     }
   }

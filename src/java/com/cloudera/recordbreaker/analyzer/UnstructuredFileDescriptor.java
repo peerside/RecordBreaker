@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 /********************************************************************
- * <code>UnstructuredDataDescriptor</code> holds no structured data.
+ * <code>UnstructuredFileDescriptor</code> holds no structured data.
  * It doesn't have a schema to recover.
  *
  * @author "Michael Cafarella"
@@ -27,9 +27,9 @@ import java.util.ArrayList;
  * @since 1.0
  * @see DataDescriptor
  ********************************************************************/
-public class UnstructuredDataDescriptor implements DataDescriptor {
+public class UnstructuredFileDescriptor implements DataDescriptor {
   File f;
-  public UnstructuredDataDescriptor(File f) {
+  public UnstructuredFileDescriptor(File f) {
     this.f = f;
   }
 
