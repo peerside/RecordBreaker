@@ -37,15 +37,12 @@ public class LearnStructure {
   public static String DATA_FILENAME = "data.avro";
   public static String PARSER_FILENAME = "parser.dat";
 
+  public LearnStructure() {
+  }
+  
   /**
-   *
    */
-  public void inferRecordFormat(File f, File outdir, boolean emitAvro) throws IOException {
-    File schemaFile = new File(outdir, SCHEMA_FILENAME);
-    File jsonDataFile = new File(outdir, JSONDATA_FILENAME);
-    File dataFile = new File(outdir, DATA_FILENAME);
-    File parseTreeFile = new File(outdir, PARSER_FILENAME);
-
+  public void inferRecordFormat(File f, File schemaFile, File parseTreeFile, File jsonDataFile, File avroDataFile) throws IOException {    
     // Store parse errors and results
     List<Integer> unparseableLineNos = new ArrayList<Integer>();
     List<String> unparseableStrs = new ArrayList<String>();
@@ -106,34 +103,31 @@ public class LearnStructure {
     // 2) A serialized parser program that can consume data and emit Avro files using the given schema
     //
     Schema s = typeTree.getAvroSchema();
-    BufferedWriter out = new BufferedWriter(new FileWriter(schemaFile));
-    try {
-      out.write(s.toString(true));
-    } finally {
-      out.close();
+    if (schemaFile != null) {
+      BufferedWriter out = new BufferedWriter(new FileWriter(schemaFile));
+      try {
+        out.write(s.toString(true));
+      } finally {
+        out.close();
+      }
     }
-    DataOutputStream outd = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(parseTreeFile)));
-    try {
-      typeTree.write(outd);
-    } finally {
-      outd.close();
+    if (parseTreeFile != null) {
+      DataOutputStream outd = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(parseTreeFile)));
+      try {
+        typeTree.write(outd);
+      } finally {
+        outd.close();
+      }
     }
 
     //
     // Apply the typetree's parser.
     //
-    if (emitAvro) {
-      int numGoodParses = 0;
-      int lineno = 0;
+    if (jsonDataFile != null) {
       Schema schema = typeTree.getAvroSchema();
-      GenericDatumWriter jsonGDWriter = new GenericDatumWriter(schema);
+      GenericDatumWriter jsonGDWriter = new GenericDatumWriter(schema);      
       BufferedOutputStream outJson = new BufferedOutputStream(new FileOutputStream(jsonDataFile));
       JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, outJson);
-
-      GenericDatumWriter gdWriter = new GenericDatumWriter(schema);
-      DataFileWriter outData = new DataFileWriter(gdWriter);
-      outData = outData.create(schema, dataFile);
-
       try {
         in = new BufferedReader(new FileReader(f));
         try {
@@ -143,10 +137,37 @@ public class LearnStructure {
             GenericContainer gct = typeTree.parse(str);
 
             if (gct != null) {
-              numGoodParses++;
               jsonGDWriter.write(gct, encoder);
+            }
+            str = in.readLine();
+          }      
+        } finally {
+          in.close();
+        }
+      } finally {
+        encoder.flush();
+        outJson.close();
+      }
+    }
+
+    if (avroDataFile != null) {
+      int numGoodParses = 0;
+      int lineno = 0;
+      Schema schema = typeTree.getAvroSchema();
+
+      GenericDatumWriter gdWriter = new GenericDatumWriter(schema);
+      DataFileWriter outData = new DataFileWriter(gdWriter);
+      outData = outData.create(schema, avroDataFile);
+
+      try {
+        in = new BufferedReader(new FileReader(f));
+        try {
+          String str = in.readLine();
+          while (str != null) {
+            GenericContainer gct = typeTree.parse(str);
+            if (gct != null) {
+              numGoodParses++;
               outData.append(gct);
-              //System.err.println("Good parse " + numGoodParses);
             } else {
               System.err.println("unparsed line: '" + str + "'");
             }
@@ -157,8 +178,6 @@ public class LearnStructure {
           in.close();
         }
       } finally {
-        encoder.flush();
-        outJson.close();
         outData.close();
       }
       System.err.println();
@@ -192,8 +211,15 @@ public class LearnStructure {
       throw new IOException("Output directory already exists: " + outdir);
     }
     outdir.mkdirs();
-
+    File schemaFile = new File(outdir, SCHEMA_FILENAME);
+    File parseTreeFile = new File(outdir, PARSER_FILENAME);    
+    File jsonDataFile = null;
+    File avroDataFile = null;
+    if (emitAvro) {
+      jsonDataFile = new File(outdir, JSONDATA_FILENAME);    
+      avroDataFile = new File(outdir, DATA_FILENAME);
+    }
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, outdir, emitAvro);
+    ls.inferRecordFormat(f, schemaFile, parseTreeFile, jsonDataFile, avroDataFile);
   }
 }
