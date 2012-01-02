@@ -32,7 +32,10 @@
       <dependency org="org.apache.rat" name="apache-rat-tasks" rev="0.7" />
       <dependency org="org.apache.rat" name="apache-rat" rev="0.7" />
       <dependency org="junit" name="junit" rev="4.8.1" />
-
+      <dependency org="com.almworks.sqlite4java" name="sqlite4java" rev="0.213" />
+      <dependency org="com.almworks.sqlite4java" name="libsqlite4java-osx" rev="0.213">
+        <include type="jnilib"/>
+      </dependency>
       <exclude org="ant-eclipse" module="ant-eclipse" />
     </dependencies>
 </ivy-module>
