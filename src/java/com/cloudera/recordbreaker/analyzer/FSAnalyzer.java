@@ -211,6 +211,15 @@ public class FSAnalyzer {
   //
   // 3. Analytics queries
   //
+  // For unified file listing: select F.fname, T.typelabel, S.schemadescriptor from Schemas S, Files F, Types T, TypeGuesses TG where F.fid = TG.fid AND TG.schemaid = S.schemaid AND TG.typeid = T.typeid;
+  //
+  // For type statistics over entire db
+  // select T.typelabel, COUNT(T.typelabel) from Files F, Types T, TypeGuesses TG where F.fid = TG.fid AND TG.typeid = T.typeid GROUP BY T.typelabel;
+  //
+  // For schema statistics over entire db
+  // select S.schemalabel, COUNT(S.schemalabel) from Files F, Schemas S, TypeGuesses TG where F.fid = TG.fid AND TG.schemaid = S.schemaid GROUP BY S.schemalabel;
+  //
+  //
   static String subpathFilesQuery = "SELECT fid from Files WHERE path LIKE ?";
   List<Long> getFidUnderPath(String pathPrefix) throws SQLiteException {
     List<Long> results = new ArrayList<Long>();
@@ -230,11 +239,12 @@ public class FSAnalyzer {
     
   File store;
   SQLiteConnection db;
+  FormatAnalyzer formatAnalyzer;
   
   /**
    * Inits (and optionally creates) a new <code>FSAnalyzer</code> instance.
    */
-  public FSAnalyzer(File store) throws IOException, SQLiteException {
+  public FSAnalyzer(File store, File schemaDir) throws IOException, SQLiteException {
     boolean isNew = false;
     if (! store.exists()) {
       isNew = true;
@@ -245,25 +255,47 @@ public class FSAnalyzer {
     if (isNew) {
       createTables();
     }
+
+    this.formatAnalyzer = new FormatAnalyzer(schemaDir);
   }
 
   void close() throws IOException, SQLiteException {
     db.dispose();
   }
 
+  /**
+   * <code>addFile</code> will insert a single file into the database.
+   * This isn't the most efficient thing in the world; it would be better
+   * to add a batch at a time.
+   */
   void addFile(File f, String crawlDate) throws IOException, SQLiteException {
-    List<TypeGuess> tgs = new ArrayList<TypeGuess>();
-    if (r.nextBoolean()) {
-      tgs.add(new TypeGuess("xml", "XML", "state,governor", "All the states", 1.0));
+    List<TypeGuess> tgs = new ArrayList<TypeGuess>();    
+
+    DataDescriptor descriptor = formatAnalyzer.describeData(f);
+    List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();
+
+    if (schemas == null || schemas.size() == 0) {
+      tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
+                            "no schema", "no schema", 1.0));
     } else {
-      tgs.add(new TypeGuess("csv", "CSV", "state,governor", "All the states", 1.0));
+      for (SchemaDescriptor sd: schemas) {
+        tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
+                              sd.getSchemaIdentifier(), sd.getSchemaSourceDescription(), 1.0));
+      }
     }
 
     Date dateModified = new Date(f.lastModified());
     long id = insertIntoFiles(f.getName(), "mjc", f.length(), fileDateFormat.format(dateModified), f.getCanonicalFile().getParent(), crawlDate, tgs);
   }
   
-  void crawl(File f) throws IOException, SQLiteException {
+  /**
+   * Traverse an entire region of the filesystem, analyzing files.
+   * This code should:
+   * a) Navigate the directory hierarchy
+   * b) Run analysis code to figure out the file details
+   * c) Invoke addFile() appropriately.
+   */
+  void crawl(File f, int subdirDepth) throws IOException, SQLiteException {
     Date now = new Date(System.currentTimeMillis());
     String crawlDate = fileDateFormat.format(now);
     
@@ -271,6 +303,13 @@ public class FSAnalyzer {
       for (File subfile: f.listFiles()) {
         if (subfile.isFile()) {
           addFile(subfile, crawlDate);
+        }
+      }
+      if (subdirDepth > 0) {
+        for (File subfile: f.listFiles()) {
+          if (! subfile.isFile()) {
+            crawl(subfile, subdirDepth-1);
+          }
         }
       }
     } else {
@@ -284,19 +323,23 @@ public class FSAnalyzer {
   }
 
   public static void main(String argv[]) throws IOException, SQLiteException {
-    if (argv.length < 3) {
-      System.err.println("Usage: FSAnalyzer <storedir> (--crawl <dir> | --query q)");
+    if (argv.length < 4) {
+      System.err.println("Usage: FSAnalyzer <storedir> <schemaDbDir> (--crawl <dir> <subdirdepth> | --query q)");
       return;
     }
-    File storedir = new File(argv[0]).getCanonicalFile();
-    String op = argv[1];
-    FSAnalyzer fsa = new FSAnalyzer(storedir);
+    int i = 0;
+    File storedir = new File(argv[i++]).getCanonicalFile();
+    File schemadbdir = new File(argv[i++]).getCanonicalFile();
+    String op = argv[i++];
+    FSAnalyzer fsa = new FSAnalyzer(storedir, schemadbdir);
 
     try {
       if ("--crawl".equals(op)) {
-        fsa.crawl(new File(argv[2]).getCanonicalFile());
+        File dir = new File(argv[i++]).getCanonicalFile();
+        int subdirDepth = Integer.parseInt(argv[i++]);
+        fsa.crawl(dir, subdirDepth);
       } else if ("--query".equals(op)) {
-        fsa.query(argv[2]);
+        fsa.query(argv[i]);
       }
     } finally {
       fsa.close();
