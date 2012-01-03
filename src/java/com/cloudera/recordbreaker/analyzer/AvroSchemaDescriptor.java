@@ -34,6 +34,7 @@ import org.apache.avro.generic.GenericDatumReader;
  * @see SchemaDescriptor
  *************************************************************************/
 public class AvroSchemaDescriptor implements SchemaDescriptor {
+  File f;
   Schema schema;
   
   /**
@@ -41,12 +42,14 @@ public class AvroSchemaDescriptor implements SchemaDescriptor {
    * In particular, it loads the Avro file and grabs the Schema object.
    */
   public AvroSchemaDescriptor(File f) throws IOException {
+    this.f = f;
     DataFileReader<Void> reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
     try {
       this.schema = reader.getSchema();
     } finally {
       reader.close();
     }
+    
   }
 
   /**
@@ -59,7 +62,40 @@ public class AvroSchemaDescriptor implements SchemaDescriptor {
   /**
    */
   public Iterator getIterator() {
-    return null;
+    return new Iterator() {
+      Object nextElt = null;
+      DataFileReader<Void> reader = null;
+      {
+        try {
+          reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
+          nextElt = lookahead();
+        } catch (IOException iex) {
+          this.nextElt = null;
+        }
+      }
+      public boolean hasNext() {
+        return nextElt != null;
+      }
+      public synchronized Object next() {
+        Object toReturn = nextElt;
+        nextElt = lookahead();
+        return toReturn;
+      }
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+      Object lookahead() {
+        try {
+          if (reader.hasNext()) {
+            return reader.next();
+          }
+          reader.close();
+        } catch (IOException iex) {
+          iex.printStackTrace();
+        }
+        return null;
+      }
+    };
   }
   
   /**
