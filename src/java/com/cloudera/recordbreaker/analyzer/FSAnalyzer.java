@@ -199,7 +199,7 @@ public class FSAnalyzer {
 
       stmt = db.prepare("INSERT into TypeGuesses VALUES(?, ?, ?, ?, ?)");
       try {
-        stmt.bind(1, crawlId).bind(2, fileId).bind(3, typeId).bind(4, schemaId).bind(5, score);
+        stmt.bind(1, fileId).bind(2, crawlId).bind(3, typeId).bind(4, schemaId).bind(5, score);
         stmt.step();
       } finally {
         stmt.dispose();
