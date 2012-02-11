@@ -28,7 +28,7 @@ import java.util.ArrayList;
  * @see DataDescriptor
  ******************************************************************/
 public class XMLDataDescriptor implements DataDescriptor {
-  File f;
+  File f = null;
   
   /**
    * Creates a new <code>XMLDataDescriptor</code> instance.

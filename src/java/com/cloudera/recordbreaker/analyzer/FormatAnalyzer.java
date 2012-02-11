@@ -73,15 +73,19 @@ public class FormatAnalyzer {
       if (retval != null) {
         return retval;
       } else {
+        return new UnstructuredFileDescriptor(f);
+
+        // Turn off LearnStructure for now, to make this easier to debug.
+        /**
         try {
           // It's not one of the known formats.
           // Can we recover the format via LearnStructure and SchemaDictionary?
           return new UnknownTextDataDescriptor(f, schemaDbDir);
         } catch (Exception iex) {
-          //iex.printStackTrace();
           // If not, then we finally give up and call it unstructured
           return new UnstructuredFileDescriptor(f);
         }
+        **/
       }
     }
   }
@@ -113,16 +117,15 @@ public class FormatAnalyzer {
       System.err.println();
       for (SchemaDescriptor sd: schemas) {
         Schema s = sd.getSchema();
-        System.err.println("Got schema!");
+        System.err.println("Schema src desc: " + sd.getSchemaSourceDescription());
         System.err.println();
         System.err.println("Schema identifier: " + sd.getSchemaIdentifier());
         System.err.println();
-        System.err.println("Schema src desc: " + sd.getSchemaSourceDescription());
-        System.err.println();
-        //System.err.println("Schema iterator: " + 
+        int i = 0;
         for (Iterator it = sd.getIterator(); it.hasNext(); ) {
           GenericData.Record curRow = (GenericData.Record) it.next();
-          System.err.println("Cur row: " + curRow);
+          System.err.println(i + ". Elt: " + curRow);
+          i++;
         }
       }
     }
