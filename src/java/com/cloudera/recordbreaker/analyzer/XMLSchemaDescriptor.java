@@ -267,6 +267,9 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
       if (children.size() == 0) {
         TagEnvironment hoistTarget = getHoistTarget();
         String fieldLabel = buildHoistedLabel(hoistTarget);
+        if (fieldLabel.length() == 0) {
+          fieldLabel = getLabel();
+        }
         hoistTarget.addField(getTypedData(), new Schema.Field(fieldLabel, Schema.create(getDataSchema()), "", null));
       } else {
         for (TagEnvironment child: children) {
