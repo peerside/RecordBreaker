@@ -310,8 +310,8 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
         Object fieldValue = null;
         if (fieldType == Schema.Type.INT) {
           fieldValue = Integer.parseInt(rawFieldValue);
-        } else if (fieldType == Schema.Type.FLOAT) {
-          fieldValue = Float.parseFloat(rawFieldValue);
+        } else if (fieldType == Schema.Type.DOUBLE) {
+          fieldValue = Double.parseDouble(rawFieldValue);
         } else if (fieldType == Schema.Type.STRING) {
           fieldValue = rawFieldValue;
         } else {

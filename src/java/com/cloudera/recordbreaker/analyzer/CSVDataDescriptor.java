@@ -16,6 +16,11 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.FileReader;
+import java.io.BufferedReader;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +36,56 @@ import java.util.List;
  * @see DataDescriptor
  **************************************************************************************/
 public class CSVDataDescriptor implements DataDescriptor {
+  private static int MAX_LINES = 25;
+  private static double MAX_ALLOWABLE_LINE_STDDEV = 0.1;
+
+  /**
+   * Test whether a given file is amenable to CSV processing
+   */
+  public static boolean isCSV(File f) throws IOException {
+    String fname = f.getName();    
+    if (fname.endsWith(".csv")) {
+      return true;
+    }
+    BufferedReader in = new BufferedReader(new FileReader(f));
+    try {
+      int lineCount = 0;
+      List<Integer> observedEltCounts = new ArrayList<Integer>();
+      int totalEltCount = 0;
+      int minEltCount = Integer.MAX_VALUE;
+      int maxEltCount = -1;
+
+      String line = null;
+      while (lineCount < MAX_LINES && ((line = in.readLine()) != null)) {
+        Matcher m = CSVSchemaDescriptor.pattern.matcher(line);
+        int numElts = 0;
+        while (m.find()) {
+          numElts++;
+        }
+        minEltCount = Math.min(minEltCount, numElts);
+        maxEltCount = Math.max(maxEltCount, numElts);
+        totalEltCount += numElts;
+        observedEltCounts.add(numElts);
+        
+        lineCount++;
+      }
+      double meanEltCount = totalEltCount / (1.0 * observedEltCounts.size());
+      double totalVariance = 0;
+      for (Integer v: observedEltCounts) {
+        totalVariance += Math.pow(v - meanEltCount, 2);
+      }
+      double variance = totalVariance / observedEltCounts.size();
+      double stddev = Math.sqrt(variance);
+
+      if ((stddev / meanEltCount) < MAX_ALLOWABLE_LINE_STDDEV) {
+        return true;
+      }
+    } finally {
+      in.close();
+    }
+    return false;
+  }
+
   File f;
   
   /**

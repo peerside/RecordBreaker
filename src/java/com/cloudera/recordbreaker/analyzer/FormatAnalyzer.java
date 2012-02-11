@@ -57,7 +57,7 @@ public class FormatAnalyzer {
   public DataDescriptor describeData(File f) throws IOException {
     String fname = f.getName();
     // Test to see if the file is one of a handful of known structured formats.
-    if (fname.endsWith(".csv")) {
+    if (CSVDataDescriptor.isCSV(f)) {
       return new CSVDataDescriptor(f);
     } else if (fname.endsWith(".xml")) {
       return new XMLDataDescriptor(f);
