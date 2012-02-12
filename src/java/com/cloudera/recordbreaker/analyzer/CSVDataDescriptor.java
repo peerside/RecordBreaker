@@ -19,9 +19,6 @@ import java.io.IOException;
 import java.io.FileReader;
 import java.io.BufferedReader;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +36,7 @@ import au.com.bytecode.opencsv.CSVParser;
  **************************************************************************************/
 public class CSVDataDescriptor implements DataDescriptor {
   private static int MAX_LINES = 25;
+  private static int MIN_MEAN_ELTS = 3;
   private static double MAX_ALLOWABLE_LINE_STDDEV = 0.1;
 
   /**
@@ -78,7 +76,7 @@ public class CSVDataDescriptor implements DataDescriptor {
         double variance = totalVariance / observedEltCounts.size();
         double stddev = Math.sqrt(variance);
 
-        if (meanEltCount >= 3 && ((stddev / meanEltCount) < MAX_ALLOWABLE_LINE_STDDEV)) {
+        if (meanEltCount >= MIN_MEAN_ELTS && ((stddev / meanEltCount) < MAX_ALLOWABLE_LINE_STDDEV)) {
           return true;
         }
       } finally {

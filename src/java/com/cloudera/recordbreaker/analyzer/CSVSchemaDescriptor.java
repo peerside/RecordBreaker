@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+
+import au.com.bytecode.opencsv.CSVParser;
 
 /**
  * <code>CSVSchemaDescriptor</code> captures the schema that we extract from a CSV file.
@@ -38,7 +38,6 @@ import org.apache.avro.generic.GenericData;
  */
 public class CSVSchemaDescriptor implements SchemaDescriptor {
   static int MAX_LINES = 1000;
-  static Pattern pattern = Pattern.compile("(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)");
 
   File f;
   boolean hasHeaderRow;
@@ -107,17 +106,18 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     //
     int numColumns = 0;
     List<String> firstRow = new ArrayList<String>();
-    List<List<Schema.Type>> allEltTypes = new ArrayList<List<Schema.Type>>();    
+    List<List<Schema.Type>> allEltTypes = new ArrayList<List<Schema.Type>>();
+    CSVParser parser = new CSVParser();    
     BufferedReader in = new BufferedReader(new FileReader(f));
     try {
       int lineno = 0;
       String s = null;
       while ((s = in.readLine()) != null) {
-        Matcher m = pattern.matcher(s);
         List<Schema.Type> schemaTypes = new ArrayList<Schema.Type>();
-        
-        while (m.find()) {
-          String elt = m.group();
+        String parts[] = parser.parseLine(s);
+
+        for (int i = 0; i < parts.length; i++) {
+          String elt = parts[i];
           if (elt.startsWith(",")) {
             elt = elt.substring(1);
           }
@@ -126,6 +126,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
             elt = elt.substring(1, elt.length()-1);
             elt = elt.trim();
           }
+
           if (lineno == 0) {
             firstRow.add(elt);
           } else {
@@ -238,12 +239,14 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
    */
   public Iterator getIterator() {
     return new Iterator() {
+      CSVParser parser;
       int rowNum;
       Object nextElt = null;
       BufferedReader in = null;
       {
         rowNum = 0;
         try {
+          this.parser = new CSVParser();
           in = new BufferedReader(new FileReader(f));
           nextElt = lookahead();          
         } catch (IOException iex) {
@@ -272,14 +275,14 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
             }
             // Parse each line in the file
             GenericData.Record cur = null;            
-            Matcher m = pattern.matcher(s);
+            String parts[] = parser.parseLine(s);
             int fieldPos = 0;
 
-            while (m.find()) {
+            for (int i = 0; i < parts.length; i++) {
               if (cur == null) {
                 cur = new GenericData.Record(schema);
               }
-              String rawFieldValue = m.group();
+              String rawFieldValue = parts[i];
               if (rawFieldValue.startsWith(",")) {
                 rawFieldValue = rawFieldValue.substring(1);
               }
