@@ -39,7 +39,8 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
   File f;
   File schemaDictDir;
   File workingAvroFile;
-  List<SchemaDescriptor> schemaDescriptors;
+  File workingSchemaFile;
+  List<SchemaDescriptor> schemaDescriptors = new ArrayList<SchemaDescriptor>();
   
   /**
    * Creates a new <code>UnknownTextDataDescriptor</code>.
@@ -48,32 +49,30 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
     this.f = f;
     this.schemaDictDir = schemaDictDir;    
     this.workingAvroFile = File.createTempFile("textdesc", "avro", null);
+    this.workingSchemaFile = File.createTempFile("textdesc", "schema", null);
 
-    computeSchema(f);
-  }
-
-  // 1.  We already have a synthesized Avro data, with anonymous fields.
-  // 2.  Test it against the known database of types.
-  // 3.  Return the top-k types/schemas that we discover, as long as they pass a threshold.
-  void computeSchema(File f) throws IOException {
+    // 1.  We already have a synthesized Avro data, with anonymous fields.
+    // 2.  Test it against the known database of types.
+    // 3.  Return the top-k types/schemas that we discover, as long as they pass a threshold.
+    System.err.println("--------------------------------------");
+    System.err.println("About to infer structure...");
+    System.err.println("--------------------------------------");    
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, null, null, null, workingAvroFile);
-    this.schemaDescriptors = new ArrayList<SchemaDescriptor>();
+    ls.inferRecordFormat(f, workingSchemaFile, null, null, workingAvroFile, false);
 
     // The most basic schema descriptor is the raw one that captures the anonymous avro file
     schemaDescriptors.add(new UnknownTextSchemaDescriptor(workingAvroFile));
 
     // We might be able to find more interesting descriptors by using the SchemaDictionary
-    SchemaSuggest ss = new SchemaSuggest(schemaDictDir);
-    List<DictionaryMapping> schemaMappings = ss.inferSchemaMapping(workingAvroFile, 10);
-
-    int count = 0;
-    for (DictionaryMapping dm: schemaMappings) {
+    //SchemaSuggest ss = new SchemaSuggest(schemaDictDir);
+    //List<DictionaryMapping> schemaMappings = ss.inferSchemaMapping(workingAvroFile, 10);
+    //int count = 0;
+    //for (DictionaryMapping dm: schemaMappings) {
       // Obtaining a dictionarymapping via 'inferSchemaMapping' is like acquiring a transformation function that hasn't been applied yet.
       // We apply the function to obtain a novel Avro file, then return a schema descriptor for this transformed data file.
       //schemaDescriptors.add(new UnknownTextSchemaDescriptor(dm.applyAvroTransform(workingAvroFile, File.createTempFile("textdesc-" + count, "avro", null))));
-      count++;
-    }
+    //count++;
+    //}
   }
 
   /**

@@ -101,7 +101,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
    * <code>computeTypes</code> examines the CSV file and tries to figure out the
    * columnar data types.  It also tests if there's a CSV header that it can extract.
    */
-  void computeTypes(File f) throws IOException {
+  void computeTypes(File f) throws IOException {   
     //
     // 1.  Go through all columns in the CSV and identify cell data types
     //
@@ -156,8 +156,10 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     for (int curCol = 0; curCol < numColumns; curCol++) {
       Schema.Type columnType = Schema.Type.NULL;
       for (List<Schema.Type> rowTypes: allEltTypes) {
-        Schema.Type cellType = rowTypes.get(curCol);
-        columnType = combineTypes(columnType, cellType);
+        if (curCol < rowTypes.size()) {
+          Schema.Type cellType = rowTypes.get(curCol);
+          columnType = combineTypes(columnType, cellType);
+        }
       }
       columnTypes.add(columnType);
     }
@@ -204,7 +206,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     //
     List<Schema.Field> schemaFields = new ArrayList<Schema.Field>();
     for (int i = 0; i < numColumns; i++) {
-      String fieldName = "anon." + i;
+      String fieldName = "anon_" + i;
       String fieldDoc = "csv-noheader-" + fieldName;
       Schema.Type fieldType = columnTypes.get(i);
       if (hasHeaderRow) {
@@ -309,7 +311,12 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
       Object parseField(String rawFieldValue, Schema.Type fieldType) throws IOException {
         Object fieldValue = null;
         if (fieldType == Schema.Type.INT) {
-          fieldValue = Integer.parseInt(rawFieldValue);
+          try {
+            fieldValue = Integer.parseInt(rawFieldValue);
+          } catch (NumberFormatException nfe) {
+            nfe.printStackTrace();
+            fieldValue = 0;
+          }
         } else if (fieldType == Schema.Type.DOUBLE) {
           fieldValue = Double.parseDouble(rawFieldValue);
         } else if (fieldType == Schema.Type.STRING) {

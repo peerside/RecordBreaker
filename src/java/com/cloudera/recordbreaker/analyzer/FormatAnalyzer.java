@@ -73,19 +73,14 @@ public class FormatAnalyzer {
       if (retval != null) {
         return retval;
       } else {
-        return new UnstructuredFileDescriptor(f);
-
-        // Turn off LearnStructure for now, to make this easier to debug.
-        /**
+        // It's not one of the known formats, so apply LearnStructure (and
+        // SchemaDictionary), then emit the resulting Avro data.
         try {
-          // It's not one of the known formats.
-          // Can we recover the format via LearnStructure and SchemaDictionary?
           return new UnknownTextDataDescriptor(f, schemaDbDir);
         } catch (Exception iex) {
-          // If not, then we finally give up and call it unstructured
+          // If that doesn't work, then give up and call it unstructured
           return new UnstructuredFileDescriptor(f);
         }
-        **/
       }
     }
   }

@@ -25,6 +25,8 @@ import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.List;
 
+import au.com.bytecode.opencsv.CSVParser;
+
 /*************************************************************************************
  * <code>CSVDataDescriptor</code> is a DataDescriptor for comma-separated-value files.
  *
@@ -42,46 +44,47 @@ public class CSVDataDescriptor implements DataDescriptor {
   /**
    * Test whether a given file is amenable to CSV processing
    */
-  public static boolean isCSV(File f) throws IOException {
+  public static boolean isCSV(File f) {
     String fname = f.getName();    
     if (fname.endsWith(".csv")) {
       return true;
     }
-    BufferedReader in = new BufferedReader(new FileReader(f));
+    CSVParser parser = new CSVParser();
     try {
-      int lineCount = 0;
-      List<Integer> observedEltCounts = new ArrayList<Integer>();
-      int totalEltCount = 0;
-      int minEltCount = Integer.MAX_VALUE;
-      int maxEltCount = -1;
+      BufferedReader in = new BufferedReader(new FileReader(f));
+      try {
+        int lineCount = 0;
+        List<Integer> observedEltCounts = new ArrayList<Integer>();
+        int totalEltCount = 0;
+        int minEltCount = Integer.MAX_VALUE;
+        int maxEltCount = -1;
 
-      String line = null;
-      while (lineCount < MAX_LINES && ((line = in.readLine()) != null)) {
-        Matcher m = CSVSchemaDescriptor.pattern.matcher(line);
-        int numElts = 0;
-        while (m.find()) {
-          numElts++;
-        }
-        minEltCount = Math.min(minEltCount, numElts);
-        maxEltCount = Math.max(maxEltCount, numElts);
-        totalEltCount += numElts;
-        observedEltCounts.add(numElts);
+        String line = null;
+        while (lineCount < MAX_LINES && ((line = in.readLine()) != null)) {
+          String parts[] = parser.parseLine(line);
+          int numElts = parts.length;
+          minEltCount = Math.min(minEltCount, numElts);
+          maxEltCount = Math.max(maxEltCount, numElts);
+          totalEltCount += numElts;
+          observedEltCounts.add(numElts);
         
-        lineCount++;
-      }
-      double meanEltCount = totalEltCount / (1.0 * observedEltCounts.size());
-      double totalVariance = 0;
-      for (Integer v: observedEltCounts) {
-        totalVariance += Math.pow(v - meanEltCount, 2);
-      }
-      double variance = totalVariance / observedEltCounts.size();
-      double stddev = Math.sqrt(variance);
+          lineCount++;
+        }
+        double meanEltCount = totalEltCount / (1.0 * observedEltCounts.size());
+        double totalVariance = 0;
+        for (Integer v: observedEltCounts) {
+          totalVariance += Math.pow(v - meanEltCount, 2);
+        }
+        double variance = totalVariance / observedEltCounts.size();
+        double stddev = Math.sqrt(variance);
 
-      if ((stddev / meanEltCount) < MAX_ALLOWABLE_LINE_STDDEV) {
-        return true;
+        if (meanEltCount >= 3 && ((stddev / meanEltCount) < MAX_ALLOWABLE_LINE_STDDEV)) {
+          return true;
+        }
+      } finally {
+        in.close();
       }
-    } finally {
-      in.close();
+    } catch (IOException ie) {
     }
     return false;
   }

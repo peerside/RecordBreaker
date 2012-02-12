@@ -33,41 +33,10 @@ import org.apache.avro.generic.GenericDatumReader;
  * @since 1.0
  * @see SchemaDescriptor
  *************************************************************************/
-public class UnknownTextSchemaDescriptor implements SchemaDescriptor {
-  Schema schema;
-
-  /**
-   * Creates a new <code>UnknownTextSchemaDescriptor</code> out of the given Avro file
-   */
+public class UnknownTextSchemaDescriptor extends AvroSchemaDescriptor {
   public UnknownTextSchemaDescriptor(File f) throws IOException {
-    DataFileReader<Void> reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
-    try {
-      this.schema = reader.getSchema();
-    } finally {
-      reader.close();
-    }
+    super(f);
   }
-
-  /**
-   * @return the <code>Schema</code> value
-   */
-  public Schema getSchema() {
-    return schema;
-  }
-  
-  /**
-   */
-  public Iterator getIterator() {
-    return null;
-  }
-  
-  /**
-   * @return a <code>String</code> that uniquely identifies the schema
-   */
-  public String getSchemaIdentifier() {
-    return schema.toString();
-  }
-
   /**
    * @return a <code>String</code> that annotates the schema
    */

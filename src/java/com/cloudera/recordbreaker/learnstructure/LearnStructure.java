@@ -42,7 +42,7 @@ public class LearnStructure {
   
   /**
    */
-  public void inferRecordFormat(File f, File schemaFile, File parseTreeFile, File jsonDataFile, File avroDataFile) throws IOException {    
+  public void inferRecordFormat(File f, File schemaFile, File parseTreeFile, File jsonDataFile, File avroDataFile, boolean verbose) throws IOException {    
     // Store parse errors and results
     List<Integer> unparseableLineNos = new ArrayList<Integer>();
     List<String> unparseableStrs = new ArrayList<String>();
@@ -77,15 +77,17 @@ public class LearnStructure {
     // Infer type structure from the tokenized chunks
     //
     long start = System.currentTimeMillis();
-    System.err.println("Number of chunks: " + allChunks.size());
     InferredType typeTree = TypeInference.infer(allChunks);
     long end = System.currentTimeMillis();
     double loadTime = (start - startRead) / 1000.0;
     double inferTime = (end - start) / 1000.0;
     double totalTime = (end - startRead) / 1000.0;
-    System.err.println("Elapsed load time: " + loadTime);
-    System.err.println("Elapsed inference time: " + inferTime);
-    System.err.println("Total execution time: " + totalTime);
+    if (verbose) {
+      System.err.println("Number of chunks: " + allChunks.size());    
+      System.err.println("Elapsed load time: " + loadTime);
+      System.err.println("Elapsed inference time: " + inferTime);
+      System.err.println("Total execution time: " + totalTime);
+    }
 
     //
     // The existing type tree is now correct, but could probably be more succinct.
@@ -169,7 +171,9 @@ public class LearnStructure {
               numGoodParses++;
               outData.append(gct);
             } else {
-              System.err.println("unparsed line: '" + str + "'");
+              if (verbose) {
+                System.err.println("unparsed line: '" + str + "'");
+              }
             }
             str = in.readLine();
             lineno++;
@@ -180,9 +184,11 @@ public class LearnStructure {
       } finally {
         outData.close();
       }
-      System.err.println();
-      System.err.println("Total # input lines: " + lineno);
-      System.err.println("Total # lines parsed correctly: " + numGoodParses);
+      if (verbose) {
+        System.err.println();
+        System.err.println("Total # input lines: " + lineno);
+        System.err.println("Total # lines parsed correctly: " + numGoodParses);
+      }
     }
   }
 
@@ -220,6 +226,6 @@ public class LearnStructure {
       avroDataFile = new File(outdir, DATA_FILENAME);
     }
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, schemaFile, parseTreeFile, jsonDataFile, avroDataFile);
+    ls.inferRecordFormat(f, schemaFile, parseTreeFile, jsonDataFile, avroDataFile, true);
   }
 }
