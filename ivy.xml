@@ -33,6 +33,9 @@
       <dependency org="org.apache.rat" name="apache-rat" rev="0.7" />
       <dependency org="junit" name="junit" rev="4.8.1" />
       <dependency org="net.sf.opencsv" name="opencsv" rev="2.3" />
+      <dependency org="org.mortbay.jetty" name="jetty" rev="6.1.26" />
+      <dependency org="org.apache.wicket" name="wicket-core" rev="1.5.3" />
+      <dependency org="it.tidalwave.northernwind" name="northernwind-twitter-bootstrap-1.4.0" rev="2" />            
       <dependency org="com.almworks.sqlite4java" name="sqlite4java" rev="0.213" />
       <dependency org="com.almworks.sqlite4java" name="libsqlite4java-osx" rev="0.213">
         <include type="jnilib"/>

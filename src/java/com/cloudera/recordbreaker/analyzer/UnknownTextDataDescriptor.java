@@ -54,9 +54,6 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
     // 1.  We already have a synthesized Avro data, with anonymous fields.
     // 2.  Test it against the known database of types.
     // 3.  Return the top-k types/schemas that we discover, as long as they pass a threshold.
-    System.err.println("--------------------------------------");
-    System.err.println("About to infer structure...");
-    System.err.println("--------------------------------------");    
     LearnStructure ls = new LearnStructure();
     ls.inferRecordFormat(f, workingSchemaFile, null, null, workingAvroFile, false);
 

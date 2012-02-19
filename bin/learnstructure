@@ -8,7 +8,9 @@ function usage {
   echo "usage: learnstructure command [args...]"
   echo "Commands include: "
   echo " <learn>             Learn the schema for a given datafile"
-  echo " <analyze>           Analyze a file, using schema-learning if needed."
+  echo " <analyzefile>       Analyze a file, using schema-learning if needed."
+  echo " <analyzefs>         Analyze a directory (or more) of files."
+  echo " <fisheye>           Start the FishEye server."
   exit -1
 }
 
@@ -103,8 +105,12 @@ if [ "$CMD" = "-h" ] ; then
   usage
 elif [ "$CMD" = "learn" ] ; then
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.learnstructure.LearnStructure "$@"
-elif [ "$CMD" = "analyze" ] ; then
+elif [ "$CMD" = "analyzefile" ] ; then
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.analyzer.FormatAnalyzer "$@"
+elif [ "$CMD" = "analyzefs" ] ; then
+  exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.analyzer.FSAnalyzer "$@"
+elif [ "$CMD" = "fisheye" ] ; then
+  exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.fisheye.FishEye "$@"
 elif [ "$CMD" = "class" ]; then
   # Just do a java class with the environment setup
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" "$@"
