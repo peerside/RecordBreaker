@@ -14,14 +14,32 @@
  */
 package com.cloudera.recordbreaker.fisheye;
 
+import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.list.ListView;
+import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.link.ExternalLink;
+
+import java.util.List;
+
+import com.cloudera.recordbreaker.analyzer.TypeSummary;
 
 /**
  * The <code>SchemasPage</code> renders information about all known filetypes
  */
 public class FiletypesPage extends WebPage {
   public FiletypesPage() {
-    add(new Label("numFisheyeFiletypes", "3"));    
+    List<TypeSummary> list = FishEye.analyzer.getTypeSummaries();
+    ListView<TypeSummary> listview = new ListView<TypeSummary>("listview", list) {
+      protected void populateItem(ListItem<TypeSummary> item) {
+        TypeSummary ts = item.getModelObject();
+
+        String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
+        item.add(new ExternalLink("typelabel", typeUrl, ts.getLabel()));
+      }
+    };
+    add(listview);
+    add(new Label("numFisheyeTypes", "" + list.size()));
   }
 }

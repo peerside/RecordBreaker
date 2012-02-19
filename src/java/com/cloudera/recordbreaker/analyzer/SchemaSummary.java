@@ -38,6 +38,9 @@ public class SchemaSummary {
     this.schemaId = schemaId;
     this.hasData = false;
   }
+  public long getSchemaId() {
+    return schemaId;
+  }
   void getData() {
     this.ssd = analyzer.getSchemaSummaryData(this.schemaId);
     this.hasData = true;

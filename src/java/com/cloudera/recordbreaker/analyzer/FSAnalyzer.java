@@ -303,7 +303,6 @@ public class FSAnalyzer {
    * <code>getSchemaSummaries</code> returns an instance of SchemaSummary
    * for each unique schema in the database.
    */
-  //static String schemaInfoQuery = "SELECT Schemas.schemaid, schemalabel, schemadescriptor, Files.fid, fname FROM Schemas, Files, TypeGuesses WHERE TypeGuesses.fid = Files.fid AND TypeGuesses.schemaid = Schemas.schemaid";
   static String schemaInfoQuery = "SELECT schemaid FROM Schemas";    
   public List<SchemaSummary> getSchemaSummaries() {
     return dbQueue.execute(new SQLiteJob<List<SchemaSummary>>() {
@@ -325,6 +324,56 @@ public class FSAnalyzer {
         }}).complete();
   }
 
+  /**
+   * <code>getFileSummaries</code> returns an instance of FileSummary
+   * for each unique schema in the database.
+   */
+  static String fileInfoQuery = "SELECT fid FROM Files";    
+  public List<FileSummary> getFileSummaries() {
+    return dbQueue.execute(new SQLiteJob<List<FileSummary>>() {
+        protected List<FileSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<FileSummary> output = new ArrayList<FileSummary>();          
+          SQLiteStatement stmt = db.prepare(fileInfoQuery);
+          
+          try {
+            while (stmt.step()) {
+              long fid = stmt.columnLong(0);
+              output.add(new FileSummary(FSAnalyzer.this, fid));
+            }
+          } catch (SQLiteException se) {
+            se.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }}).complete();
+  }
+  
+  /**
+   * <code>getTypeSummaries</code> returns an instance of TypeSummary
+   * for each unique type in the database.
+   */
+  static String typeInfoQuery = "SELECT typeid FROM Types";    
+  public List<TypeSummary> getTypeSummaries() {
+    return dbQueue.execute(new SQLiteJob<List<TypeSummary>>() {
+        protected List<TypeSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<TypeSummary> output = new ArrayList<TypeSummary>();          
+          SQLiteStatement stmt = db.prepare(typeInfoQuery);
+          
+          try {
+            while (stmt.step()) {
+              long typeid = stmt.columnLong(0);
+              output.add(new TypeSummary(FSAnalyzer.this, typeid));
+            }
+          } catch (SQLiteException se) {
+            se.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }}).complete();
+  }
+  
   ///////////////////////////////////////////
   // ACCESSORS FOR INDIVIDUAL OBJECTS
   ///////////////////////////////////////////

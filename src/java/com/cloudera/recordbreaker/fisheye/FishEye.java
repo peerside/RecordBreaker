@@ -54,8 +54,6 @@ public class FishEye {
     this.schemaDir = schemaDir;
     this.fisheyeDir = fisheyeDir;
     FishEye.analyzer = new FSAnalyzer(fisheyeDir, schemaDir);
-    System.err.println("Schema summary list: " + analyzer.getSchemaSummaries().size());
-    System.err.println("Schema summary list: " + analyzer.getSchemaSummaries().size());
   }
 
   public void run() throws Exception {

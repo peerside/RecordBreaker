@@ -15,9 +15,16 @@
 package com.cloudera.recordbreaker.fisheye;
 
 import com.cloudera.recordbreaker.analyzer.FileSummary;
+import com.cloudera.recordbreaker.analyzer.TypeSummary;
+import com.cloudera.recordbreaker.analyzer.SchemaSummary;
+import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
+
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.markup.html.link.ExternalLink;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
+
+import java.util.List;
 
 /**
  * Wicket Page class that describes a specific File
@@ -35,14 +42,23 @@ public class FilePage extends WebPage {
     if (fidStr != null) {
       try {
         FileSummary fs = new FileSummary(FishEye.analyzer, Long.parseLong(fidStr));
-        if (fs != null) {
-          add(new Label("filetitle", fs.getFname()));
-          add(new Label("filesubtitle", "in " + fs.getPath()));
-          add(new Label("owner", fs.getOwner()));
-          add(new Label("size", "" + fs.getSize()));
-          add(new Label("lastmodified", fs.getLastModified()));
-          return;
-        }
+        add(new Label("filetitle", fs.getFname()));
+        add(new Label("filesubtitle", "in " + fs.getPath()));
+        add(new Label("owner", fs.getOwner()));
+        add(new Label("size", "" + fs.getSize()));
+        add(new Label("lastmodified", fs.getLastModified()));
+        add(new Label("crawledon", fs.getCrawl().getLastExamined()));
+
+        List<TypeGuessSummary> tgses = fs.getTypeGuesses();
+        TypeGuessSummary tgs = tgses.get(0);
+        TypeSummary ts = tgs.getTypeSummary();          
+        SchemaSummary ss = tgs.getSchemaSummary();
+
+        String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
+        String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
+        add(new ExternalLink("typelink", typeUrl, ts.getLabel()));
+        add(new ExternalLink("schemalink", schemaUrl, "Schema"));
+        return;
       } catch (NumberFormatException nfe) {
       }
     }
@@ -51,5 +67,6 @@ public class FilePage extends WebPage {
     add(new Label("owner", ""));
     add(new Label("size", ""));
     add(new Label("lastmodified", ""));
+    add(new Label("crawledon", ""));
   }
 }

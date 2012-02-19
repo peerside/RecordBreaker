@@ -34,6 +34,9 @@ public class TypeSummary {
     this.typeid = typeid;
     this.hasData = false;
   }
+  public long getTypeId() {
+    return typeid;
+  }
   void getData() {
     this.tsd = analyzer.getTypeSummaryData(this.typeid);
     this.hasData = true;
