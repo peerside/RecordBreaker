@@ -22,8 +22,12 @@ import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.link.BookmarkablePageLink;
 import org.apache.wicket.markup.html.link.ExternalLink;
 
+import org.codehaus.jackson.JsonNode;
+
 import java.util.List;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.io.IOException;
 
 import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
 import com.cloudera.recordbreaker.analyzer.FileSummary;
@@ -39,11 +43,25 @@ public class SchemasPage extends WebPage {
     ListView<SchemaSummary> listview = new ListView<SchemaSummary>("listview", list) {
       protected void populateItem(ListItem<SchemaSummary> item) {
         SchemaSummary ss = item.getModelObject();
-        item.add(new Label("schemalabel", ss.getLabel()));
         item.add(new Label("schemadesc", ss.getDesc()));
 
-        List<TypeGuessSummary> typeGuesses = ss.getTypeGuesses();
+        StringBuffer schemalabel = new StringBuffer();
+        try {
+          List<List<JsonNode>> listOfSchemaElts = SchemaPage.getSchemaDigest(ss.getLabel());
+          for (Iterator<JsonNode> it = listOfSchemaElts.get(0).iterator(); it.hasNext(); ) {
+            JsonNode curNode = it.next();
+            schemalabel.append(curNode.get("name"));
+            if (it.hasNext()) {
+              schemalabel.append(", ");
+            }
+          }
+        } catch (IOException iex) {
+        }
+        String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
+        item.add(new ExternalLink("schemalabellink", schemaUrl, schemalabel.toString()));
+
         
+        List<TypeGuessSummary> typeGuesses = ss.getTypeGuesses();
         for (int i = 0; i < Math.min(1, typeGuesses.size()); i++) {
           TypeGuessSummary curTGS = typeGuesses.get(i);
           FileSummary fs = curTGS.getFileSummary();

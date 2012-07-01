@@ -6,6 +6,7 @@
   <!-- set global properties for this build -->
   <property name="src" location="src"/>
   <property name="java.src" location="src/java"/>
+  <property name="html.src" location="src/web"/>  
   <property name="build" location="build"/>
   <property name="build.classes" location="build"/>
   <property name="test.src" location="test"/>
@@ -221,6 +222,9 @@
        destdir="${build}" 
        classpathref="classpath" 
        debug="true" />
+    <copy todir="${build}/web">
+       <fileset dir="${html.src}"/>
+    </copy>
   </target>
 
   <target name="compile-test" depends="init,compile"

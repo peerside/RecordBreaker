@@ -44,15 +44,9 @@ public class FishEye {
   static FSAnalyzer analyzer;
   
   int port;
-  File htmlRoot;
-  File schemaDir;
-  File fisheyeDir;
   
-  public FishEye(int port, File htmlRoot, File schemaDir, File fisheyeDir) throws IOException, SQLiteException {
+  public FishEye(int port, File schemaDir, File fisheyeDir) throws IOException, SQLiteException {
     this.port = port;
-    this.htmlRoot = htmlRoot;
-    this.schemaDir = schemaDir;
-    this.fisheyeDir = fisheyeDir;
     FishEye.analyzer = new FSAnalyzer(fisheyeDir, schemaDir);
   }
 
@@ -68,8 +62,9 @@ public class FishEye {
     WebAppContext context = new WebAppContext();
     context.addServlet(servletHolder, "/*");
     String jarDir = this.getClass().getClassLoader().getResource("content/library/bootstrap/1.4.0").toExternalForm();
-    System.err.println("JAR URL: " + jarDir);
-    context.setBaseResource(new ResourceCollection(new String[] {htmlRoot.getCanonicalPath(), jarDir}));
+    String htmlRoot = this.getClass().getClassLoader().getResource("web/fisheye").toExternalForm();
+    System.err.println("HTML URL: " + htmlRoot);
+    context.setBaseResource(new ResourceCollection(new String[] {htmlRoot, jarDir}));
 
     // Start the HTTP server
     Server server = new Server();
@@ -89,17 +84,16 @@ public class FishEye {
    * Start the FishEye Server.
    */
   public static void main(String argv[]) throws Exception {
-    if (argv.length < 4) {
-      System.err.println("Usage: FishEye <port> <htmlRoot> <schemadir> <fisheyeDir>");
+    if (argv.length < 3) {
+      System.err.println("Usage: FishEye <port> <schemadir> <fisheyeDir>");
       return;
     }
 
     int port = Integer.parseInt(argv[0]);
-    File htmlRoot = new File(argv[1]);
-    File schemaDir = new File(argv[2]);
-    File fisheyeDir = new File(argv[3]);
+    File schemaDir = new File(argv[1]);
+    File fisheyeDir = new File(argv[2]);
 
-    FishEye fish = new FishEye(port, htmlRoot.getCanonicalFile(), schemaDir.getCanonicalFile(), fisheyeDir.getCanonicalFile());
+    FishEye fish = new FishEye(port, schemaDir.getCanonicalFile(), fisheyeDir.getCanonicalFile());
     fish.run();
   }
 }

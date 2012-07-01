@@ -14,9 +14,24 @@
  */
 package com.cloudera.recordbreaker.fisheye;
 
+import com.cloudera.recordbreaker.analyzer.SchemaSummary;
+
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
+import org.apache.wicket.markup.html.list.ListView;
+import org.apache.wicket.markup.html.list.ListItem;
+
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonParser;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Wicket Page class that describes a specific Schema
@@ -27,8 +42,78 @@ import org.apache.wicket.request.mapper.parameter.PageParameters;
  * @see WebPage
  */
 public class SchemaPage extends WebPage {
+  static JsonFactory factory = new JsonFactory(new ObjectMapper());
+
+  static List<List<JsonNode>> getSchemaDigest(String s) throws IOException {
+    List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
+    JsonParser parser = factory.createJsonParser(s);
+    try {
+      JsonNode root = parser.readValueAsTree();
+      if (! root.isArray()) {
+        // This handles default cases like CSV and XML
+        // (and eventually the others when bugs are fixed)
+        JsonNode fieldSet = root.get("fields");
+
+        // Take care of strange parser case
+        if (fieldSet.isArray() && fieldSet.get(0).get("name").toString().equals("\"row\"")) {
+          fieldSet = fieldSet.get(0).get("type").get(0).get("fields");
+        }
+
+        // Emit results
+        List<JsonNode> curListOfSchemaElts = new ArrayList<JsonNode>();
+        listOfSchemaElts.add(curListOfSchemaElts);
+        for (Iterator<JsonNode> it = fieldSet.getElements(); it.hasNext(); ) {
+          curListOfSchemaElts.add(it.next());
+        }
+      } else {
+        for (int i = 0; i < root.size(); i++) {
+          List<JsonNode> curListOfSchemaElts = new ArrayList<JsonNode>();              
+          JsonNode fieldSet = root.get(i).get("fields");
+          listOfSchemaElts.add(curListOfSchemaElts);
+          for (Iterator<JsonNode> it = fieldSet.getElements(); it.hasNext(); ) {
+            curListOfSchemaElts.add(it.next());
+          }
+        }
+      }
+    } finally {
+      parser.close();
+    }
+    return listOfSchemaElts;
+  }
+  
   public SchemaPage() {
   }
+
   public SchemaPage(PageParameters params) {
-  }
+    List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
+    String schemaidStr = params.get("schemaid").toString();
+    if (schemaidStr != null) {
+      try {
+        SchemaSummary ss = new SchemaSummary(FishEye.analyzer, Long.parseLong(schemaidStr));
+        listOfSchemaElts = getSchemaDigest(ss.getLabel());
+      } catch (NumberFormatException nfe) {
+      } catch (IOException ie) {
+      }
+    }
+
+    ListView<List<JsonNode>> biglistview = new ListView<List<JsonNode>>("biglistview", listOfSchemaElts) {
+      protected void populateItem(ListItem<List<JsonNode>> item) {      
+        List<JsonNode> myListOfSchemaElts = item.getModelObject();
+        
+        ListView<JsonNode> listview = new ListView<JsonNode>("listview", myListOfSchemaElts) {
+          protected void populateItem(ListItem<JsonNode> item2) {
+            JsonNode jnode = item2.getModelObject();
+        
+            item2.add(new Label("fieldname", "" + jnode.get("name")));
+            item2.add(new Label("fieldtype", "" + jnode.get("type")));
+            item2.add(new Label("fielddoc", "" + jnode.get("doc")));
+          }
+        };
+        item.add(listview);
+      }
+    };
+
+    add(new Label("numSchemaElements", "" + listOfSchemaElts.size()));
+    add(biglistview);
+  }  
 }
