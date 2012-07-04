@@ -33,7 +33,7 @@ import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
  */
 public class FilesPage extends WebPage {
   public FilesPage() {
-    List<FileSummary> list = FishEye.analyzer.getFileSummaries();
+    List<FileSummary> list = FishEye.getInstance().getAnalyzer().getFileSummaries();
     ListView<FileSummary> listview = new ListView<FileSummary>("listview", list) {
       protected void populateItem(ListItem<FileSummary> item) {
         FileSummary fs = item.getModelObject();

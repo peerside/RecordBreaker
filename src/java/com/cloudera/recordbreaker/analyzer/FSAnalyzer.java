@@ -515,7 +515,7 @@ public class FSAnalyzer {
       createTables();
     }
 
-    this.formatAnalyzer = new FormatAnalyzer(schemaDir);
+    //this.formatAnalyzer = new FormatAnalyzer(schemaDir);
   }
 
   void close() throws IOException, SQLiteException, InterruptedException {

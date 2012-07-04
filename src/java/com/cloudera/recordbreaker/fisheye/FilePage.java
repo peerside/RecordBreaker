@@ -41,7 +41,7 @@ public class FilePage extends WebPage {
     String fidStr = params.get("fid").toString();
     if (fidStr != null) {
       try {
-        FileSummary fs = new FileSummary(FishEye.analyzer, Long.parseLong(fidStr));
+        FileSummary fs = new FileSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(fidStr));
         add(new Label("filetitle", fs.getFname()));
         add(new Label("filesubtitle", "in " + fs.getPath()));
         add(new Label("owner", fs.getOwner()));

@@ -72,8 +72,57 @@
         <div class="span10">
           <div class="container">
             <h1>Settings</h1>
-            <p>Put all your settings here, please.</p>
 
+            <!-- Add a conditional logout/login button here -->
+            <!-- <div class="thingprice" wicket:id="loginbox"> -->
+            <h4>Access Control</h4>                            
+              <form class="well form-inline" method="get" wicket:id="loginform">
+                <label>
+                  You are not currently logged in.<p/>
+                  Log in to obtain better file access privileges.<p/>
+                </label><br/>
+                <input type="text" class="input-small" placeholder="Username" wicket:id="loginusername">
+                <input type="password" class="input-small" placeholder="Password" wicket:id="loginpassword">
+                <button type="submit" class="btn btn-primary">Log in</button>
+              </form>
+            <!-- </div> -->
+
+            <form class="well form-inline" method="get" wicket:id="logoutform">
+              <label>
+                You are logged in as <strong><span wicket:id="currentuser"></span></strong>.  <p/>
+                To change file access privileges, log out, then log in as a different user.<p/>
+                </label><br/>
+                <button type="submit" class="btn btn-danger">Log out</button>
+            </form>
+
+            <!-- <h5>Filesystem: <span wicket:id="fileSystem"></span></h5> -->
+            <!-- Add a button to drop-filesystem/add-filesystem here -->
+
+            <!-- if filesystem is enabled, show crawls -->
+
+            <!-- if filesystem is enabled, show button to recrawl -->
+
+
+            <h4>Miscellaneous Values</h4>            
+            <table class="table table-striped table-bordered table-condensed">
+              <thead>
+                <tr>
+                  <th>Property</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>FishEye store</td> <td><span wicket:id="fisheyeDir"></span></td>
+                </tr>
+                <tr>
+                  <td>HTTP port</td> <td><span wicket:id="fisheyePort"></span></td>
+                </tr>
+                <tr>
+                  <td>Fisheye server up since</td> <td><span wicket:id="fisheyeStarttime"></span></td>
+                </tr>
+              </tbody>
+            </table>
           </div> <!-- /container -->
         </div>
       </div>

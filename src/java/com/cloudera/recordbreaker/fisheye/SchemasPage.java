@@ -39,7 +39,7 @@ import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
  */
 public class SchemasPage extends WebPage {
   public SchemasPage() {
-    List<SchemaSummary> list = FishEye.analyzer.getSchemaSummaries();
+    List<SchemaSummary> list = FishEye.getInstance().getAnalyzer().getSchemaSummaries();
     ListView<SchemaSummary> listview = new ListView<SchemaSummary>("listview", list) {
       protected void populateItem(ListItem<SchemaSummary> item) {
         SchemaSummary ss = item.getModelObject();

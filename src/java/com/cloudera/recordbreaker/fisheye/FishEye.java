@@ -41,13 +41,60 @@ import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
  * @author "Michael Cafarella" <mjc@cloudera.com>
  ***************************************************************/
 public class FishEye {
-  static FSAnalyzer analyzer;
+  static final String FISHEYE_METADATA_STORE = "metadata";
+  static final String FISHEYE_SCHEMA_REPO = "schemarepo";
+
+  static FishEye fisheyeInstance;
+  FSAnalyzer analyzer;
+  Date startTime;
+  int fisheyePort;
+  File fisheyeDir;
+  String username;
+
+  public static FishEye getInstance() {
+    return fisheyeInstance;
+  }
   
-  int port;
-  
-  public FishEye(int port, File schemaDir, File fisheyeDir) throws IOException, SQLiteException {
-    this.port = port;
-    FishEye.analyzer = new FSAnalyzer(fisheyeDir, schemaDir);
+  public FishEye(int port, File fisheyeDir) throws IOException, SQLiteException {
+    if (! fisheyeDir.exists()) {
+      if (! fisheyeDir.mkdir()) {
+        throw new IOException("Cannot create directory: " + fisheyeDir.getCanonicalPath());
+      }
+    }
+    this.startTime = new Date(System.currentTimeMillis());
+    this.username = null;
+    this.fisheyeDir = fisheyeDir;
+    this.fisheyePort = port;
+
+    File fisheyeStore = new File(fisheyeDir, FISHEYE_METADATA_STORE);
+    File fisheyeSchemas = new File(fisheyeDir, FISHEYE_SCHEMA_REPO);
+    this.analyzer = new FSAnalyzer(fisheyeStore, fisheyeSchemas);
+
+    FishEye.fisheyeInstance = this;
+  }
+
+  public Date getStartTime() {
+    return startTime;
+  }
+  public int getPort() {
+    return fisheyePort;
+  }
+  public File getFisheyeDir() {
+    return fisheyeDir;
+  }
+  public FSAnalyzer getAnalyzer() {
+    return analyzer;
+  }
+  public String getUsername() {
+    return this.username;
+  }
+  public void logout() {
+    this.username = null;
+  }
+  public boolean login(String username, String password) {
+    // For now, login always succeeds
+    this.username = username;
+    return true;
   }
 
   public void run() throws Exception {
@@ -63,13 +110,12 @@ public class FishEye {
     context.addServlet(servletHolder, "/*");
     String jarDir = this.getClass().getClassLoader().getResource("content/library/bootstrap/1.4.0").toExternalForm();
     String htmlRoot = this.getClass().getClassLoader().getResource("web/fisheye").toExternalForm();
-    System.err.println("HTML URL: " + htmlRoot);
     context.setBaseResource(new ResourceCollection(new String[] {htmlRoot, jarDir}));
 
     // Start the HTTP server
     Server server = new Server();
     SocketConnector connector = new SocketConnector();
-    connector.setPort(port);
+    connector.setPort(fisheyePort);
     server.setConnectors(new Connector[]{connector});
     server.setHandler(context);
     
@@ -84,16 +130,15 @@ public class FishEye {
    * Start the FishEye Server.
    */
   public static void main(String argv[]) throws Exception {
-    if (argv.length < 3) {
-      System.err.println("Usage: FishEye <port> <schemadir> <fisheyeDir>");
+    if (argv.length < 2) {
+      System.err.println("Usage: FishEye <port> <fisheyeDir>");
       return;
     }
 
     int port = Integer.parseInt(argv[0]);
-    File schemaDir = new File(argv[1]);
-    File fisheyeDir = new File(argv[2]);
+    File fisheyeDir = new File(argv[1]);
 
-    FishEye fish = new FishEye(port, schemaDir.getCanonicalFile(), fisheyeDir.getCanonicalFile());
+    FishEye fish = new FishEye(port, fisheyeDir.getCanonicalFile());
     fish.run();
   }
 }

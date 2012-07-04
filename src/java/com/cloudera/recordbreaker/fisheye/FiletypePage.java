@@ -44,7 +44,7 @@ public class FiletypePage extends WebPage {
     if (filetypeStr != null) {
       try {
         // Metadata for type
-        TypeSummary ts = new TypeSummary(FishEye.analyzer, Long.parseLong(filetypeStr));
+        TypeSummary ts = new TypeSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(filetypeStr));
         add(new Label("typetitle", ts.getLabel()));
         List<TypeGuessSummary> tgses = ts.getTypeGuesses();
         

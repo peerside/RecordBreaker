@@ -30,7 +30,7 @@ import com.cloudera.recordbreaker.analyzer.TypeSummary;
  */
 public class FiletypesPage extends WebPage {
   public FiletypesPage() {
-    List<TypeSummary> list = FishEye.analyzer.getTypeSummaries();
+    List<TypeSummary> list = FishEye.getInstance().getAnalyzer().getTypeSummaries();
     ListView<TypeSummary> listview = new ListView<TypeSummary>("listview", list) {
       protected void populateItem(ListItem<TypeSummary> item) {
         TypeSummary ts = item.getModelObject();

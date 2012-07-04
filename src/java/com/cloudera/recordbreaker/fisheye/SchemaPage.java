@@ -89,7 +89,7 @@ public class SchemaPage extends WebPage {
     String schemaidStr = params.get("schemaid").toString();
     if (schemaidStr != null) {
       try {
-        SchemaSummary ss = new SchemaSummary(FishEye.analyzer, Long.parseLong(schemaidStr));
+        SchemaSummary ss = new SchemaSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(schemaidStr));
         listOfSchemaElts = getSchemaDigest(ss.getLabel());
       } catch (NumberFormatException nfe) {
       } catch (IOException ie) {
