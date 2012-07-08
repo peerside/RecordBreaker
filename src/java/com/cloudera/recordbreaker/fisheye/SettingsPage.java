@@ -24,8 +24,12 @@ import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.form.RequiredTextField;
 import org.apache.wicket.markup.html.form.PasswordTextField;
+import org.apache.wicket.markup.html.panel.FeedbackPanel;
+import org.apache.wicket.ajax.markup.html.form.AjaxButton;
+import org.apache.wicket.ajax.AjaxRequestTarget;
 
-
+import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.Model;
 
 import java.io.IOException;
 
@@ -42,19 +46,39 @@ public class SettingsPage extends WebPage {
     public LoginForm(final String id, ValueMap vm) {
       super(id, new CompoundPropertyModel<ValueMap>(vm));
       add(new RequiredTextField<String>("loginusername").setType(String.class));
-      add(new PasswordTextField("loginpassword").setType(String.class));      
+      add(new PasswordTextField("loginpassword").setType(String.class));
+      
+      add(new AjaxButton("submitbutton") {
+          protected void onSubmit(final AjaxRequestTarget target, final Form form) {
+            wmc.setVisibilityAllowed(false);            
+            target.add(wmc);
+          }
+          protected void onError(final AjaxRequestTarget target, final Form form) {
+            wmc.setVisibilityAllowed(true);            
+            target.add(wmc);
+          }
+        });
     }
     public void onSubmit() {
       FishEye fe = FishEye.getInstance();      
       ValueMap vals = getModelObject();
       if (fe.login((String) vals.get("loginusername"), (String) vals.get("loginpassword"))) {
         vals.put("currentuser", (String) vals.get("loginusername"));
+
+        wmc.setVisibilityAllowed(false);
+        setResponsePage(new SettingsPage());
+      } else {
+        wmc.setVisibilityAllowed(true);        
       }
       vals.put("loginpassword", "");
     }
-    public boolean isVisible() {
-      FishEye fe = FishEye.getInstance();            
-      return fe.getUsername() == null;
+    public void onError() {
+      ValueMap vals = getModelObject();
+      wmc.setVisibilityAllowed(true);
+      vals.put("loginpassword", "");      
+    }
+    public void onConfigure() {
+      setVisibilityAllowed(FishEye.getInstance().getUsername() == null);
     }
   }
 
@@ -64,23 +88,32 @@ public class SettingsPage extends WebPage {
       add(new Label("currentuser"));
     }
     public void onSubmit() {
-      FishEye fe = FishEye.getInstance();      
+      FishEye fe = FishEye.getInstance();
       fe.logout();
+      setResponsePage(new SettingsPage());      
     }
-    public boolean isVisible() {
-      FishEye fe = FishEye.getInstance();            
-      return fe.getUsername() != null;
+    public void onConfigure() {
+      setVisibilityAllowed(FishEye.getInstance().getUsername() != null);
     }
   }
-  
+
+  final WebMarkupContainer wmc = new WebMarkupContainer("errorMsgContainer");
   public SettingsPage() {
-    FishEye fe = FishEye.getInstance();
+    FishEye fe = FishEye.getInstance();    
+    System.err.println("INIT SETTINGS PAGE");
     final String username = fe.getUsername();
-    ValueMap logins = new ValueMap();
+    final ValueMap logins = new ValueMap();    
     logins.put("currentuser", username);
-  
+
+    this.setOutputMarkupPlaceholderTag(true);        
     add(new LoginForm("loginform", logins));
     add(new LogoutForm("logoutform", logins));
+
+    final Label errorLabel = new Label("loginErrorMessage", "Your username and password did not match.");
+    wmc.add(errorLabel);
+    wmc.setOutputMarkupPlaceholderTag(true);
+    add(wmc);
+    wmc.setVisibilityAllowed(false);    
 
     add(new Label("fisheyeStarttime", fe.getStartTime().toString()));
     add(new Label("fisheyePort", "" + fe.getPort()));

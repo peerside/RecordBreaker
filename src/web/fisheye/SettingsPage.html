@@ -73,17 +73,21 @@
           <div class="container">
             <h1>Settings</h1>
 
-            <!-- Add a conditional logout/login button here -->
-            <!-- <div class="thingprice" wicket:id="loginbox"> -->
-            <h4>Access Control</h4>                            
+              <h4>Access Control</h4>
+                <div class="errorbox" wicket:id="errorMsgContainer">
+                  <div class="alert">
+                    <strong>Login failed: </strong><span wicket:id="loginErrorMessage"></span>
+                  </div>
+                </div>
               <form class="well form-inline" method="get" wicket:id="loginform">
+                <!-- <em><strong><span wicket:id="loginfeedback"></span></strong></em> -->
                 <label>
                   You are not currently logged in.<p/>
                   Log in to obtain better file access privileges.<p/>
                 </label><br/>
                 <input type="text" class="input-small" placeholder="Username" wicket:id="loginusername">
                 <input type="password" class="input-small" placeholder="Password" wicket:id="loginpassword">
-                <button type="submit" class="btn btn-primary">Log in</button>
+                <button type="submit" class="btn btn-primary"  wicket:id="submitbutton">Log in</button>
               </form>
             <!-- </div> -->
 
