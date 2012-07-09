@@ -107,6 +107,21 @@
             <!-- if filesystem is enabled, show button to recrawl -->
 
 
+            <div class="crawlbox" wicket:id="crawlContainer">
+            <h4>Crawls</h4>
+            <table class="table table-striped table-bordered table-condensed">
+              <thead>
+                <tr>
+                </tr>
+              </thead>
+              <tbody>
+                <tr wicket:id="crawllistview">
+                  <td><span wicket:id="crawlid"></span></td><td><span wicket:id="crawllastexamined"></span></td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+
             <h4>Miscellaneous Values</h4>            
             <table class="table table-striped table-bordered table-condensed">
               <thead>

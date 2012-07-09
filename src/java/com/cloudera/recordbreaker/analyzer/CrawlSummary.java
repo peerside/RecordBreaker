@@ -24,13 +24,30 @@ import java.util.*;
 public class CrawlSummary {
   FSAnalyzer analyzer;
   long crawlid;
+  String lastexamined;
+  boolean hasData = false;
   
   public CrawlSummary(FSAnalyzer analyzer, long crawlid) {
     this.analyzer = analyzer;
     this.crawlid = crawlid;
+    this.hasData = false;
+  }
+  public CrawlSummary(FSAnalyzer analyzer, long crawlid, String lastexamined) {
+    this.analyzer = analyzer;
+    this.crawlid = crawlid;
+    this.lastexamined = lastexamined;
+    this.hasData = true;
   }
 
+  public long getCrawlId() {
+    return this.crawlid;
+  }
+  
   public String getLastExamined() {
-    return analyzer.getCrawlLastExamined(this.crawlid);
+    if (! hasData) {
+      this.lastexamined = analyzer.getCrawlLastExamined(this.crawlid);
+      this.hasData = true;
+    } 
+    return lastexamined;
   }
 }

@@ -348,6 +348,30 @@ public class FSAnalyzer {
           return output;
         }}).complete();
   }
+
+  /**
+   * <code>getCrawlSummaries</code> returns a list of the historical crawl info
+   */
+  static String crawlInfoQuery = "SELECT crawlid, lastexamined FROM Crawls";    
+  public List<CrawlSummary> getCrawlSummaries() {
+    return dbQueue.execute(new SQLiteJob<List<CrawlSummary>>() {
+        protected List<CrawlSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<CrawlSummary> output = new ArrayList<CrawlSummary>();
+          SQLiteStatement stmt = db.prepare(crawlInfoQuery);
+          try {
+            while (stmt.step()) {
+              long cid = stmt.columnLong(0);
+              String lexamined = stmt.columnString(1);
+              output.add(new CrawlSummary(FSAnalyzer.this, cid, lexamined));
+            }
+          } catch (SQLiteException se) {
+            se.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }}).complete();
+  }
   
   /**
    * <code>getTypeSummaries</code> returns an instance of TypeSummary

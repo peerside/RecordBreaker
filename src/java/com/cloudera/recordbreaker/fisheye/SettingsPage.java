@@ -14,33 +14,37 @@
  */
 package com.cloudera.recordbreaker.fisheye;
 
+import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.form.Form;
-import org.apache.wicket.util.value.ValueMap;
-import org.apache.wicket.model.CompoundPropertyModel;
 import org.apache.wicket.markup.html.form.TextArea;
 import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.form.RequiredTextField;
 import org.apache.wicket.markup.html.form.PasswordTextField;
 import org.apache.wicket.markup.html.panel.FeedbackPanel;
-import org.apache.wicket.ajax.markup.html.form.AjaxButton;
-import org.apache.wicket.ajax.AjaxRequestTarget;
-
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.markup.html.list.ListView;
+import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.model.Model;
+import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.CompoundPropertyModel;
+import org.apache.wicket.util.value.ValueMap;
+
+import com.cloudera.recordbreaker.analyzer.CrawlSummary;
 
 import java.io.IOException;
+import java.util.List;
 
-/**
+/************************************************
  * Wicket Page class that allows user to edit Settings
  *
  * @author "Michael Cafarella"
  * @version 1.0
  * @since 1.0
  * @see WebPage
- */
+ *************************************************/
 public class SettingsPage extends WebPage {
   public final class LoginForm extends Form<ValueMap> {
     public LoginForm(final String id, ValueMap vm) {
@@ -100,21 +104,40 @@ public class SettingsPage extends WebPage {
   final WebMarkupContainer wmc = new WebMarkupContainer("errorMsgContainer");
   public SettingsPage() {
     FishEye fe = FishEye.getInstance();    
-    System.err.println("INIT SETTINGS PAGE");
     final String username = fe.getUsername();
     final ValueMap logins = new ValueMap();    
     logins.put("currentuser", username);
-
     this.setOutputMarkupPlaceholderTag(true);        
+
+    // Login/logout
     add(new LoginForm("loginform", logins));
     add(new LogoutForm("logoutform", logins));
-
     final Label errorLabel = new Label("loginErrorMessage", "Your username and password did not match.");
     wmc.add(errorLabel);
     wmc.setOutputMarkupPlaceholderTag(true);
     add(wmc);
-    wmc.setVisibilityAllowed(false);    
+    wmc.setVisibilityAllowed(false);
 
+    // Display filesystem crawls
+    WebMarkupContainer crawlContainer = new WebMarkupContainer("crawlContainer");
+    List<CrawlSummary> crawlList = fe.getInstance().getAnalyzer().getCrawlSummaries();
+    ListView<CrawlSummary> crawlListView = new ListView<CrawlSummary>("crawlListView", crawlList) {
+      protected void populateItem(ListItem<CrawlSummary> item) {
+        CrawlSummary cs = item.getModelObject();
+        // Fields are: 'crawlid' and 'crawllastexamined'
+        item.add(new Label("crawlid", "" + cs.getCrawlId()));
+        item.add(new Label("crawllastexamined", cs.getLastExamined()));
+      }
+    };
+    crawlContainer.add(crawlListView);
+    add(crawlContainer);
+    if (crawlList.size() == 0) {
+      crawlContainer.setVisibilityAllowed(false);
+    } else {
+      crawlContainer.setVisibilityAllowed(true);
+    }
+
+    // Standard environment variables
     add(new Label("fisheyeStarttime", fe.getStartTime().toString()));
     add(new Label("fisheyePort", "" + fe.getPort()));
     try {
