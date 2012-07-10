@@ -73,6 +73,9 @@
           <div class="container">
             <h1>Settings</h1>
 
+            <!-- -->
+            <!-- User access control -->
+            <!-- -->            
               <h4>Access Control</h4>
                 <div class="errorbox" wicket:id="errorMsgContainer">
                   <div class="alert">
@@ -99,29 +102,67 @@
                 <button type="submit" class="btn btn-danger">Log out</button>
             </form>
 
-            <!-- <h5>Filesystem: <span wicket:id="fileSystem"></span></h5> -->
-            <!-- Add a button to drop-filesystem/add-filesystem here -->
+            <!-- -->
+            <!-- Manage filesystems -->
+            <!-- -->
+            <!-- Add a filesystem -->
+            <h4> Filesystem</h4>                        
+            <div class="well" wicket:id="fsAddContainer">
+              Fisheye does not currently have a registered filesystem.<p/>
+              You must add a filesystem before Fisheye can do anything interesting.<p/>
 
-            <!-- if filesystem is enabled, show crawls -->
-
-            <!-- if filesystem is enabled, show button to recrawl -->
-
-
-            <div class="crawlbox" wicket:id="crawlContainer">
-            <h4>Crawls</h4>
-            <table class="table table-striped table-bordered table-condensed">
-              <thead>
-                <tr>
-                </tr>
-              </thead>
-              <tbody>
-                <tr wicket:id="crawllistview">
-                  <td><span wicket:id="crawlid"></span></td><td><span wicket:id="crawllastexamined"></span></td>
-                </tr>
-              </tbody>
-            </table>
+              <form class="form-inline" method="get" wicket:id="hdfsaddform">
+                <fieldset>
+                  <div class="control-group">
+                    <div class="controls">
+                      <div class="input-prepend input-append">
+                        <span class="add-on">hdfs://</span><input class="input-large" wicket:id="hdfsDir" type="text"><button class="btn btn-primary" type="button">Add HDFS filesystem</button>
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+              </form>
+              <p/>
+              <strong>OR</strong>
+              <p/>
+              <form class="form-inline" method="get" wicket:id="localfsaddform">
+                <fieldset>
+                  <div class="control-group">
+                    <div class="controls">
+                      <div class="input-prepend input-append">
+                        <span class="add-on">file://</span><input class="input-large" wicket:id="localfsDir" type="text"><button class="btn btn-primary" type="button">Add local filesystem</button>
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+              </form>
             </div>
 
+            <!-- Display current filesystem -->
+            <div class="fsbox" wicket:id="fsDisplayContainer">
+              Fisheye is currently examining the filesystem at <span wicket:id="fsName"></span><p/>.
+
+              There are <span wicket:id="numCrawls"></span> crawls of this filesystem.
+
+              <div class="crawlbox" wicket:id="crawlContainer">
+                <table class="table table-striped table-bordered table-condensed">
+                  <thead>
+                    <tr>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr wicket:id="crawllistview">
+                      <td><span wicket:id="crawlid"></span></td><td><span wicket:id="crawllastexamined"></span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+
+            <!-- -->
+            <!-- Miscellaneous config values -->
+            <!-- -->
             <h4>Miscellaneous Values</h4>            
             <table class="table table-striped table-bordered table-condensed">
               <thead>

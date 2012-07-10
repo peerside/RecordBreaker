@@ -49,6 +49,7 @@ public class FishEye {
   Date startTime;
   int fisheyePort;
   File fisheyeDir;
+  String fsUrl;  
   String username;
 
   public static FishEye getInstance() {
@@ -81,6 +82,9 @@ public class FishEye {
   }
   public File getFisheyeDir() {
     return fisheyeDir;
+  }
+  public String getFSUrl() {
+    return analyzer.getConfigProperty("fsurl");
   }
   public FSAnalyzer getAnalyzer() {
     return analyzer;

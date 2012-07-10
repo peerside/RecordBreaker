@@ -118,9 +118,46 @@ public class SettingsPage extends WebPage {
     add(wmc);
     wmc.setVisibilityAllowed(false);
 
-    // Display filesystem crawls
+    //
+    // Display filesystem add box, if there is no current FS.
+    //
+    WebMarkupContainer fsAddContainer = new WebMarkupContainer("fsAddContainer");
+
+    Form<?> hdfsAddForm = new Form<ValueMap>("hdfsaddform", new CompoundPropertyModel<ValueMap>(new ValueMap())) {
+      protected void onSubmit() {
+        System.err.println("Hooh! hdfs dir is: " + (String) getModelObject().get("hdfsDir"));
+      }
+    };
+    hdfsAddForm.add(new RequiredTextField<String>("hdfsDir").setType(String.class));
+    fsAddContainer.add(hdfsAddForm);
+
+    Form<?> localFsAddForm = new Form<ValueMap>("localfsaddform", new CompoundPropertyModel<ValueMap>(new ValueMap())) {
+      protected void onSubmit() {
+        System.err.println("Hooh! local fs dir is: " + (String) getModelObject().get("localfsDir"));
+      }
+    };
+    localFsAddForm.add(new RequiredTextField<String>("localfsDir").setType(String.class));
+    fsAddContainer.add(localFsAddForm);
+    
+    fsAddContainer.setOutputMarkupPlaceholderTag(true);
+    add(fsAddContainer);
+    fsAddContainer.setVisibilityAllowed(fe.getFSUrl() == null);
+    
+    //
+    // Display filesystem info, if there is any.
+    //
+    List<CrawlSummary> crawlList = fe.getAnalyzer().getCrawlSummaries();    
+    WebMarkupContainer fsDisplayContainer = new WebMarkupContainer("fsDisplayContainer");
+    fsDisplayContainer.add(new Label("fsName", "" + fe.getFSUrl()));
+    fsDisplayContainer.add(new Label("numCrawls", "" + crawlList.size()));
+    fsDisplayContainer.setOutputMarkupPlaceholderTag(true);    
+    add(fsDisplayContainer);
+    fsDisplayContainer.setVisibilityAllowed(fe.getFSUrl() != null);
+    
+    //
+    // If the filesystem is there, we need to have info about its crawls
+    //
     WebMarkupContainer crawlContainer = new WebMarkupContainer("crawlContainer");
-    List<CrawlSummary> crawlList = fe.getInstance().getAnalyzer().getCrawlSummaries();
     ListView<CrawlSummary> crawlListView = new ListView<CrawlSummary>("crawlListView", crawlList) {
       protected void populateItem(ListItem<CrawlSummary> item) {
         CrawlSummary cs = item.getModelObject();
@@ -130,14 +167,12 @@ public class SettingsPage extends WebPage {
       }
     };
     crawlContainer.add(crawlListView);
-    add(crawlContainer);
-    if (crawlList.size() == 0) {
-      crawlContainer.setVisibilityAllowed(false);
-    } else {
-      crawlContainer.setVisibilityAllowed(true);
-    }
+    fsDisplayContainer.add(crawlContainer);
+    crawlContainer.setVisibilityAllowed(crawlList.size() > 0);
 
+    //
     // Standard environment variables
+    //
     add(new Label("fisheyeStarttime", fe.getStartTime().toString()));
     add(new Label("fisheyePort", "" + fe.getPort()));
     try {
