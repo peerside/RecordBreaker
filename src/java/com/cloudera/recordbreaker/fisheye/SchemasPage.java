@@ -73,6 +73,7 @@ public class SchemasPage extends WebPage {
       }
     };
 
+    add(new SettingsWarningBox());    
     add(new Label("numFisheyeSchemas", "" + list.size()));    
     add(listview);
   }

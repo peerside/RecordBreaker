@@ -39,6 +39,8 @@ public class FiletypesPage extends WebPage {
         item.add(new ExternalLink("typelabel", typeUrl, ts.getLabel()));
       }
     };
+
+    add(new SettingsWarningBox());    
     add(listview);
     add(new Label("numFisheyeTypes", "" + list.size()));
   }

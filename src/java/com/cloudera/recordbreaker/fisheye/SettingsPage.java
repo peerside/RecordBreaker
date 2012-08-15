@@ -223,7 +223,8 @@ public class SettingsPage extends WebPage {
     fsErrorMsgDisplay.setOutputMarkupPlaceholderTag(true);
     add(fsErrorMsgDisplay);
     fsErrorMsgDisplay.setVisibilityAllowed(false);
-    
+
+
     //
     // If the filesystem is there, we need to have info about its crawls
     //

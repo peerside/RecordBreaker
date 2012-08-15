@@ -55,6 +55,8 @@ public class FilesPage extends WebPage {
         item.add(new ExternalLink("schemalink", schemaUrl, "Schema"));
       }
     };
+
+    add(new SettingsWarningBox());
     add(listview);
     add(new Label("numFisheyeFiles", "" + list.size()));
   }

@@ -71,6 +71,13 @@
         </div>
         <div class="span10">
           <div class="container">
+            <!-- The Settings warning box -->
+            <div class="errorbox" wicket:id="settingsWarningMsgContainer">
+              <div class="alert alert-error">
+                <strong>Warning: </strong><span wicket:id="settingsErrorLabel"></span>
+              </div>
+            </div>
+
             <h1>Files</h1>
             <p>Fisheye is currently staring at <span wicket:id="numFisheyeFiles"></span> files.</p>
 
