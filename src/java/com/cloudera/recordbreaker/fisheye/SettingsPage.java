@@ -169,16 +169,18 @@ public class SettingsPage extends WebPage {
   }
 
   /////////////////////////////////////////////////////
-  // Filesystem cancellation form
+  // Filesystem info/cancellation form
   ////////////////////////////////////////////////////
-  public final class FilesystemCancelForm extends Form<ValueMap> {
-    public FilesystemCancelForm(final String id, ValueMap vm) {
+  public final class FilesystemInfoForm extends Form<ValueMap> {
+    public FilesystemInfoForm(final String id, ValueMap vm) {
       super(id, new CompoundPropertyModel<ValueMap>(vm));
       FishEye fe = FishEye.getInstance();      
       add(new Label("currentfs"));
       List<CrawlSummary> crawlList = fe.getAnalyzer().getCrawlSummaries();
       add(new Label("numcrawls", "" + crawlList.size()));
       vm.put("currentfs", fe.getFSUrl());
+
+      //List<CrawlSummary> crawlSummaries = 
     }
     public void onSubmit() {
       FishEye fe = FishEye.getInstance();
@@ -190,6 +192,25 @@ public class SettingsPage extends WebPage {
     }
   }
 
+  /////////////////////////////////////////////////////
+  // Crawl info/progress form
+  ////////////////////////////////////////////////////
+  /**
+  public final class FilesystemCrawlForm extends Form<ValueMap> {
+    public FilesystemCrawlForm(final String id, ValueMap vm) {
+      super(id, new CompoundPropertyModel<ValueMap>(vm));
+      add(
+    }
+    public void onSubmit() {
+      FishEye fe = FishEye.getInstance();
+      fe.startCrawl();
+      setResponsePage(new SettingsPage());      
+    }
+    public void onConfigure() {
+      setVisibilityAllowed(FishEye.getInstance().getFSUrl() != null);      
+    }
+  }
+  **/
 
   
   final WebMarkupContainer loginErrorMsgDisplay = new WebMarkupContainer("loginErrorMsgContainer");
@@ -217,7 +238,7 @@ public class SettingsPage extends WebPage {
     //
     final ValueMap fsinfo = new ValueMap();        
     add(new FilesystemRegistrationForm("fsaddform", fsinfo));
-    add(new FilesystemCancelForm("fscancelform", fsinfo));
+    add(new FilesystemInfoForm("fsinfoform", fsinfo));
     final Label fsErrorLabel = new Label("fsErrorMessage", "The filesystem was not found.");
     fsErrorMsgDisplay.add(fsErrorLabel);
     fsErrorMsgDisplay.setOutputMarkupPlaceholderTag(true);

@@ -137,13 +137,16 @@
               </fieldset>
             </form>
             
-            <!-- If there is a filesystem, display the current one -->
-            <form class="well form-inline" method="get" wicket:id="fscancelform">
+            <!-- If there is a filesystem, display its name and allow it to be changed -->
+            <form class="well form-inline" method="get" wicket:id="fsinfoform">
               <label>
               Fisheye is currently examining the filesystem at <strong><span wicket:id="currentfs"></span></strong>.<p/>
               There are <strong><span wicket:id="numcrawls"></span></strong> crawls of this filesystem.<p/>
               </label><br/>
-              <button type="submit" class="btn btn-danger">Change filesystem</button>              
+              <button type="submit" class="btn btn-danger">Change filesystem</button>
+            </form>
+
+            <!-- If there is a filesystem, display crawl info and offer recrawl capacity. -->
 
               <!--
               <div class="crawlbox" wicket:id="crawlContainer">
