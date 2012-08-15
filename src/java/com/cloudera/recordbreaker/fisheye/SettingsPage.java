@@ -15,6 +15,7 @@
 package com.cloudera.recordbreaker.fisheye;
 
 import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.ajax.IAjaxIndicatorAware;
 import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.WebMarkupContainer;
@@ -46,6 +47,10 @@ import java.util.List;
  * @see WebPage
  *************************************************/
 public class SettingsPage extends WebPage {
+
+  /////////////////////////////////////////////////////
+  // User login form
+  ////////////////////////////////////////////////////
   public final class LoginForm extends Form<ValueMap> {
     public LoginForm(final String id, ValueMap vm) {
       super(id, new CompoundPropertyModel<ValueMap>(vm));
@@ -54,12 +59,12 @@ public class SettingsPage extends WebPage {
       
       add(new AjaxButton("submitbutton") {
           protected void onSubmit(final AjaxRequestTarget target, final Form form) {
-            wmc.setVisibilityAllowed(false);            
-            target.add(wmc);
+            loginErrorMsgDisplay.setVisibilityAllowed(false);            
+            target.add(loginErrorMsgDisplay);
           }
           protected void onError(final AjaxRequestTarget target, final Form form) {
-            wmc.setVisibilityAllowed(true);            
-            target.add(wmc);
+            loginErrorMsgDisplay.setVisibilityAllowed(true);            
+            target.add(loginErrorMsgDisplay);
           }
         });
     }
@@ -69,16 +74,16 @@ public class SettingsPage extends WebPage {
       if (fe.login((String) vals.get("loginusername"), (String) vals.get("loginpassword"))) {
         vals.put("currentuser", (String) vals.get("loginusername"));
 
-        wmc.setVisibilityAllowed(false);
+        loginErrorMsgDisplay.setVisibilityAllowed(false);
         setResponsePage(new SettingsPage());
       } else {
-        wmc.setVisibilityAllowed(true);        
+        loginErrorMsgDisplay.setVisibilityAllowed(true);        
       }
       vals.put("loginpassword", "");
     }
     public void onError() {
       ValueMap vals = getModelObject();
-      wmc.setVisibilityAllowed(true);
+      loginErrorMsgDisplay.setVisibilityAllowed(true);
       vals.put("loginpassword", "");      
     }
     public void onConfigure() {
@@ -86,6 +91,9 @@ public class SettingsPage extends WebPage {
     }
   }
 
+  /////////////////////////////////////////////////////
+  // User logout form
+  ////////////////////////////////////////////////////
   public final class LogoutForm extends Form<ValueMap> {
     public LogoutForm(final String id, ValueMap vm) {
       super(id, new CompoundPropertyModel<ValueMap>(vm));
@@ -101,7 +109,91 @@ public class SettingsPage extends WebPage {
     }
   }
 
-  final WebMarkupContainer wmc = new WebMarkupContainer("errorMsgContainer");
+  /////////////////////////////////////////////////////
+  // Filesystem registration form
+  ////////////////////////////////////////////////////
+  public final class FilesystemRegistrationForm extends Form<ValueMap> {
+    public FilesystemRegistrationForm(final String id, ValueMap vm) {
+      super(id, new CompoundPropertyModel<ValueMap>(vm));
+      add(new TextField<String>("hdfsDir").setType(String.class));
+      add(new TextField<String>("localfsDir").setType(String.class));      
+      add(new AjaxButton("fssubmitbutton") {
+          protected void onSubmit(final AjaxRequestTarget target, final Form form) {
+            fsErrorMsgDisplay.setVisibilityAllowed(false);            
+            target.add(fsErrorMsgDisplay);
+          }
+          protected void onError(final AjaxRequestTarget target, final Form form) {
+            fsErrorMsgDisplay.setVisibilityAllowed(true);            
+            target.add(fsErrorMsgDisplay);
+          }
+        });
+    }
+    public void onSubmit() {
+      String hdfsUrl = (String) getModelObject().get("hdfsDir");
+      String fsUrl = (String) getModelObject().get("localfsDir");      
+      FishEye fe = FishEye.getInstance();
+      ValueMap vals = getModelObject();      
+      boolean success = false;
+      String targetFs = null;
+      try {
+        if (hdfsUrl != null && hdfsUrl.length() > 0) {
+          targetFs = "hdfs://" + hdfsUrl;
+        } else if (fsUrl != null && fsUrl.length() > 0) {
+          targetFs = "file://" + fsUrl;
+        }
+        if (targetFs != null) {
+          success = fe.registerFilesystem(targetFs);
+        } else {
+          success = false;
+        }
+      } catch (IOException ioe) {
+      }
+
+      if (success) {
+        vals.put("currentfs", targetFs);
+        fsErrorMsgDisplay.setVisibilityAllowed(false);
+        setResponsePage(new SettingsPage());
+      } else {
+        // Ask user to kindly error message
+        fsErrorMsgDisplay.setVisibilityAllowed(true);
+      }
+    }
+    public void onError() {
+      ValueMap vals = getModelObject();
+      fsErrorMsgDisplay.setVisibilityAllowed(true);
+      vals.put("currentfs", "");      
+    }
+    public void onConfigure() {
+      setVisibilityAllowed(FishEye.getInstance().getFSUrl() == null);
+    }
+  }
+
+  /////////////////////////////////////////////////////
+  // Filesystem cancellation form
+  ////////////////////////////////////////////////////
+  public final class FilesystemCancelForm extends Form<ValueMap> {
+    public FilesystemCancelForm(final String id, ValueMap vm) {
+      super(id, new CompoundPropertyModel<ValueMap>(vm));
+      FishEye fe = FishEye.getInstance();      
+      add(new Label("currentfs"));
+      List<CrawlSummary> crawlList = fe.getAnalyzer().getCrawlSummaries();
+      add(new Label("numcrawls", "" + crawlList.size()));
+      vm.put("currentfs", fe.getFSUrl());
+    }
+    public void onSubmit() {
+      FishEye fe = FishEye.getInstance();
+      fe.cancelFS();
+      setResponsePage(new SettingsPage());      
+    }
+    public void onConfigure() {
+      setVisibilityAllowed(FishEye.getInstance().getFSUrl() != null);
+    }
+  }
+
+
+  
+  final WebMarkupContainer loginErrorMsgDisplay = new WebMarkupContainer("loginErrorMsgContainer");
+  final WebMarkupContainer fsErrorMsgDisplay = new WebMarkupContainer("fsErrorMsgContainer");
   public SettingsPage() {
     FishEye fe = FishEye.getInstance();    
     final String username = fe.getUsername();
@@ -109,54 +201,33 @@ public class SettingsPage extends WebPage {
     logins.put("currentuser", username);
     this.setOutputMarkupPlaceholderTag(true);        
 
+    //
     // Login/logout
+    //
     add(new LoginForm("loginform", logins));
     add(new LogoutForm("logoutform", logins));
-    final Label errorLabel = new Label("loginErrorMessage", "Your username and password did not match.");
-    wmc.add(errorLabel);
-    wmc.setOutputMarkupPlaceholderTag(true);
-    add(wmc);
-    wmc.setVisibilityAllowed(false);
+    final Label loginErrorLabel = new Label("loginErrorMessage", "Your username and password did not match.");
+    loginErrorMsgDisplay.add(loginErrorLabel);
+    loginErrorMsgDisplay.setOutputMarkupPlaceholderTag(true);
+    add(loginErrorMsgDisplay);
+    loginErrorMsgDisplay.setVisibilityAllowed(false);
 
     //
-    // Display filesystem add box, if there is no current FS.
+    // Add filesystem/remove filesystem
     //
-    WebMarkupContainer fsAddContainer = new WebMarkupContainer("fsAddContainer");
-
-    Form<?> hdfsAddForm = new Form<ValueMap>("hdfsaddform", new CompoundPropertyModel<ValueMap>(new ValueMap())) {
-      protected void onSubmit() {
-        System.err.println("Hooh! hdfs dir is: " + (String) getModelObject().get("hdfsDir"));
-      }
-    };
-    hdfsAddForm.add(new RequiredTextField<String>("hdfsDir").setType(String.class));
-    fsAddContainer.add(hdfsAddForm);
-
-    Form<?> localFsAddForm = new Form<ValueMap>("localfsaddform", new CompoundPropertyModel<ValueMap>(new ValueMap())) {
-      protected void onSubmit() {
-        System.err.println("Hooh! local fs dir is: " + (String) getModelObject().get("localfsDir"));
-      }
-    };
-    localFsAddForm.add(new RequiredTextField<String>("localfsDir").setType(String.class));
-    fsAddContainer.add(localFsAddForm);
-    
-    fsAddContainer.setOutputMarkupPlaceholderTag(true);
-    add(fsAddContainer);
-    fsAddContainer.setVisibilityAllowed(fe.getFSUrl() == null);
-    
-    //
-    // Display filesystem info, if there is any.
-    //
-    List<CrawlSummary> crawlList = fe.getAnalyzer().getCrawlSummaries();    
-    WebMarkupContainer fsDisplayContainer = new WebMarkupContainer("fsDisplayContainer");
-    fsDisplayContainer.add(new Label("fsName", "" + fe.getFSUrl()));
-    fsDisplayContainer.add(new Label("numCrawls", "" + crawlList.size()));
-    fsDisplayContainer.setOutputMarkupPlaceholderTag(true);    
-    add(fsDisplayContainer);
-    fsDisplayContainer.setVisibilityAllowed(fe.getFSUrl() != null);
+    final ValueMap fsinfo = new ValueMap();        
+    add(new FilesystemRegistrationForm("fsaddform", fsinfo));
+    add(new FilesystemCancelForm("fscancelform", fsinfo));
+    final Label fsErrorLabel = new Label("fsErrorMessage", "The filesystem was not found.");
+    fsErrorMsgDisplay.add(fsErrorLabel);
+    fsErrorMsgDisplay.setOutputMarkupPlaceholderTag(true);
+    add(fsErrorMsgDisplay);
+    fsErrorMsgDisplay.setVisibilityAllowed(false);
     
     //
     // If the filesystem is there, we need to have info about its crawls
     //
+    /**
     WebMarkupContainer crawlContainer = new WebMarkupContainer("crawlContainer");
     ListView<CrawlSummary> crawlListView = new ListView<CrawlSummary>("crawlListView", crawlList) {
       protected void populateItem(ListItem<CrawlSummary> item) {
@@ -169,6 +240,7 @@ public class SettingsPage extends WebPage {
     crawlContainer.add(crawlListView);
     fsDisplayContainer.add(crawlContainer);
     crawlContainer.setVisibilityAllowed(crawlList.size() > 0);
+    **/
 
     //
     // Standard environment variables

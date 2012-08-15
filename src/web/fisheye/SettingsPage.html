@@ -76,74 +76,76 @@
             <!-- -->
             <!-- User access control -->
             <!-- -->            
-              <h4>Access Control</h4>
-                <div class="errorbox" wicket:id="errorMsgContainer">
-                  <div class="alert">
-                    <strong>Login failed: </strong><span wicket:id="loginErrorMessage"></span>
-                  </div>
+            <h4>Access Control</h4>
+              <div class="errorbox" wicket:id="loginErrorMsgContainer">
+                <div class="alert">
+                  <strong>Login failed: </strong><span wicket:id="loginErrorMessage"></span>
                 </div>
-              <form class="well form-inline" method="get" wicket:id="loginform">
-                <!-- <em><strong><span wicket:id="loginfeedback"></span></strong></em> -->
-                <label>
-                  You are not currently logged in.<p/>
-                  Log in to obtain better file access privileges.<p/>
-                </label><br/>
-                <input type="text" class="input-small" placeholder="Username" wicket:id="loginusername">
-                <input type="password" class="input-small" placeholder="Password" wicket:id="loginpassword">
-                <button type="submit" class="btn btn-primary"  wicket:id="submitbutton">Log in</button>
-              </form>
-            <!-- </div> -->
-
-            <form class="well form-inline" method="get" wicket:id="logoutform">
+              </div>
+            <form class="well form-inline" method="get" wicket:id="loginform">
+              <!-- <em><strong><span wicket:id="loginfeedback"></span></strong></em> -->
               <label>
-                You are logged in as <strong><span wicket:id="currentuser"></span></strong>.  <p/>
-                To change file access privileges, log out, then log in as a different user.<p/>
-                </label><br/>
-                <button type="submit" class="btn btn-danger">Log out</button>
+                You are not currently logged in.<p/>
+                Log in to obtain better file access privileges.<p/>
+              </label><br/>
+              <input type="text" class="input-small" placeholder="Username" wicket:id="loginusername">
+              <input type="password" class="input-small" placeholder="Password" wicket:id="loginpassword">
+              <button type="submit" class="btn btn-primary"  wicket:id="submitbutton">Log in</button>
             </form>
+          <!-- </div> -->
+
+          <form class="well form-inline" method="get" wicket:id="logoutform">
+            <label>
+              You are logged in as <strong><span wicket:id="currentuser"></span></strong>.  <p/>
+              To change file access privileges, log out, then log in as a different user.<p/>
+              </label><br/>
+              <button type="submit" class="btn btn-danger">Log out</button>
+          </form>
 
             <!-- -->
-            <!-- Manage filesystems -->
+            <!-- FILESYSTEM -->
             <!-- -->
-            <!-- Add a filesystem -->
-            <h4> Filesystem</h4>                        
-            <div class="well" wicket:id="fsAddContainer">
-              Fisheye does not currently have a registered filesystem.<p/>
-              You must add a filesystem before Fisheye can do anything interesting.<p/>
-
-              <form class="form-inline" method="get" wicket:id="hdfsaddform">
-                <fieldset>
-                  <div class="control-group">
-                    <div class="controls">
-                      <div class="input-prepend input-append">
-                        <span class="add-on">hdfs://</span><input class="input-large" wicket:id="hdfsDir" type="text"><button class="btn btn-primary" type="button">Add HDFS filesystem</button>
-                      </div>
-                    </div>
-                  </div>
-                </fieldset>
-              </form>
-              <p/>
-              <strong>OR</strong>
-              <p/>
-              <form class="form-inline" method="get" wicket:id="localfsaddform">
-                <fieldset>
-                  <div class="control-group">
-                    <div class="controls">
-                      <div class="input-prepend input-append">
-                        <span class="add-on">file://</span><input class="input-large" wicket:id="localfsDir" type="text"><button class="btn btn-primary" type="button">Add local filesystem</button>
-                      </div>
-                    </div>
-                  </div>
-                </fieldset>
-              </form>
+            <h4> Filesystem</h4>
+            
+            <!-- Potential error box for filesystem config -->
+            <div class="errorbox" wicket:id="fsErrorMsgContainer">
+              <div class="alert">
+                <strong><span wicket:id="fsErrorMessage"></span></strong>
+              </div>
             </div>
 
-            <!-- Display current filesystem -->
-            <div class="fsbox" wicket:id="fsDisplayContainer">
-              Fisheye is currently examining the filesystem at <span wicket:id="fsName"></span><p/>.
+            <!-- If no filesystem, show form to grab filesystem info -->
+            <form class="well form-inline" method="get" wicket:id="fsaddform">
+              <label>
+                Fisheye does not currently have a registered filesystem.<p/>
+                You must add a filesystem before Fisheye can do anything interesting.<p/>
+              </label><br/>
+              <fieldset>
+                <div class="control-group">
+                  <div class="controls">
+                    <div class="input-prepend input-append">
+                      <span class="add-on">hdfs://</span><input class="input-large" wicket:id="hdfsDir" type="text">
+                    </div>
+                  <br/><strong>OR</strong><p/>
+                    <div class="input-prepend input-append">
+                      <span class="add-on">file://</span><input class="input-large" wicket:id="localfsDir" type="text">
+                    </div>
+                  </div>
+                </div>
+                <p/>
+                <button class="btn btn-primary" wicket:id="fssubmitbutton" type="submit">Add filesystem</button>
+              </fieldset>
+            </form>
+            
+            <!-- If there is a filesystem, display the current one -->
+            <form class="well form-inline" method="get" wicket:id="fscancelform">
+              <label>
+              Fisheye is currently examining the filesystem at <strong><span wicket:id="currentfs"></span></strong>.<p/>
+              There are <strong><span wicket:id="numcrawls"></span></strong> crawls of this filesystem.<p/>
+              </label><br/>
+              <button type="submit" class="btn btn-danger">Change filesystem</button>              
 
-              There are <span wicket:id="numCrawls"></span> crawls of this filesystem.
-
+              <!--
               <div class="crawlbox" wicket:id="crawlContainer">
                 <table class="table table-striped table-bordered table-condensed">
                   <thead>
@@ -157,7 +159,8 @@
                   </tbody>
                 </table>
               </div>
-            </div>
+              -->
+            </form>
 
 
             <!-- -->

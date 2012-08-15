@@ -49,7 +49,6 @@ public class FishEye {
   Date startTime;
   int fisheyePort;
   File fisheyeDir;
-  String fsUrl;  
   String username;
 
   public static FishEye getInstance() {
@@ -74,6 +73,12 @@ public class FishEye {
     FishEye.fisheyeInstance = this;
   }
 
+  public boolean registerFilesystem(String fsUrl) throws IOException {
+    // REMIND -- check to make sure FS is valid.
+    analyzer.setConfigProperty("fsurl", fsUrl);
+    return true;
+  }
+
   public Date getStartTime() {
     return startTime;
   }
@@ -86,6 +91,10 @@ public class FishEye {
   public String getFSUrl() {
     return analyzer.getConfigProperty("fsurl");
   }
+  public void cancelFS() {
+    analyzer.setConfigProperty("fsurl", null);
+    // Cancel the FS
+  }
   public FSAnalyzer getAnalyzer() {
     return analyzer;
   }
@@ -97,8 +106,12 @@ public class FishEye {
   }
   public boolean login(String username, String password) {
     // For now, login always succeeds
-    this.username = username;
-    return true;
+    if (username.equals(password)) {
+      this.username = username;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   public void run() throws Exception {
