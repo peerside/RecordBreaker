@@ -159,4 +159,33 @@ public class FSCrawler {
     long crawlid = startNonblockingCrawl(startDir, subdirDepth, fsname);
     return waitForCrawl(crawlid);
   }
+
+  ////////////////////////////////////////
+  // Main()
+  ////////////////////////////////////////
+  public static void main(String argv[]) throws Exception {
+    if (argv.length < 4) {
+      System.err.println("Usage: FSCrawler <metadataStoreDir> <schemaDbDir> (--crawl <dir> <subdirdepth>)");
+      return;
+    }
+    int i = 0;
+    File metadataStoreDir = new File(argv[i++]).getCanonicalFile();
+    File schemadbdir = new File(argv[i++]).getCanonicalFile();
+    String op = argv[i++];
+    FSAnalyzer fsa = new FSAnalyzer(metadataStoreDir, schemadbdir);
+
+    try {
+      if ("--crawl".equals(op)) {
+        File dir = new File(argv[i++]).getCanonicalFile();
+        int subdirDepth = Integer.parseInt(argv[i++]);
+        FSCrawler crawler = new FSCrawler(fsa);
+        crawler.blockingCrawl(dir, subdirDepth, "file://");
+      } else if ("--test".equals(op)) {
+        List<SchemaSummary> summaryList = fsa.getSchemaSummaries();
+        System.err.println("Schema summary list has " + summaryList.size() + " entries");
+      }
+    } finally {
+      fsa.close();
+    }
+  }
 }

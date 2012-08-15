@@ -50,7 +50,7 @@ public class FSAnalyzer {
   // 1. Create the schemas
   //
   static String CREATE_TABLE_CONFIG = "CREATE TABLE Configs(propertyname varchar(128), property varchar(256));";
-  static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, lastexamined text, inprogress boolean, foreign key(fsid) references Filesystems(fsid));";
+  static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, lastexamined text, inprogress text, fsid integer, foreign key(fsid) references Filesystems(fsid));";
   static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
   static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, crawlid integer, fname varchar(256), owner varchar(16), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
   static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
@@ -60,9 +60,9 @@ public class FSAnalyzer {
     dbQueue.execute(new SQLiteJob<Object>() {
         protected Object job(SQLiteConnection db) throws SQLiteException {
           try {
-            db.exec(CREATE_TABLE_CONFIG);            
+            db.exec(CREATE_TABLE_CONFIG);
+            db.exec(CREATE_TABLE_FILESYSTEM);                        
             db.exec(CREATE_TABLE_CRAWL);
-            db.exec(CREATE_TABLE_FILESYSTEM);            
             db.exec(CREATE_TABLE_FILES);    
             db.exec(CREATE_TABLE_TYPES);
             db.exec(CREATE_TABLE_SCHEMAS);
@@ -622,7 +622,6 @@ public class FSAnalyzer {
   ////////////////////////////////////////
   // Initialize and close an instance of FSAnalyzer
   ////////////////////////////////////////
-  File store;
   SQLiteConnection db;
   SQLiteQueue dbQueue;
   FormatAnalyzer formatAnalyzer;
@@ -632,7 +631,8 @@ public class FSAnalyzer {
    */
   public FSAnalyzer(File metadataStore, File schemaDir) throws IOException, SQLiteException {
     boolean isNew = false;
-    if (! store.exists()) {
+    metadataStore = metadataStore.getCanonicalFile();
+    if (! metadataStore.exists()) {
       isNew = true;
     }
     this.dbQueue = new SQLiteQueue(metadataStore);
@@ -646,34 +646,5 @@ public class FSAnalyzer {
 
   void close() throws IOException, SQLiteException, InterruptedException {
     this.dbQueue.stop(true).join();
-  }
-
-  ////////////////////////////////////////
-  // Main()
-  ////////////////////////////////////////
-  public static void main(String argv[]) throws Exception {
-    if (argv.length < 4) {
-      System.err.println("Usage: FSAnalyzer <metadataStoreDir> <schemaDbDir> (--crawl <dir> <subdirdepth>)");
-      return;
-    }
-    int i = 0;
-    File metadataStoreDir = new File(argv[i++]).getCanonicalFile();
-    File schemadbdir = new File(argv[i++]).getCanonicalFile();
-    String op = argv[i++];
-    FSAnalyzer fsa = new FSAnalyzer(metadataStoreDir, schemadbdir);
-
-    try {
-      if ("--crawl".equals(op)) {
-        File dir = new File(argv[i++]).getCanonicalFile();
-        int subdirDepth = Integer.parseInt(argv[i++]);
-        FSCrawler crawler = new FSCrawler(fsa);
-        crawler.blockingCrawl(dir, subdirDepth, "file://");
-      } else if ("--test".equals(op)) {
-        List<SchemaSummary> summaryList = fsa.getSchemaSummaries();
-        System.err.println("Schema summary list has " + summaryList.size() + " entries");
-      }
-    } finally {
-      fsa.close();
-    }
   }
 }
