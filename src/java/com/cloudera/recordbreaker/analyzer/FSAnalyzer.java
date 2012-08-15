@@ -74,44 +74,10 @@ public class FSAnalyzer {
       }).complete();
   }
 
-  //
-  // 2. Insert data (about the crawled and analyzed files)
-  //
-  class TypeGuess {
-    String typeLabel;
-    String typeDesc;
-    String schemaLabel;
-    String schemaDesc;
-    double score;
-    
-    public TypeGuess(String typeLabel, String typeDesc, String schemaLabel, String schemaDesc, double score) {
-      this.typeLabel = typeLabel;
-      this.typeDesc = typeDesc;
-      this.schemaLabel = schemaLabel;
-      this.schemaDesc = schemaDesc;
-      this.score = score;
-    }
-    String getTypeLabel() {
-      return typeLabel;
-    }
-    String getTypeDesc() {
-      return typeDesc;
-    }
-    String getSchemaLabel() {
-      return schemaLabel;
-    }
-    String getSchemaDesc() {
-      return schemaDesc;
-    }
-    double getScore() {
-      return score;
-    }
-  }
-
   ///////////////////////////////////////////////
   // Manage Crawls and Filesystems
   ///////////////////////////////////////////////
-  long getCreateFilesystem(final String fsname) throws SQLiteException {
+  public long getCreateFilesystem(final String fsname) throws SQLiteException {
     long fsid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("SELECT fsid FROM Filesystems WHERE fsname = ?");
@@ -152,7 +118,7 @@ public class FSAnalyzer {
    * If a crawl is pending, that one is returned.
    * If no crawl is pending, a new one is created.
    */
-  long getNewOrPendingCrawl(final long fsid) throws SQLiteException {
+  public long getNewOrPendingCrawl(final long fsid) throws SQLiteException {
     long crawlid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("SELECT crawlid from Crawls WHERE fsid = ? AND inprogress = 'True'");
@@ -190,7 +156,7 @@ public class FSAnalyzer {
         }
       }).complete();
   }
-  void completeCrawl(final long fsid) throws SQLiteException {
+  public void completeCrawl(final long fsid) throws SQLiteException {
     dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("UPDATE Crawls SET inprogress='False' WHERE fsid = ?");
@@ -335,6 +301,13 @@ public class FSAnalyzer {
         }
       }).complete();
     return fileId;
+  }
+
+  /**
+   * Try to describe the contents of the given file
+   */
+  DataDescriptor describeData(File f) throws IOException {
+    return formatAnalyzer.describeData(f);
   }
   
   ///////////////////////////////////////////////////
@@ -657,12 +630,12 @@ public class FSAnalyzer {
   /**
    * Inits (and optionally creates) a new <code>FSAnalyzer</code> instance.
    */
-  public FSAnalyzer(File store, File schemaDir) throws IOException, SQLiteException {
+  public FSAnalyzer(File metadataStore, File schemaDir) throws IOException, SQLiteException {
     boolean isNew = false;
     if (! store.exists()) {
       isNew = true;
     }
-    this.dbQueue = new SQLiteQueue(store);
+    this.dbQueue = new SQLiteQueue(metadataStore);
     this.dbQueue.start();
 
     if (isNew) {
@@ -678,93 +651,26 @@ public class FSAnalyzer {
   ////////////////////////////////////////
   // Crawl services
   ////////////////////////////////////////
-  /**
-   * <code>addFile</code> will insert a single file into the database.
-   * This isn't the most efficient thing in the world; it would be better
-   * to add a batch at a time.
-   */
-  void addFile(File f, long crawlid) throws IOException, SQLiteException {
-    // REMIND --- need to add support for HDFS files here
-    List<TypeGuess> tgs = new ArrayList<TypeGuess>();    
-
-    DataDescriptor descriptor = formatAnalyzer.describeData(f);
-    List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();
-
-    if (schemas == null || schemas.size() == 0) {
-      tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
-                            "no schema", "no schema", 1.0));
-    } else {
-      for (SchemaDescriptor sd: schemas) {
-        tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
-                              sd.getSchemaIdentifier(), sd.getSchemaSourceDescription(), 1.0));
-      }
-    }
-
-    Date dateModified = new Date(f.lastModified());
-    // Need to grab the owner of the file somehow!!!
-    String owner = "mjc";
-    long id = insertIntoFiles(f.getName(), owner, f.length(), fileDateFormat.format(dateModified), f.getCanonicalFile().getParent(), crawlid, tgs);
-  }
-  
-  /**
-   * Traverse an entire region of the filesystem, analyzing files.
-   * This code should:
-   * a) Navigate the directory hierarchy
-   * b) Run analysis code to figure out the file details
-   * c) Invoke addFile() appropriately.
-   */
-  void recursiveCrawl(File f, int subdirDepth, long crawlId) throws IOException, SQLiteException {
-    // REMIND --- need to add support for HDFS files here
-    if (f.isDirectory()) {
-      for (File subfile: f.listFiles()) {
-        if (subfile.isFile()) {
-          addFile(subfile, crawlId);
-        }
-      }
-      if (subdirDepth > 0) {
-        for (File subfile: f.listFiles()) {
-          if (! subfile.isFile()) {
-            recursiveCrawl(subfile, subdirDepth-1, crawlId);
-          }
-        }
-      }
-    } else {
-      addFile(f, crawlId);
-    }
-  }
-
-  /**
-   * Kick off a crawl at the indicated directory and filesystem,
-   * to the indicated depth.
-   */
-  long performCrawl(File startDir, int subdirDepth, String fsname) throws IOException, SQLiteException {
-    long fsid = getCreateFilesystem(fsname);
-    long crawlid = getNewOrPendingCrawl(fsid);
-    recursiveCrawl(startDir, subdirDepth, crawlid);
-    completeCrawl(crawlid);
-    return crawlid;
-  }
-
-
   ////////////////////////////////////////
   // Main()
   ////////////////////////////////////////
   public static void main(String argv[]) throws Exception {
     if (argv.length < 4) {
-      System.err.println("Usage: FSAnalyzer <storedir> <schemaDbDir> (--crawl <dir> <subdirdepth>)");
+      System.err.println("Usage: FSAnalyzer <metadataStoreDir> <schemaDbDir> (--crawl <dir> <subdirdepth>)");
       return;
     }
     int i = 0;
-    File storedir = new File(argv[i++]).getCanonicalFile();
+    File metadataStoreDir = new File(argv[i++]).getCanonicalFile();
     File schemadbdir = new File(argv[i++]).getCanonicalFile();
     String op = argv[i++];
-    FSAnalyzer fsa = new FSAnalyzer(storedir, schemadbdir);
+    FSAnalyzer fsa = new FSAnalyzer(metadataStoreDir, schemadbdir);
 
     try {
       if ("--crawl".equals(op)) {
         File dir = new File(argv[i++]).getCanonicalFile();
         int subdirDepth = Integer.parseInt(argv[i++]);
-        fsa.performCrawl(dir, subdirDepth, "file://");
+        FSCrawler crawler = new FSCrawler(fsa);
+        crawler.blockingCrawl(dir, subdirDepth, "file://");
       } else if ("--test".equals(op)) {
         List<SchemaSummary> summaryList = fsa.getSchemaSummaries();
         System.err.println("Schema summary list has " + summaryList.size() + " entries");
