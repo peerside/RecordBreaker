@@ -49,7 +49,9 @@ public class FSAnalyzer {
   //
   // 1. Create the schemas
   //
-  static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, lastexamined text);";  
+  static String CREATE_TABLE_CONFIG = "CREATE TABLE Configs(propertyname varchar(128), property varchar(256));";
+  static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, lastexamined text, inprogress boolean, foreign key(fsid) references Filesystems(fsid));";
+  static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
   static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, crawlid integer, fname varchar(256), owner varchar(16), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
   static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
   static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemalabel varchar(64), schemadescriptor varchar(1024));";
@@ -58,7 +60,9 @@ public class FSAnalyzer {
     dbQueue.execute(new SQLiteJob<Object>() {
         protected Object job(SQLiteConnection db) throws SQLiteException {
           try {
+            db.exec(CREATE_TABLE_CONFIG);            
             db.exec(CREATE_TABLE_CRAWL);
+            db.exec(CREATE_TABLE_FILESYSTEM);            
             db.exec(CREATE_TABLE_FILES);    
             db.exec(CREATE_TABLE_TYPES);
             db.exec(CREATE_TABLE_SCHEMAS);
@@ -104,16 +108,56 @@ public class FSAnalyzer {
     }
   }
 
+  ///////////////////////////////////////////////
+  // Manage Crawls and Filesystems
+  ///////////////////////////////////////////////
+  long getCreateFilesystem(final String fsname) throws SQLiteException {
+    long fsid = dbQueue.execute(new SQLiteJob<Long>() {
+        protected Long job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT fsid FROM Filesystems WHERE fsname = ?");
+          try {
+            stmt.bind(1, fsname);
+            if (stmt.step()) {
+              long resultId = stmt.columnLong(0);
+              return resultId;
+            } else {
+              return -1L;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+    if (fsid >= 0) {
+      return fsid;
+    }
+
+    // It wasn't there, so create it!
+    return dbQueue.execute(new SQLiteJob<Long>() {
+        protected Long job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("INSERT into Filesystems VALUES(null, ?)");
+          try {
+            stmt.bind(1, fsname);
+            stmt.step();
+            return db.getLastInsertId();
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  };
+  
   /**
-   * Helper fn <code>getCreateCrawl</code> returns the id of a specified Crawl in the Crawls table.
-   * The row is created, if necessary.
+   * Helper fn <code>getNewOrPendingCrawl</code> returns the id of a Crawl for the specified filesystem.
+   * If a crawl is pending, that one is returned.
+   * If no crawl is pending, a new one is created.
    */
-  long getCreateCrawl(final String lastExamined) throws SQLiteException {
+  long getNewOrPendingCrawl(final long fsid) throws SQLiteException {
     long crawlid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT crawlid from Crawls WHERE lastexamined = ?");
+          SQLiteStatement stmt = db.prepare("SELECT crawlid from Crawls WHERE fsid = ? AND inprogress = 'True'");
           try {
-            stmt.bind(1, lastExamined);
+            stmt.bind(1, fsid);
             if (stmt.step()) {
               return stmt.columnLong(0);
             } else {
@@ -132,9 +176,12 @@ public class FSAnalyzer {
     // Time to insert
     return dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("INSERT into Crawls VALUES(null, ?)");
+          Date now = new Date(System.currentTimeMillis());
+          String lastExamined = fileDateFormat.format(now);
+          String inprogress = "True";
+          SQLiteStatement stmt = db.prepare("INSERT into Crawls VALUES(null, ?, ?, ?)");
           try {
-            stmt.bind(1, lastExamined);
+            stmt.bind(1, lastExamined).bind(2, inprogress).bind(3, fsid);
             stmt.step();
             return db.getLastInsertId();
           } finally {
@@ -143,7 +190,27 @@ public class FSAnalyzer {
         }
       }).complete();
   }
+  void completeCrawl(final long fsid) throws SQLiteException {
+    dbQueue.execute(new SQLiteJob<Long>() {
+        protected Long job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("UPDATE Crawls SET inprogress='False' WHERE fsid = ?");
+          try {
+            stmt.bind(1, fsid);
+            if (stmt.step()) {
+              return fsid;
+            } else {
+              return -1L;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
 
+  ///////////////////////////////////////////////
+  // Manage Types and Schemas
+  ///////////////////////////////////////////////
   /**
    * Helper fn <code>getCreateType</code> returns the id of a specified Type in the Types table.
    * The row is created, if necessary.
@@ -229,9 +296,7 @@ public class FSAnalyzer {
   /**
    * Add a new object to the set of all known files.  This involves several tables.
    */
-  long insertIntoFiles(final String fname, final String owner, final long size, final String timeDateStamp, final String path, String lastExamined, final List<TypeGuess> typeGuesses) throws SQLiteException {
-    final long crawlId = getCreateCrawl(lastExamined);
-
+  long insertIntoFiles(final String fname, final String owner, final long size, final String timeDateStamp, final String path, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException {
     final long fileId = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?)");
@@ -402,6 +467,68 @@ public class FSAnalyzer {
   // ACCESSORS FOR INDIVIDUAL OBJECTS
   ///////////////////////////////////////////
   /**
+   * Read a property's value
+   */
+  public String getConfigProperty(final String propertyName) {
+    return dbQueue.execute(new SQLiteJob<String>() {
+        protected String job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT property FROM Configs WHERE propertyname=?");
+          try {
+            stmt.bind(1, propertyName);
+            if (stmt.step()) {
+              return stmt.columnString(0);
+            } else {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+
+  /**
+   * Write a property
+   */
+  public void setConfigProperty(final String propertyName, final String property) {
+    if (property == null) {
+      deleteConfigProperty(propertyName);
+    } else {
+      dbQueue.execute(new SQLiteJob<Object>() {
+          protected Object job(SQLiteConnection db) throws SQLiteException {
+            SQLiteStatement stmt = db.prepare("REPLACE into Configs VALUES(?, ?)");
+            try {
+              stmt.bind(1, propertyName);
+              stmt.bind(2, property);            
+              stmt.step();
+            } finally {
+              stmt.dispose();
+            }
+            return null;
+          }
+        }).complete();
+    }
+  }
+
+  /**
+   * Delete a property
+   */
+  public void deleteConfigProperty(final String propertyName) {
+    dbQueue.execute(new SQLiteJob<Object>() {
+        protected Object job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("DELETE from Configs WHERE propertyname=?");
+          try {
+            stmt.bind(1, propertyName);
+            stmt.step();
+          } finally {
+            stmt.dispose();
+          }
+          return null;
+        }
+      }).complete();
+  }
+  
+  /**
    * Grab details on a specific file.
    */
   public FileSummaryData getFileSummaryData(final long fid) {
@@ -487,7 +614,7 @@ public class FSAnalyzer {
 
   
   ///////////////////////////////////////////
-  // GRAB TYPE GUESS SETS
+  // Get type guesses
   ///////////////////////////////////////////
   static String typeGuessQueryForFile = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE fid = ?";
   static String typeGuessQueryForSchema = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE schemaid = ?";
@@ -519,6 +646,9 @@ public class FSAnalyzer {
       }).complete();
   }
 
+  ////////////////////////////////////////
+  // Initialize and close an instance of FSAnalyzer
+  ////////////////////////////////////////
   File store;
   SQLiteConnection db;
   SQLiteQueue dbQueue;
@@ -538,7 +668,6 @@ public class FSAnalyzer {
     if (isNew) {
       createTables();
     }
-
     //this.formatAnalyzer = new FormatAnalyzer(schemaDir);
   }
 
@@ -546,12 +675,16 @@ public class FSAnalyzer {
     this.dbQueue.stop(true).join();
   }
 
+  ////////////////////////////////////////
+  // Crawl services
+  ////////////////////////////////////////
   /**
    * <code>addFile</code> will insert a single file into the database.
    * This isn't the most efficient thing in the world; it would be better
    * to add a batch at a time.
    */
-  void addFile(File f, String crawlDate) throws IOException, SQLiteException {
+  void addFile(File f, long crawlid) throws IOException, SQLiteException {
+    // REMIND --- need to add support for HDFS files here
     List<TypeGuess> tgs = new ArrayList<TypeGuess>();    
 
     DataDescriptor descriptor = formatAnalyzer.describeData(f);
@@ -568,7 +701,9 @@ public class FSAnalyzer {
     }
 
     Date dateModified = new Date(f.lastModified());
-    long id = insertIntoFiles(f.getName(), "mjc", f.length(), fileDateFormat.format(dateModified), f.getCanonicalFile().getParent(), crawlDate, tgs);
+    // Need to grab the owner of the file somehow!!!
+    String owner = "mjc";
+    long id = insertIntoFiles(f.getName(), owner, f.length(), fileDateFormat.format(dateModified), f.getCanonicalFile().getParent(), crawlid, tgs);
   }
   
   /**
@@ -578,29 +713,42 @@ public class FSAnalyzer {
    * b) Run analysis code to figure out the file details
    * c) Invoke addFile() appropriately.
    */
-  void crawl(File f, int subdirDepth) throws IOException, SQLiteException {
-    Date now = new Date(System.currentTimeMillis());
-    String crawlDate = fileDateFormat.format(now);
-    
+  void recursiveCrawl(File f, int subdirDepth, long crawlId) throws IOException, SQLiteException {
+    // REMIND --- need to add support for HDFS files here
     if (f.isDirectory()) {
       for (File subfile: f.listFiles()) {
         if (subfile.isFile()) {
-          addFile(subfile, crawlDate);
+          addFile(subfile, crawlId);
         }
       }
       if (subdirDepth > 0) {
         for (File subfile: f.listFiles()) {
           if (! subfile.isFile()) {
-            crawl(subfile, subdirDepth-1);
+            recursiveCrawl(subfile, subdirDepth-1, crawlId);
           }
         }
       }
     } else {
-      addFile(f, crawlDate);
+      addFile(f, crawlId);
     }
   }
 
+  /**
+   * Kick off a crawl at the indicated directory and filesystem,
+   * to the indicated depth.
+   */
+  long performCrawl(File startDir, int subdirDepth, String fsname) throws IOException, SQLiteException {
+    long fsid = getCreateFilesystem(fsname);
+    long crawlid = getNewOrPendingCrawl(fsid);
+    recursiveCrawl(startDir, subdirDepth, crawlid);
+    completeCrawl(crawlid);
+    return crawlid;
+  }
 
+
+  ////////////////////////////////////////
+  // Main()
+  ////////////////////////////////////////
   public static void main(String argv[]) throws Exception {
     if (argv.length < 4) {
       System.err.println("Usage: FSAnalyzer <storedir> <schemaDbDir> (--crawl <dir> <subdirdepth>)");
@@ -616,7 +764,7 @@ public class FSAnalyzer {
       if ("--crawl".equals(op)) {
         File dir = new File(argv[i++]).getCanonicalFile();
         int subdirDepth = Integer.parseInt(argv[i++]);
-        fsa.crawl(dir, subdirDepth);
+        fsa.performCrawl(dir, subdirDepth, "file://");
       } else if ("--test".equals(op)) {
         List<SchemaSummary> summaryList = fsa.getSchemaSummaries();
         System.err.println("Schema summary list has " + summaryList.size() + " entries");
