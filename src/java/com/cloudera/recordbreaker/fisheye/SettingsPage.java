@@ -30,10 +30,12 @@ import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.CompoundPropertyModel;
 import org.apache.wicket.util.value.ValueMap;
 
 import com.cloudera.recordbreaker.analyzer.CrawlSummary;
+import com.cloudera.recordbreaker.analyzer.CrawlRuntimeStatus;
 
 import java.io.IOException;
 import java.util.List;
@@ -142,7 +144,7 @@ public class SettingsPage extends WebPage {
           targetFs = "file://" + fsUrl;
         }
         if (targetFs != null) {
-          success = fe.registerFilesystem(targetFs);
+          success = fe.registerAndCrawlFilesystem(targetFs);
         } else {
           success = false;
         }
@@ -174,13 +176,71 @@ public class SettingsPage extends WebPage {
   public final class FilesystemInfoForm extends Form<ValueMap> {
     public FilesystemInfoForm(final String id, ValueMap vm) {
       super(id, new CompoundPropertyModel<ValueMap>(vm));
-      FishEye fe = FishEye.getInstance();      
-      add(new Label("currentfs"));
-      List<CrawlSummary> crawlList = fe.getAnalyzer().getCrawlSummaries();
-      add(new Label("numcrawls", "" + crawlList.size()));
-      vm.put("currentfs", fe.getFSUrl());
 
-      //List<CrawlSummary> crawlSummaries = 
+      //
+      // Info about the currently-registered filesystem
+      //
+      add(new Label("currentfs", new Model<String>() {
+            public String getObject() {
+              return FishEye.getInstance().getFSUrl();
+            }
+      }));
+      add(new Label("numcompletedcrawls", new Model<String>() {
+            public String getObject() {
+              List<CrawlSummary> crawlList = FishEye.getInstance().getAnalyzer().getCrawlSummaries();
+              int numCompletedCrawls = 0;
+              for (CrawlSummary cs: crawlList) {
+                if (! cs.isOngoing) {
+                  numCompletedCrawls++;
+                }
+              }
+              return "" + numCompletedCrawls;
+            }
+      }));
+      add(new Label("numongoingcrawls", new Model<String>() {
+            public String getObject() {
+              List<CrawlSummary> crawlList = FishEye.getInstance().getAnalyzer().getCrawlSummaries();
+              int numOngoingCrawls = 0;
+              for (CrawlSummary cs: crawlList) {
+                if (cs.isOngoing) {
+                  numOngoingCrawls++;
+                }
+              }
+              return "" + numOngoingCrawls;
+            }
+      }));
+
+      //
+      // Info about the currently-running crawl
+      //
+      add(new WebMarkupContainer("currentCrawlInfo") {
+          {
+            setOutputMarkupPlaceholderTag(true);
+            setVisibilityAllowed(false);
+            add(new Label("numDone", new Model<String>() {
+                  public String getObject() {
+                    FishEye fe = FishEye.getInstance();            
+                    if (fe.checkOngoingCrawl() != null) {
+                      return "" + fe.checkOngoingCrawl().getNumDone();
+                    }
+                    return null;
+                  }
+            }));
+            add(new Label("numToProcess", new Model<String>() {
+                  public String getObject() {
+                    FishEye fe = FishEye.getInstance();                        
+                    if (fe.checkOngoingCrawl() != null) {
+                      return "" + fe.checkOngoingCrawl().getNumToProcess();
+                    } else {
+                      return null;
+                    }
+                  }
+            }));
+          }
+          public void onConfigure() {
+            setVisibilityAllowed(FishEye.getInstance().checkOngoingCrawl() != null);
+          }
+        });
     }
     public void onSubmit() {
       FishEye fe = FishEye.getInstance();
@@ -192,27 +252,6 @@ public class SettingsPage extends WebPage {
     }
   }
 
-  /////////////////////////////////////////////////////
-  // Crawl info/progress form
-  ////////////////////////////////////////////////////
-  /**
-  public final class FilesystemCrawlForm extends Form<ValueMap> {
-    public FilesystemCrawlForm(final String id, ValueMap vm) {
-      super(id, new CompoundPropertyModel<ValueMap>(vm));
-      add(
-    }
-    public void onSubmit() {
-      FishEye fe = FishEye.getInstance();
-      fe.startCrawl();
-      setResponsePage(new SettingsPage());      
-    }
-    public void onConfigure() {
-      setVisibilityAllowed(FishEye.getInstance().getFSUrl() != null);      
-    }
-  }
-  **/
-
-  
   final WebMarkupContainer loginErrorMsgDisplay = new WebMarkupContainer("loginErrorMsgContainer");
   final WebMarkupContainer fsErrorMsgDisplay = new WebMarkupContainer("fsErrorMsgContainer");
   public SettingsPage() {

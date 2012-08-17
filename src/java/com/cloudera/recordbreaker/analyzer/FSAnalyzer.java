@@ -50,7 +50,7 @@ public class FSAnalyzer {
   // 1. Create the schemas
   //
   static String CREATE_TABLE_CONFIG = "CREATE TABLE Configs(propertyname varchar(128), property varchar(256));";
-  static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, lastexamined text, inprogress text, fsid integer, foreign key(fsid) references Filesystems(fsid));";
+  static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, crawlstarted date, crawlfinished date, inprogress text, fsid integer, foreign key(fsid) references Filesystems(fsid));";
   static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
   static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, crawlid integer, fname varchar(256), owner varchar(16), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
   static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
@@ -77,7 +77,10 @@ public class FSAnalyzer {
   ///////////////////////////////////////////////
   // Manage Crawls and Filesystems
   ///////////////////////////////////////////////
-  public long getCreateFilesystem(final String fsname) throws SQLiteException {
+  public long getCreateFilesystem(final String fsname, boolean canCreate) {
+    // REMIND -- must check to make sure FS is valid before accepting it.
+    // (E.g., for HDFS see if we can contact it)
+    
     long fsid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("SELECT fsid FROM Filesystems WHERE fsname = ?");
@@ -99,18 +102,22 @@ public class FSAnalyzer {
     }
 
     // It wasn't there, so create it!
-    return dbQueue.execute(new SQLiteJob<Long>() {
-        protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("INSERT into Filesystems VALUES(null, ?)");
-          try {
-            stmt.bind(1, fsname);
-            stmt.step();
-            return db.getLastInsertId();
-          } finally {
-            stmt.dispose();
+    if (canCreate) {
+      return dbQueue.execute(new SQLiteJob<Long>() {
+          protected Long job(SQLiteConnection db) throws SQLiteException {
+            SQLiteStatement stmt = db.prepare("INSERT into Filesystems VALUES(null, ?)");
+            try {
+              stmt.bind(1, fsname);
+              stmt.step();
+              return db.getLastInsertId();
+            } finally {
+              stmt.dispose();
+            }
           }
-        }
-      }).complete();
+        }).complete();
+    } else {
+      return -1L;
+    }
   };
   
   /**
@@ -118,52 +125,59 @@ public class FSAnalyzer {
    * If a crawl is pending, that one is returned.
    * If no crawl is pending, a new one is created.
    */
-  public long getNewOrPendingCrawl(final long fsid) throws SQLiteException {
-    long crawlid = dbQueue.execute(new SQLiteJob<Long>() {
-        protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT crawlid from Crawls WHERE fsid = ? AND inprogress = 'True'");
-          try {
-            stmt.bind(1, fsid);
-            if (stmt.step()) {
-              return stmt.columnLong(0);
-            } else {
-              return -1L;
+  public long getCreatePendingCrawl(final long fsid, boolean shouldCreate)  {
+      long crawlid = dbQueue.execute(new SQLiteJob<Long>() {
+          protected Long job(SQLiteConnection db) throws SQLiteException {
+            SQLiteStatement stmt = db.prepare("SELECT crawlid from Crawls WHERE fsid = ? AND inprogress = 'True'");
+            try {
+              stmt.bind(1, fsid);
+              if (stmt.step()) {
+                return stmt.columnLong(0);
+              } else {
+                return -1L;
+              }
+            } finally {
+              stmt.dispose();
             }
-          } finally {
-            stmt.dispose();
           }
-        }
-      }).complete();
+        }).complete();
 
-    if (crawlid >= 0) {
-      return crawlid;
-    }
+      if (crawlid >= 0) {
+        return crawlid;
+      }
     
-    // Time to insert
-    return dbQueue.execute(new SQLiteJob<Long>() {
-        protected Long job(SQLiteConnection db) throws SQLiteException {
-          Date now = new Date(System.currentTimeMillis());
-          String lastExamined = fileDateFormat.format(now);
-          String inprogress = "True";
-          SQLiteStatement stmt = db.prepare("INSERT into Crawls VALUES(null, ?, ?, ?)");
-          try {
-            stmt.bind(1, lastExamined).bind(2, inprogress).bind(3, fsid);
-            stmt.step();
-            return db.getLastInsertId();
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }).complete();
+      // Time to insert
+      if (shouldCreate) {
+        return dbQueue.execute(new SQLiteJob<Long>() {
+            protected Long job(SQLiteConnection db) throws SQLiteException {
+              Date now = new Date(System.currentTimeMillis());
+              String dateCreated = fileDateFormat.format(now);
+              String syntheticDateFinished = fileDateFormat.format(new Date(0));
+              String inprogress = "True";
+              SQLiteStatement stmt = db.prepare("INSERT into Crawls VALUES(null, ?, ?, ?, ?)");
+              try {
+                stmt.bind(1, dateCreated).bind(2, syntheticDateFinished).bind(3, inprogress).bind(4, fsid);
+                stmt.step();
+                return db.getLastInsertId();
+              } finally {
+                stmt.dispose();
+              }
+            }
+          }).complete();
+      }
+    return -1L;
   }
-  public void completeCrawl(final long fsid) throws SQLiteException {
+  
+  public void completeCrawl(final long crawlid) throws SQLiteException {
     dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("UPDATE Crawls SET inprogress='False' WHERE fsid = ?");
+          SQLiteStatement stmt = db.prepare("UPDATE Crawls SET inprogress='False', crawlfinished=? WHERE crawlid = ?");
           try {
-            stmt.bind(1, fsid);
+            Date now = new Date(System.currentTimeMillis());
+            String dateFinished = fileDateFormat.format(now);
+            stmt.bind(1, dateFinished).bind(2, crawlid);
             if (stmt.step()) {
-              return fsid;
+              return crawlid;
             } else {
               return -1L;
             }
@@ -277,17 +291,23 @@ public class FSAnalyzer {
       }).complete();
 
     // Go through all the associated typeGuesses
+    final List<Long> typeIds = new ArrayList<Long>();
+    final List<Long> schemaIds = new ArrayList<Long>();    
+    for (TypeGuess tg: typeGuesses) {
+      String typeLabel = tg.getTypeLabel();
+      String typeDesc = tg.getTypeDesc();
+      String schemaLabel = tg.getSchemaLabel();
+      String schemaDesc = tg.getSchemaDesc();
+      typeIds.add(getCreateType(typeLabel, typeDesc));
+      schemaIds.add(getCreateSchema(schemaLabel, schemaDesc));
+    }
     dbQueue.execute(new SQLiteJob<Object>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          for (TypeGuess tg: typeGuesses) {
-            String typeLabel = tg.getTypeLabel();
-            String typeDesc = tg.getTypeDesc();
-            String schemaLabel = tg.getSchemaLabel();
-            String schemaDesc = tg.getSchemaDesc();
+          for (int i = 0; i < typeGuesses.size(); i++) {
+            TypeGuess tg = typeGuesses.get(i);
+            long typeId = typeIds.get(i);
+            long schemaId = schemaIds.get(i);            
             double score = tg.getScore();
-
-            long typeId = getCreateType(typeLabel, typeDesc);
-            long schemaId = getCreateSchema(schemaLabel, schemaDesc);
 
             SQLiteStatement stmt = db.prepare("INSERT into TypeGuesses VALUES(?, ?, ?, ?)");
             try {
@@ -390,7 +410,7 @@ public class FSAnalyzer {
   /**
    * <code>getCrawlSummaries</code> returns a list of the historical crawl info
    */
-  static String crawlInfoQuery = "SELECT crawlid, lastexamined FROM Crawls";    
+  static String crawlInfoQuery = "SELECT crawlid, crawlstarted, crawlfinished, inprogress, fsid FROM Crawls";    
   public List<CrawlSummary> getCrawlSummaries() {
     return dbQueue.execute(new SQLiteJob<List<CrawlSummary>>() {
         protected List<CrawlSummary> job(SQLiteConnection db) throws SQLiteException {
@@ -399,8 +419,11 @@ public class FSAnalyzer {
           try {
             while (stmt.step()) {
               long cid = stmt.columnLong(0);
-              String lexamined = stmt.columnString(1);
-              output.add(new CrawlSummary(FSAnalyzer.this, cid, lexamined));
+              String started = stmt.columnString(1);
+              String finished = stmt.columnString(2);
+              String inprogress = stmt.columnString(3);
+              long fsid = stmt.columnLong(4);                            
+              output.add(new CrawlSummary(FSAnalyzer.this, cid, started, finished, "True".equals(inprogress), fsid));
             }
           } catch (SQLiteException se) {
             se.printStackTrace();
@@ -567,14 +590,14 @@ public class FSAnalyzer {
   /**
    * Grab details on a crawl.
    */
-  public String getCrawlLastExamined(final long crawlid) {
-    return dbQueue.execute(new SQLiteJob<String>() {
-        protected String job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT lastexamined FROM Crawls WHERE crawlid = ?");
+  public CrawlSummary getCrawlSummaryData(final long crawlid) {
+    return dbQueue.execute(new SQLiteJob<CrawlSummary>() {
+        protected CrawlSummary job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT crawlstarted, crawlfinished, inprogress, fsid FROM Crawls WHERE crawlid = ?");
           try {
             stmt.bind(1, crawlid);
             if (stmt.step()) {
-              return stmt.columnString(0);
+              return new CrawlSummary(FSAnalyzer.this, crawlid, stmt.columnString(0), stmt.columnString(1), "True".equals(stmt.columnString(2)), stmt.columnLong(3));
             } else {
               return null;
             }
@@ -641,10 +664,10 @@ public class FSAnalyzer {
     if (isNew) {
       createTables();
     }
-    //this.formatAnalyzer = new FormatAnalyzer(schemaDir);
+    this.formatAnalyzer = new FormatAnalyzer(schemaDir);
   }
 
-  void close() throws IOException, SQLiteException, InterruptedException {
+  public void close() throws IOException, SQLiteException, InterruptedException {
     this.dbQueue.stop(true).join();
   }
 }

@@ -31,6 +31,8 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 
 import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
+import com.cloudera.recordbreaker.analyzer.FSCrawler;
+import com.cloudera.recordbreaker.analyzer.CrawlRuntimeStatus;
 
 /***************************************************************
  * <code>FishEye</code> is a web app that allows a user to examine
@@ -46,6 +48,7 @@ public class FishEye {
 
   static FishEye fisheyeInstance;
   FSAnalyzer analyzer;
+  FSCrawler crawler;
   Date startTime;
   int fisheyePort;
   File fisheyeDir;
@@ -69,14 +72,45 @@ public class FishEye {
     File fisheyeStore = new File(fisheyeDir, FISHEYE_METADATA_STORE);
     File fisheyeSchemas = new File(fisheyeDir, FISHEYE_SCHEMA_REPO);
     this.analyzer = new FSAnalyzer(fisheyeStore, fisheyeSchemas);
-
+    this.crawler = new FSCrawler(analyzer);
     FishEye.fisheyeInstance = this;
+    restartIncompleteCrawl();
   }
 
-  public boolean registerFilesystem(String fsUrl) throws IOException {
-    // REMIND -- check to make sure FS is valid.
+  public boolean restartIncompleteCrawl() {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl != null) {
+      long fsid = analyzer.getCreateFilesystem(fsUrl, true);
+      long pendingCrawlId = analyzer.getCreatePendingCrawl(fsid, false);
+      if (pendingCrawlId >= 0) {
+        return crawler.getStartNonblockingCrawl(fsUrl);
+      }
+    }
+    return false;
+  }
+
+  public CrawlRuntimeStatus checkOngoingCrawl() {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl != null) {
+      CrawlRuntimeStatus crs = crawler.isCrawlOngoing(fsUrl);
+      return crs;
+    }
+    return null;
+  }
+
+  public boolean checkCreateCrawl() {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl != null) {
+      return crawler.getStartNonblockingCrawl(fsUrl);
+    }
+    return false;
+  }
+
+  public boolean registerAndCrawlFilesystem(String fsUrl) throws IOException {
+    // REMIND - check the filesystem before proceeding.
     analyzer.setConfigProperty("fsurl", fsUrl);
-    return true;
+    analyzer.getCreateFilesystem(fsUrl, true);        
+    return checkCreateCrawl();
   }
 
   public Date getStartTime() {
@@ -92,8 +126,9 @@ public class FishEye {
     return analyzer.getConfigProperty("fsurl");
   }
   public void cancelFS() {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    crawler.killCrawl(fsUrl);
     analyzer.setConfigProperty("fsurl", null);
-    // Cancel the FS
   }
   public FSAnalyzer getAnalyzer() {
     return analyzer;
@@ -148,14 +183,32 @@ public class FishEye {
    */
   public static void main(String argv[]) throws Exception {
     if (argv.length < 2) {
-      System.err.println("Usage: FishEye <port> <fisheyeDir>");
+      System.err.println("Usage: FishEye (-run <port> <fisheyeDir>) (-init <targetdir> [schemadbdir])");
       return;
     }
+    int i = 0;
+    String cmd = argv[i++];
 
-    int port = Integer.parseInt(argv[0]);
-    File fisheyeDir = new File(argv[1]);
-
-    FishEye fish = new FishEye(port, fisheyeDir.getCanonicalFile());
-    fish.run();
+    if ("-run".equals(cmd)) {
+      int port = Integer.parseInt(argv[i++]);
+      File fisheyeDir = new File(argv[i++]);
+      FishEye fish = new FishEye(port, fisheyeDir.getCanonicalFile());
+      fish.run();
+    } else if ("-init".equals(cmd)) {
+      File targetDir = new File(argv[i++]).getCanonicalFile();
+      File schemaDbDir = null;
+      if (i < argv.length) {
+        schemaDbDir = new File(argv[i++]).getCanonicalFile();
+      }
+      if (targetDir.exists()) {
+        throw new IOException("Directory already exists: " + targetDir);
+      }
+      if (! targetDir.mkdirs()) {
+        throw new IOException("Cannot create: " + targetDir);
+      }
+      File metadataStore = new File(targetDir, "metadata");
+      FSAnalyzer fsa = new FSAnalyzer(metadataStore, schemaDbDir);
+      fsa.close();
+    }
   }
 }

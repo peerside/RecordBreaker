@@ -47,7 +47,7 @@ public class FilePage extends WebPage {
         add(new Label("owner", fs.getOwner()));
         add(new Label("size", "" + fs.getSize()));
         add(new Label("lastmodified", fs.getLastModified()));
-        add(new Label("crawledon", fs.getCrawl().getLastExamined()));
+        add(new Label("crawledon", fs.getCrawl().getStartedDate()));
 
         List<TypeGuessSummary> tgses = fs.getTypeGuesses();
         TypeGuessSummary tgs = tgses.get(0);

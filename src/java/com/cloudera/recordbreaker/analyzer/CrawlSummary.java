@@ -23,31 +23,45 @@ import java.util.*;
  *************************************************************/
 public class CrawlSummary {
   FSAnalyzer analyzer;
-  long crawlid;
-  String lastexamined;
-  boolean hasData = false;
+  public long crawlid;
+  public String started;
+  public boolean isOngoing;
+  public String finished;
+  public long fsid;
+  public boolean hasData = false;
   
   public CrawlSummary(FSAnalyzer analyzer, long crawlid) {
     this.analyzer = analyzer;
     this.crawlid = crawlid;
     this.hasData = false;
   }
-  public CrawlSummary(FSAnalyzer analyzer, long crawlid, String lastexamined) {
+  public CrawlSummary(FSAnalyzer analyzer, long crawlid, String started, String finished, boolean isOngoing, long fsid) {
     this.analyzer = analyzer;
     this.crawlid = crawlid;
-    this.lastexamined = lastexamined;
+    this.started = started;
+    this.finished = finished;
+    this.isOngoing = isOngoing;
+    this.fsid = fsid;
     this.hasData = true;
   }
 
   public long getCrawlId() {
     return this.crawlid;
-  }
-  
-  public String getLastExamined() {
+  }  
+
+  public String getStartedDate() {
     if (! hasData) {
-      this.lastexamined = analyzer.getCrawlLastExamined(this.crawlid);
-      this.hasData = true;
-    } 
-    return lastexamined;
+      getData();
+    }
+    return started;
   }
+
+  protected void getData() {
+    CrawlSummary fullSummary = analyzer.getCrawlSummaryData(this.crawlid);
+    this.started = fullSummary.started;
+    this.finished = fullSummary.finished;
+    this.isOngoing = fullSummary.isOngoing;
+    this.fsid = fullSummary.fsid;
+    this.hasData = true;
+  } 
 }
