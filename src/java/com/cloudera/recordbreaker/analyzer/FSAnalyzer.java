@@ -276,12 +276,17 @@ public class FSAnalyzer {
   /**
    * Add a new object to the set of all known files.  This involves several tables.
    */
-  long insertIntoFiles(final String fname, final String owner, final long size, final String timeDateStamp, final String path, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException {
+  long insertIntoFiles(File insertFile, final String owner, final String timeDateStamp, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException, IOException {
+    insertFile = insertFile.getCanonicalFile();
+    final String parentPath = insertFile.getParent();
+    final String fName = insertFile.getName();
+    final long size = insertFile.length();
+    
     final long fileId = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?)");
           try {
-            stmt.bind(1, crawlId).bind(2, fname).bind(3, owner).bind(4, size).bind(5, timeDateStamp).bind(6, path);
+            stmt.bind(1, crawlId).bind(2, fName).bind(3, owner).bind(4, size).bind(5, timeDateStamp).bind(6, parentPath);
             stmt.step();
             return db.getLastInsertId();
           } finally {
@@ -397,6 +402,29 @@ public class FSAnalyzer {
             while (stmt.step()) {
               long fid = stmt.columnLong(0);
               output.add(new FileSummary(FSAnalyzer.this, fid));
+            }
+          } catch (SQLiteException se) {
+            se.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }}).complete();
+  }
+
+  /**
+   * <code>getFilesForCrawl()</code> returns all the seen files for a given crawlid
+   */
+  static String filenameForCrawlQuery = "SELECT path, fname FROM Files WHERE crawlid=?";      
+  public List<File> getFilesForCrawl(final long crawlid) {
+    return dbQueue.execute(new SQLiteJob<List<File>>() {
+        protected List<File> job(SQLiteConnection db) throws SQLiteException {
+          List<File> output = new ArrayList<File>();          
+          SQLiteStatement stmt = db.prepare(filenameForCrawlQuery);
+          try {
+            stmt.bind(1, crawlid);
+            while (stmt.step()) {
+              output.add(new File(stmt.columnString(0), stmt.columnString(1)));
             }
           } catch (SQLiteException se) {
             se.printStackTrace();

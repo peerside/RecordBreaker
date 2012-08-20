@@ -18,6 +18,8 @@ import java.io.File;
 import java.util.Date;
 import java.io.IOException;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.Iterator;
 import java.util.Hashtable;
 import java.util.ArrayList;
 import java.text.SimpleDateFormat;
@@ -74,7 +76,7 @@ public class FSCrawler {
     String owner = "tmpowner";
     Date dateModified = new Date(f.lastModified());    
     try {
-      analyzer.insertIntoFiles(f.getName(), owner, f.length(), fileDateFormat.format(dateModified), f.getCanonicalFile().getParent(), crawlid, tgs);
+      analyzer.insertIntoFiles(f, owner, fileDateFormat.format(dateModified), crawlid, tgs);
     } catch (SQLiteException sle) {
       throw new IOException(sle.getMessage());
     }
@@ -150,6 +152,16 @@ public class FSCrawler {
                   }
                   List<File> todoList = new ArrayList<File>();
                   recursiveCrawlBuildList(startDir, subdirDepth, crawlid, todoList);
+                  TreeSet<String> observedFilenames = new TreeSet<String>();
+                  for (File f: analyzer.getFilesForCrawl(crawlid)) {
+                    observedFilenames.add(f.getCanonicalPath());
+                  }
+                  for (Iterator<File> it = todoList.iterator(); it.hasNext(); ) {
+                    File f = it.next();
+                    if (observedFilenames.contains(f.getCanonicalPath())) {
+                      it.remove();
+                    }
+                  }
                   synchronized (crawlStatusInfo) {
                     CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
                     cstatus.setMessage("Processing files");
@@ -179,7 +191,6 @@ public class FSCrawler {
                     synchronized (pendingCrawls) {
                       pendingCrawls.remove(crawlid);
                       analyzer.completeCrawl(crawlid);
-                      System.err.println("CRAWL Done with " + crawlid);
                     }
                   } catch (SQLiteException sle) {
                   }
