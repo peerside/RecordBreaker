@@ -170,6 +170,10 @@ public class FSCrawler {
                   }
                   int numDone = 0;
                   for (File f: todoList) {
+                    synchronized (crawlStatusInfo) {
+                      CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
+                      cstatus.setMessage("Processing file " + f.getPath());
+                    }
                     try {
                       addSingleFile(f, crawlid);
                     } catch (Exception iex) {

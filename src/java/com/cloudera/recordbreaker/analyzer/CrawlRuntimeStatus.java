@@ -34,6 +34,9 @@ public class CrawlRuntimeStatus {
   public void setMessage(String msg) {
     this.msg = msg;
   }
+  public String getMessage() {
+    return this.msg;
+  }
   public int getNumToProcess() {
     return numToProcess;
   }
@@ -52,4 +55,5 @@ public class CrawlRuntimeStatus {
   public void setNumDone(int numDone) {
     this.numDone = numDone;
   }
+  
 }

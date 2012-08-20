@@ -236,6 +236,16 @@ public class SettingsPage extends WebPage {
                     }
                   }
             }));
+            add(new Label("crawlStatusMessage", new Model<String>() {
+                  public String getObject() {
+                    FishEye fe = FishEye.getInstance();                        
+                    if (fe.checkOngoingCrawl() != null) {
+                      return "" + fe.checkOngoingCrawl().getMessage();
+                    } else {
+                      return "";
+                    }
+                  }
+            }));
           }
           public void onConfigure() {
             setVisibilityAllowed(FishEye.getInstance().checkOngoingCrawl() != null);
