@@ -36,14 +36,17 @@ import java.util.List;
  */
 public class FilePage extends WebPage {
   public FilePage() {
+    add(new SettingsWarningBox());        
   }
   public FilePage(PageParameters params) {
     String fidStr = params.get("fid").toString();
+    add(new SettingsWarningBox());        
     if (fidStr != null) {
       try {
         FileSummary fs = new FileSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(fidStr));
         add(new Label("filetitle", fs.getFname()));
-        add(new Label("filesubtitle", "in " + fs.getPath()));
+        //add(new Label("filesubtitle", "in " + fs.getPath()));
+        add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath())).toString(), fs.getPath()));
         add(new Label("owner", fs.getOwner()));
         add(new Label("size", "" + fs.getSize()));
         add(new Label("lastmodified", fs.getLastModified()));
@@ -63,6 +66,7 @@ public class FilePage extends WebPage {
       }
     }
     add(new Label("filetitle", "unknown"));
+    add(new Label("filesubtitlelink", ""));
     add(new Label("filesubtitle", ""));
     add(new Label("owner", ""));
     add(new Label("size", ""));

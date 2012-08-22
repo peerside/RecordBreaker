@@ -27,7 +27,9 @@ import org.apache.wicket.model.PropertyModel;
  * @since 1.0
  *************************************************/
 public class SettingsWarningBox extends WebMarkupContainer {
-  class ErrorMsgHandler {
+  final class ErrorMsgHandler {
+    public ErrorMsgHandler() {
+    }
     public String getErrorMsg() {
       FishEye fe = FishEye.getInstance();
       String fsUrl = fe.getFSUrl();

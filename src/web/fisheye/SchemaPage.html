@@ -71,6 +71,13 @@
         </div>
         <div class="span10">
           <div class="container">
+            <!-- The Settings warning box -->
+            <div class="errorbox" wicket:id="settingsWarningMsgContainer">
+              <div class="alert alert-error">
+                <strong>Warning: </strong><span wicket:id="settingsErrorLabel"></span>
+              </div>
+            </div>
+          
             <h1>Schema</h1>
             <p>Fisheye is currently boring into <span wicket:id="numSchemaElements"></span> schema(s).</p>            
 

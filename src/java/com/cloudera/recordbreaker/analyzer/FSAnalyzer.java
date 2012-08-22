@@ -52,7 +52,7 @@ public class FSAnalyzer {
   static String CREATE_TABLE_CONFIG = "CREATE TABLE Configs(propertyname varchar(128), property varchar(256));";
   static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, crawlstarted date, crawlfinished date, inprogress text, fsid integer, foreign key(fsid) references Filesystems(fsid));";
   static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
-  static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, crawlid integer, fname varchar(256), owner varchar(16), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
+  static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, isDir string, crawlid integer, fname varchar(256), owner varchar(16), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
   static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
   static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemalabel varchar(64), schemadescriptor varchar(1024));";
   static String CREATE_TABLE_GUESSES = "CREATE TABLE TypeGuesses(fid integer, typeid integer, schemaid integer, score double, foreign key(fid) references Files(fid), foreign key(typeid) references Types(typeid), foreign key(schemaid) references Schemas(schemaid));";
@@ -188,6 +188,24 @@ public class FSAnalyzer {
       }).complete();
   }
 
+  public long getLatestCompleteCrawl(final long fsid) {
+    return dbQueue.execute(new SQLiteJob<Long>() {
+        protected Long job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT crawlid from Crawls WHERE fsid = ? AND inprogress = 'False' ORDER BY crawlid DESC LIMIT 1");
+          try {
+            stmt.bind(1, fsid);
+            if (stmt.step()) {
+              return stmt.columnLong(0);
+            } else {
+              return -1L;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+
   ///////////////////////////////////////////////
   // Manage Types and Schemas
   ///////////////////////////////////////////////
@@ -276,7 +294,7 @@ public class FSAnalyzer {
   /**
    * Add a new object to the set of all known files.  This involves several tables.
    */
-  long insertIntoFiles(File insertFile, final String owner, final String timeDateStamp, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException, IOException {
+  long insertIntoFiles(File insertFile, final boolean isDir, final String owner, final String timeDateStamp, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException, IOException {
     insertFile = insertFile.getCanonicalFile();
     final String parentPath = insertFile.getParent();
     final String fName = insertFile.getName();
@@ -284,9 +302,9 @@ public class FSAnalyzer {
     
     final long fileId = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?)");
+          SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?, ?)");
           try {
-            stmt.bind(1, crawlId).bind(2, fName).bind(3, owner).bind(4, size).bind(5, timeDateStamp).bind(6, parentPath);
+            stmt.bind(1, isDir ? "True" : "False").bind(2, crawlId).bind(3, fName).bind(4, owner).bind(5, size).bind(6, timeDateStamp).bind(7, parentPath);
             stmt.step();
             return db.getLastInsertId();
           } finally {
@@ -336,32 +354,8 @@ public class FSAnalyzer {
   }
   
   ///////////////////////////////////////////////////
-  // ACCESSORS FOR SETS OF OBJECTS
+  // ACCESSORS FOR SCHEMAS
   ///////////////////////////////////////////////////
-  /**
-   * <code>getFidUnderPath</code> returns the files under the given path prefix
-   */
-  static String subpathFilesQuery = "SELECT fid from Files WHERE path LIKE ?";
-  public List<Long> getFidUnderPath(final String pathPrefix) throws SQLiteException {
-    List<Long> finalResults = dbQueue.execute(new SQLiteJob<List<Long>>() {
-        protected List<Long> job(SQLiteConnection db) throws SQLiteException {
-          List<Long> results = new ArrayList<Long>();          
-          SQLiteStatement stmt = db.prepare(subpathFilesQuery);
-          try {
-            stmt.bind(1, pathPrefix + "%");
-            while (stmt.step()) {
-              long resultId = stmt.columnLong(0);
-              results.add(resultId);
-            }
-            return results;
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }).complete();
-    return finalResults;
-  }
-
   /**
    * <code>getSchemaSummaries</code> returns an instance of SchemaSummary
    * for each unique schema in the database.
@@ -388,16 +382,72 @@ public class FSAnalyzer {
   }
 
   /**
+   * Grab details on a schema.
+   */
+  public SchemaSummaryData getSchemaSummaryData(final long schemaid) {
+    return dbQueue.execute(new SQLiteJob<SchemaSummaryData>() {
+        protected SchemaSummaryData job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT schemalabel, schemadescriptor FROM Schemas WHERE schemaid = ?");
+          try {
+            stmt.bind(1, schemaid);
+            if (stmt.step()) {
+              return new SchemaSummaryData(schemaid, stmt.columnString(0), stmt.columnString(1));
+            } else {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+
+  ///////////////////////////////////////////////////
+  // ACCESSORS FOR FILES
+  ///////////////////////////////////////////////////
+  /**
+   * <code>getFidUnderPath</code> returns the files under the given path prefix
+   */
+  static String subpathFilesQuery = "SELECT fid from Files WHERE path LIKE ?";
+  public List<Long> getFidUnderPath(final String pathPrefix) throws SQLiteException {
+    List<Long> finalResults = dbQueue.execute(new SQLiteJob<List<Long>>() {
+        protected List<Long> job(SQLiteConnection db) throws SQLiteException {
+          List<Long> results = new ArrayList<Long>();          
+          SQLiteStatement stmt = db.prepare(subpathFilesQuery);
+          try {
+            stmt.bind(1, pathPrefix + "%");
+            while (stmt.step()) {
+              long resultId = stmt.columnLong(0);
+              results.add(resultId);
+            }
+            return results;
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+    return finalResults;
+  }
+
+  /**
    * <code>getFileSummaries</code> returns an instance of FileSummary
    * for each unique schema in the database.
    */
-  static String fileInfoQuery = "SELECT fid FROM Files";    
-  public List<FileSummary> getFileSummaries() {
+  static String fileInfoQueryWithoutPrefix = "SELECT fid FROM Files WHERE isDir = ?";
+  static String fileInfoQueryWithPrefix = "SELECT fid FROM Files WHERE isDir = ? AND path = ?";
+  public List<FileSummary> getFileSummaries(final boolean isDir, final String prefix) {
     return dbQueue.execute(new SQLiteJob<List<FileSummary>>() {
         protected List<FileSummary> job(SQLiteConnection db) throws SQLiteException {
-          List<FileSummary> output = new ArrayList<FileSummary>();          
-          SQLiteStatement stmt = db.prepare(fileInfoQuery);
-          
+          List<FileSummary> output = new ArrayList<FileSummary>();
+          SQLiteStatement stmt;
+          if (prefix == null) {
+            stmt = db.prepare(fileInfoQueryWithoutPrefix);
+            stmt.bind(1, isDir ? "True" : "False");            
+          } else {
+            stmt = db.prepare(fileInfoQueryWithPrefix);
+            stmt.bind(1, isDir ? "True" : "False").bind(2, prefix);            
+          }
+
           try {
             while (stmt.step()) {
               long fid = stmt.columnLong(0);
@@ -415,14 +465,20 @@ public class FSAnalyzer {
   /**
    * <code>getFilesForCrawl()</code> returns all the seen files for a given crawlid
    */
-  static String filenameForCrawlQuery = "SELECT path, fname FROM Files WHERE crawlid=?";      
   public List<File> getFilesForCrawl(final long crawlid) {
+    return getFileEntriesForCrawl(crawlid, "False");
+  }
+  public List<File> getDirsForCrawl(final long crawlid) {
+    return getFileEntriesForCrawl(crawlid, "True");    
+  }
+  static String filenameForCrawlQuery = "SELECT path, fname FROM Files WHERE crawlid=? AND isDir = ?";        
+  private List<File> getFileEntriesForCrawl(final long crawlid, final String isDir) {
     return dbQueue.execute(new SQLiteJob<List<File>>() {
         protected List<File> job(SQLiteConnection db) throws SQLiteException {
           List<File> output = new ArrayList<File>();          
           SQLiteStatement stmt = db.prepare(filenameForCrawlQuery);
           try {
-            stmt.bind(1, crawlid);
+            stmt.bind(1, crawlid).bind(2, isDir);
             while (stmt.step()) {
               output.add(new File(stmt.columnString(0), stmt.columnString(1)));
             }
@@ -435,6 +491,93 @@ public class FSAnalyzer {
         }}).complete();
   }
 
+  /**
+   * Grab details on a specific file.
+   */
+  public FileSummaryData getFileSummaryData(final long fid) {
+    return dbQueue.execute(new SQLiteJob<FileSummaryData>() {
+        protected FileSummaryData job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT crawlid, fname, owner, size, modified, path from Files WHERE fid = ?");
+          try {
+            stmt.bind(1, fid);
+            if (stmt.step()) {
+              return new FileSummaryData(fid, stmt.columnLong(0), stmt.columnString(1), stmt.columnString(2), stmt.columnLong(3), stmt.columnString(4), stmt.columnString(5));
+            } else {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+
+  /**
+   * Get the top-level directory from a given crawl
+   */
+  public String getTopDir(final long crawlid)  {
+    return dbQueue.execute(new SQLiteJob<String>() {
+        protected String job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT path||'/'||fname FROM Files WHERE crawlid = ? AND isDir = 'True' ORDER BY length(path||'/'||fname) ASC LIMIT 1");
+          try {
+            stmt.bind(1, crawlid);
+            if (stmt.step()) {
+              return stmt.columnString(0);
+            } else {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+
+  /**
+   * Get the parents for the given directory from a given crawl
+   */
+  public List<File> getDirParents(final long crawlid, final String targetDir) {
+    return dbQueue.execute(new SQLiteJob<List<File>>() {
+        protected List<File> job(SQLiteConnection db) throws SQLiteException {
+          List<File> output = new ArrayList<File>();
+          SQLiteStatement stmt = db.prepare("select path||'/'||fname from Files WHERE crawlid = ? AND length(?) > length(path||'/'||fname) AND isDir = 'True' AND length(replace(?, path||'/'||fname, '')) < length(?)");
+          try {
+            stmt.bind(1, crawlid).bind(2, targetDir).bind(3, targetDir).bind(4, targetDir);
+            while (stmt.step()) {
+              output.add(new File(stmt.columnString(0)));
+            }
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }
+      }).complete();
+  }
+
+  /**
+   * Get the parents for the given directory from a given crawl
+   */
+  public List<File> getDirChildren(final long crawlid, final String targetDir) {
+    return dbQueue.execute(new SQLiteJob<List<File>>() {
+        protected List<File> job(SQLiteConnection db) throws SQLiteException {
+          List<File> output = new ArrayList<File>();
+          SQLiteStatement stmt = db.prepare("SELECT DISTINCT path||'/'||fname AS fullpath FROM Files WHERE isDir = 'True' AND crawlid = ? AND path = ? ORDER BY fname ASC");
+          try {
+            stmt.bind(1, crawlid).bind(2, targetDir);
+            while (stmt.step()) {
+              output.add(new File(stmt.columnString(0)));
+            }
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }
+      }).complete();
+  }
+  
+  ///////////////////////////////////////////////////
+  // ACCESSORS FOR CRAWLS
+  ///////////////////////////////////////////////////
   /**
    * <code>getCrawlSummaries</code> returns a list of the historical crawl info
    */
@@ -463,6 +606,30 @@ public class FSAnalyzer {
   }
   
   /**
+   * Grab details on a crawl.
+   */
+  public CrawlSummary getCrawlSummaryData(final long crawlid) {
+    return dbQueue.execute(new SQLiteJob<CrawlSummary>() {
+        protected CrawlSummary job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT crawlstarted, crawlfinished, inprogress, fsid FROM Crawls WHERE crawlid = ?");
+          try {
+            stmt.bind(1, crawlid);
+            if (stmt.step()) {
+              return new CrawlSummary(FSAnalyzer.this, crawlid, stmt.columnString(0), stmt.columnString(1), "True".equals(stmt.columnString(2)), stmt.columnLong(3));
+            } else {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+
+  ///////////////////////////////////////////////////
+  // ACCESSORS FOR TYPES
+  ///////////////////////////////////////////////////
+  /**
    * <code>getTypeSummaries</code> returns an instance of TypeSummary
    * for each unique type in the database.
    */
@@ -486,9 +653,30 @@ public class FSAnalyzer {
           return output;
         }}).complete();
   }
+
+  /**
+   * Grab details on a type.
+   */
+  public TypeSummaryData getTypeSummaryData(final long typeid) {
+    return dbQueue.execute(new SQLiteJob<TypeSummaryData>() {
+        protected TypeSummaryData job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT typelabel, typedescriptor FROM Types WHERE typeid = ?");
+          try {
+            stmt.bind(1, typeid);
+            if (stmt.step()) {
+              return new TypeSummaryData(typeid, stmt.columnString(0), stmt.columnString(1));
+            } else {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
   
   ///////////////////////////////////////////
-  // ACCESSORS FOR INDIVIDUAL OBJECTS
+  // ACCESSORS FOR CONFIG INFO
   ///////////////////////////////////////////
   /**
    * Read a property's value
@@ -551,91 +739,6 @@ public class FSAnalyzer {
         }
       }).complete();
   }
-  
-  /**
-   * Grab details on a specific file.
-   */
-  public FileSummaryData getFileSummaryData(final long fid) {
-    return dbQueue.execute(new SQLiteJob<FileSummaryData>() {
-        protected FileSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT crawlid, fname, owner, size, modified, path from Files WHERE fid = ?");
-          try {
-            stmt.bind(1, fid);
-            if (stmt.step()) {
-              return new FileSummaryData(fid, stmt.columnLong(0), stmt.columnString(1), stmt.columnString(2), stmt.columnLong(3), stmt.columnString(4), stmt.columnString(5));
-            } else {
-              return null;
-            }
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }).complete();
-  }
-
-  /**
-   * Grab details on a schema.
-   */
-  public SchemaSummaryData getSchemaSummaryData(final long schemaid) {
-    return dbQueue.execute(new SQLiteJob<SchemaSummaryData>() {
-        protected SchemaSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT schemalabel, schemadescriptor FROM Schemas WHERE schemaid = ?");
-          try {
-            stmt.bind(1, schemaid);
-            if (stmt.step()) {
-              return new SchemaSummaryData(schemaid, stmt.columnString(0), stmt.columnString(1));
-            } else {
-              return null;
-            }
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }).complete();
-  }
-
-  /**
-   * Grab details on a type.
-   */
-  public TypeSummaryData getTypeSummaryData(final long typeid) {
-    return dbQueue.execute(new SQLiteJob<TypeSummaryData>() {
-        protected TypeSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT typelabel, typedescriptor FROM Types WHERE typeid = ?");
-          try {
-            stmt.bind(1, typeid);
-            if (stmt.step()) {
-              return new TypeSummaryData(typeid, stmt.columnString(0), stmt.columnString(1));
-            } else {
-              return null;
-            }
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }).complete();
-  }
-
-  /**
-   * Grab details on a crawl.
-   */
-  public CrawlSummary getCrawlSummaryData(final long crawlid) {
-    return dbQueue.execute(new SQLiteJob<CrawlSummary>() {
-        protected CrawlSummary job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT crawlstarted, crawlfinished, inprogress, fsid FROM Crawls WHERE crawlid = ?");
-          try {
-            stmt.bind(1, crawlid);
-            if (stmt.step()) {
-              return new CrawlSummary(FSAnalyzer.this, crawlid, stmt.columnString(0), stmt.columnString(1), "True".equals(stmt.columnString(2)), stmt.columnLong(3));
-            } else {
-              return null;
-            }
-          } finally {
-            stmt.dispose();
-          }
-        }
-      }).complete();
-  }
-
   
   ///////////////////////////////////////////
   // Get type guesses

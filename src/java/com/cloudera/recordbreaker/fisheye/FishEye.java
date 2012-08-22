@@ -130,6 +130,49 @@ public class FishEye {
     crawler.killCrawl(fsUrl);
     analyzer.setConfigProperty("fsurl", null);
   }
+  public String getTopDir() {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl == null) {
+      return null;
+    }
+    long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+    if (fsid >= 0) {
+      long crawlid = analyzer.getLatestCompleteCrawl(fsid);
+      if (crawlid >= 0) {
+        String td = analyzer.getTopDir(crawlid);
+        return td;
+      }
+    }
+    return null;
+  }
+  public List<File> getDirParents(String targetDir) {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl == null) {
+      return null;
+    }
+    long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+    if (fsid >= 0) {
+      long crawlid = analyzer.getLatestCompleteCrawl(fsid);
+      if (crawlid >= 0) {
+        return analyzer.getDirParents(crawlid, targetDir);
+      }
+    }
+    return null;
+  }
+  public List<File> getDirChildren(String targetDir) {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl == null) {
+      return null;
+    }
+    long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+    if (fsid >= 0) {
+      long crawlid = analyzer.getLatestCompleteCrawl(fsid);
+      if (crawlid >= 0) {
+        return analyzer.getDirChildren(crawlid, targetDir);
+      }
+    }
+    return null;
+  }
   public FSAnalyzer getAnalyzer() {
     return analyzer;
   }

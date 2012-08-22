@@ -71,8 +71,15 @@
         </div>
         <div class="span10">
           <div class="container">
+            <!-- The Settings warning box -->
+            <div class="errorbox" wicket:id="settingsWarningMsgContainer">
+              <div class="alert alert-error">
+                <strong>Warning: </strong><span wicket:id="settingsErrorLabel"></span>
+              </div>
+            </div>
+            
             <h1>File: <span wicket:id="filetitle"/></h1>
-            <h5><span wicket:id="filesubtitle"/></h5>
+            <h5>in <a href="#" wicket:id="filesubtitlelink"></a></h5>
 
             <table class="table table-striped table-bordered table-condensed">
               <thead>
