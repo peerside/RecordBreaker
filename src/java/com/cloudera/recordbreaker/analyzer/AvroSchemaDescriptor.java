@@ -109,6 +109,6 @@ public class AvroSchemaDescriptor implements SchemaDescriptor {
    * @return a <code>String</code> that annotates the schema
    */
   public String getSchemaSourceDescription() {
-    return "Schema recovered directly from the given Avro file.";
+    return "avro";
   }
 }

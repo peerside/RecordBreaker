@@ -223,7 +223,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     // 5.  Figure out the schemaIdentifier and 'description' fields.
     //
     this.schemaIdentifier = (schema == null ? "" : schema.toString());
-    this.schemaSrcDesc = "Extracted data types from CSV.  " + (hasHeaderRow ? "CSV header detected; used topic-specific field names." : "No CSV headert detected; used anonymous field names.");
+    this.schemaSrcDesc = "csv-" + (hasHeaderRow ? "header" : "noheader");
   }
 
   /**

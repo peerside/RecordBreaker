@@ -41,6 +41,6 @@ public class UnknownTextSchemaDescriptor extends AvroSchemaDescriptor {
    * @return a <code>String</code> that annotates the schema
    */
   public String getSchemaSourceDescription() {
-    return "Schema recovered from structured text file and previously-seen data.";
+    return "recordbreaker-recovered";
   }
 }
