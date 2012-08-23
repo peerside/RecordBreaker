@@ -34,7 +34,11 @@ import com.almworks.sqlite4java.SQLiteException;
  * @author "Michael Cafarella" <mjc@cloudera.com>
  ***********************************************************/
 public class FSCrawler {
+  final static int MAX_ANALYSIS_LINES = 400;
+  final static int MAX_CRAWL_DEPTH = 5;
+  
   static SimpleDateFormat fileDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
   Hashtable<Long, Thread> pendingCrawls = new Hashtable<Long, Thread>();
   Hashtable<Long, CrawlRuntimeStatus> crawlStatusInfo = new Hashtable<Long, CrawlRuntimeStatus>();
   FSAnalyzer analyzer;
@@ -56,7 +60,7 @@ public class FSCrawler {
     List<TypeGuess> tgs = new ArrayList<TypeGuess>();    
 
     if (! isDir) {
-      DataDescriptor descriptor = analyzer.describeData(f);
+      DataDescriptor descriptor = analyzer.describeData(f, MAX_ANALYSIS_LINES);
       try {
         List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();
 
@@ -79,6 +83,8 @@ public class FSCrawler {
     Date dateModified = new Date(f.lastModified());    
     try {
       analyzer.insertIntoFiles(f, isDir, owner, fileDateFormat.format(dateModified), crawlid, tgs);
+      System.err.println("Done!  added " + f);
+      
     } catch (SQLiteException sle) {
       throw new IOException(sle.getMessage());
     }
@@ -115,7 +121,7 @@ public class FSCrawler {
    */
   public synchronized boolean getStartNonblockingCrawl(final String fsUrl) {
     try {
-      final int subdirDepth = 3;
+      final int subdirDepth = MAX_CRAWL_DEPTH;
       long fsId = analyzer.getCreateFilesystem(fsUrl, true);    
       if (fsId < 0) {
         return false;

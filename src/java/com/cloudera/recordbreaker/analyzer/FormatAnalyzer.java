@@ -54,7 +54,7 @@ public class FormatAnalyzer {
    * @param f a <code>File</code> value
    * @return a <code>DataDescriptor</code> value
    */
-  public DataDescriptor describeData(File f) throws IOException {
+  public DataDescriptor describeData(File f, int maxLines) throws IOException {
     String fname = f.getName();
     // Test to see if the file is one of a handful of known structured formats.
     if (CSVDataDescriptor.isCSV(f)) {
@@ -76,7 +76,7 @@ public class FormatAnalyzer {
         // It's not one of the known formats, so apply LearnStructure (and
         // SchemaDictionary), then emit the resulting Avro data.
         try {
-          return new UnknownTextDataDescriptor(f, schemaDbDir);
+          return new UnknownTextDataDescriptor(f, schemaDbDir, maxLines);
         } catch (Exception iex) {
           // If that doesn't work, then give up and call it unstructured
           return new UnstructuredFileDescriptor(f);
@@ -101,7 +101,7 @@ public class FormatAnalyzer {
     File schemaDbDir = new File(argv[1]);
     FormatAnalyzer fa = new FormatAnalyzer(schemaDbDir);
 
-    DataDescriptor descriptor = fa.describeData(inputFile);
+    DataDescriptor descriptor = fa.describeData(inputFile, -1);
     System.err.println("Filename: " + descriptor.getFilename());
     System.err.println("Filetype identifier: " + descriptor.getFileTypeIdentifier());
     List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();

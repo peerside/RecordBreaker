@@ -45,7 +45,7 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
   /**
    * Creates a new <code>UnknownTextDataDescriptor</code>.
    */
-  public UnknownTextDataDescriptor(File f, File schemaDictDir) throws IOException {
+  public UnknownTextDataDescriptor(File f, File schemaDictDir, int maxLines) throws IOException {
     this.f = f;
     this.schemaDictDir = schemaDictDir;    
     this.workingAvroFile = File.createTempFile("textdesc", "avro", null);
@@ -55,7 +55,7 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
     // 2.  Test it against the known database of types.
     // 3.  Return the top-k types/schemas that we discover, as long as they pass a threshold.
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, workingSchemaFile, null, null, workingAvroFile, false);
+    ls.inferRecordFormat(f, workingSchemaFile, null, null, workingAvroFile, false, maxLines);
 
     // The most basic schema descriptor is the raw one that captures the anonymous avro file
     schemaDescriptors.add(new UnknownTextSchemaDescriptor(workingAvroFile));

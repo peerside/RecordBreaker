@@ -349,8 +349,8 @@ public class FSAnalyzer {
   /**
    * Try to describe the contents of the given file
    */
-  DataDescriptor describeData(File f) throws IOException {
-    return formatAnalyzer.describeData(f);
+  DataDescriptor describeData(File f, int maxLines) throws IOException {
+    return formatAnalyzer.describeData(f, maxLines);
   }
   
   ///////////////////////////////////////////////////

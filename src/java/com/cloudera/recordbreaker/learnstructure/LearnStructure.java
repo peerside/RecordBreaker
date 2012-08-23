@@ -42,7 +42,7 @@ public class LearnStructure {
   
   /**
    */
-  public void inferRecordFormat(File f, File schemaFile, File parseTreeFile, File jsonDataFile, File avroDataFile, boolean verbose) throws IOException {    
+  public void inferRecordFormat(File f, File schemaFile, File parseTreeFile, File jsonDataFile, File avroDataFile, boolean verbose, int maxLines) throws IOException {    
     // Store parse errors and results
     List<Integer> unparseableLineNos = new ArrayList<Integer>();
     List<String> unparseableStrs = new ArrayList<String>();
@@ -58,6 +58,9 @@ public class LearnStructure {
       String s = in.readLine();
       int lineno = 0;
       while (s != null) {
+        if (maxLines >= 0 && lineno >= maxLines) {
+          break;
+        }
         List<Token.AbstractToken> chunkToks = Tokenizer.tokenize(s);
         if (chunkToks != null) {
           allChunks.add(chunkToks);
@@ -226,6 +229,6 @@ public class LearnStructure {
       avroDataFile = new File(outdir, DATA_FILENAME);
     }
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, schemaFile, parseTreeFile, jsonDataFile, avroDataFile, true);
+    ls.inferRecordFormat(f, schemaFile, parseTreeFile, jsonDataFile, avroDataFile, true, -1);
   }
 }
