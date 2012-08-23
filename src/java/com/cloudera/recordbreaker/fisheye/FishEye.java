@@ -122,12 +122,22 @@ public class FishEye {
   public File getFisheyeDir() {
     return fisheyeDir;
   }
+  public boolean hasFSAndCrawl() {
+    String fsUrl = analyzer.getConfigProperty("fsurl");
+    if (fsUrl != null) {
+      long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+      if (fsid >= 0) {
+        return analyzer.getLatestCompleteCrawl(fsid) >= 0;
+      }
+    }
+    return false;
+  }
   public String getFSUrl() {
     return analyzer.getConfigProperty("fsurl");
   }
   public void cancelFS() {
     String fsUrl = analyzer.getConfigProperty("fsurl");
-    crawler.killCrawl(fsUrl);
+    crawler.killOngoingCrawl(fsUrl);
     analyzer.setConfigProperty("fsurl", null);
   }
   public String getTopDir() {

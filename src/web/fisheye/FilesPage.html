@@ -79,6 +79,12 @@
             </div>
 
             <h1>Files</h1>
+            <div class="errorbox" wicket:id="crawlWarningMsgContainer">
+              <div class="alert alert-info">
+                <strong>Note: </strong><span wicket:id="crawlErrorLabel"></span>
+              </div>
+            </div>
+
             <div wicket:id="currentDirListing">
               <p>This directory has <span wicket:id="numFisheyeFiles"></span> files.</p>
 

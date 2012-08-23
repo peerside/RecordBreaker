@@ -16,6 +16,7 @@ package com.cloudera.recordbreaker.fisheye;
 
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.list.ListItem;
@@ -38,43 +39,60 @@ import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
  * The <code>SchemasPage</code> renders information about all known schemas.
  */
 public class SchemasPage extends WebPage {
-  public SchemasPage() {
-    List<SchemaSummary> list = FishEye.getInstance().getAnalyzer().getSchemaSummaries();
-    ListView<SchemaSummary> listview = new ListView<SchemaSummary>("listview", list) {
-      protected void populateItem(ListItem<SchemaSummary> item) {
-        SchemaSummary ss = item.getModelObject();
-        item.add(new Label("schemadesc", ss.getDesc()));
+  final class SchemaListing extends WebMarkupContainer {
+    public SchemaListing(String name) {
+      super(name);
+      FishEye fe = FishEye.getInstance();
+      if (fe.hasFSAndCrawl()) {
+        List<SchemaSummary> list = fe.getAnalyzer().getSchemaSummaries();
+        ListView<SchemaSummary> listview = new ListView<SchemaSummary>("listview", list) {
+          protected void populateItem(ListItem<SchemaSummary> item) {
+            SchemaSummary ss = item.getModelObject();
+            item.add(new Label("schemadesc", ss.getDesc()));
 
-        StringBuffer schemalabel = new StringBuffer();
-        try {
-          List<List<JsonNode>> listOfSchemaElts = SchemaPage.getSchemaDigest(ss.getLabel());
-          for (Iterator<JsonNode> it = listOfSchemaElts.get(0).iterator(); it.hasNext(); ) {
-            JsonNode curNode = it.next();
-            schemalabel.append(curNode.get("name"));
-            if (it.hasNext()) {
-              schemalabel.append(", ");
+            StringBuffer schemalabel = new StringBuffer();
+            try {
+              List<List<JsonNode>> listOfSchemaElts = SchemaPage.getSchemaDigest(ss.getLabel());
+              for (Iterator<JsonNode> it = listOfSchemaElts.get(0).iterator(); it.hasNext(); ) {
+                JsonNode curNode = it.next();
+                schemalabel.append(curNode.get("name"));
+                if (it.hasNext()) {
+                  schemalabel.append(", ");
+                }
+              }
+            } catch (IOException iex) {
             }
-          }
-        } catch (IOException iex) {
-        }
-        String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
-        item.add(new ExternalLink("schemalabellink", schemaUrl, schemalabel.toString()));
+            String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
+            item.add(new ExternalLink("schemalabellink", schemaUrl, schemalabel.toString()));
 
         
-        List<TypeGuessSummary> typeGuesses = ss.getTypeGuesses();
-        for (int i = 0; i < Math.min(1, typeGuesses.size()); i++) {
-          TypeGuessSummary curTGS = typeGuesses.get(i);
-          FileSummary fs = curTGS.getFileSummary();
+            List<TypeGuessSummary> typeGuesses = ss.getTypeGuesses();
+            for (int i = 0; i < Math.min(1, typeGuesses.size()); i++) {
+              TypeGuessSummary curTGS = typeGuesses.get(i);
+              FileSummary fs = curTGS.getFileSummary();
 
-          PageParameters pars = new PageParameters();
-          String fidUrl = urlFor(FilePage.class, new PageParameters("fid=" + fs.getFid())).toString();
-          item.add(new ExternalLink("schemafilelink", fidUrl, fs.getFname()));
-        }
+              PageParameters pars = new PageParameters();
+              String fidUrl = urlFor(FilePage.class, new PageParameters("fid=" + fs.getFid())).toString();
+              item.add(new ExternalLink("schemafilelink", fidUrl, fs.getFname()));
+            }
+          }
+        };
+        add(new Label("numFisheyeSchemas", "" + list.size()));        
+        add(listview);
       }
-    };
 
-    add(new SettingsWarningBox());    
-    add(new Label("numFisheyeSchemas", "" + list.size()));    
-    add(listview);
+      setOutputMarkupPlaceholderTag(true);
+      setVisibilityAllowed(false);
+    }
+    public void onConfigure() {
+      FishEye fe = FishEye.getInstance();    
+      setVisibilityAllowed(fe.hasFSAndCrawl());
+    }
+  }
+
+  public SchemasPage() {
+    add(new SchemaListing("currentSchemaListing"));
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());            
   }
 }

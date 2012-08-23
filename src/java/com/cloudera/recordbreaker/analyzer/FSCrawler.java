@@ -97,8 +97,8 @@ public class FSCrawler {
     if (! f.isDirectory()) {
       todoFileList.add(f);
     } else {
-      todoDirList.add(f);
       if (subdirDepth > 0) {
+        todoDirList.add(f);        
         for (File subfile: f.listFiles()) {
           subfile = subfile.getCanonicalFile();
           recursiveCrawlBuildList(subfile, subdirDepth-1, crawlId, todoFileList, todoDirList);
@@ -247,16 +247,20 @@ public class FSCrawler {
   }
 
   /**
-   * waitForCrawl() will block until the given crawl is complete.  If the crawl
-   * is unknown, then it will return -1.
+   * waitForCrawl() will block until the given crawl is complete.  If there
+   * is an ongoing crawl that completes, it will return true.
+   * If there was no ongoing crawl, it will return false.
    */
-  public boolean waitForCrawl(String fsUrl, boolean shouldKill) {
+  protected boolean waitForOngoingCrawl(String fsUrl, boolean shouldKill) {
     long fsId = analyzer.getCreateFilesystem(fsUrl, false);
     if (fsId < 0) {
       return false;
     }
     synchronized (pendingCrawls) {
       final long crawlid = analyzer.getCreatePendingCrawl(fsId, false);
+      if (crawlid < 0) {
+        return false;
+      }
       if (shouldKill) {
         synchronized (crawlStatusInfo) {
           CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
@@ -274,7 +278,7 @@ public class FSCrawler {
     }
   }
 
-  public void killCrawl(String fsUrl) {
+  public void killOngoingCrawl(String fsUrl) {
     long fsId = analyzer.getCreateFilesystem(fsUrl, false);
     if (fsId >= 0) {
       synchronized (pendingCrawls) {
@@ -294,7 +298,11 @@ public class FSCrawler {
    * to the indicated depth.
    */
   public boolean blockingCrawl(String fsUrl) throws IOException, SQLiteException {
-    return getStartNonblockingCrawl(fsUrl) && waitForCrawl(fsUrl, false);
+    boolean crawlStarted = getStartNonblockingCrawl(fsUrl);
+    if (crawlStarted) {
+      waitForOngoingCrawl(fsUrl, false);
+    }
+    return crawlStarted;
   }
 
   ////////////////////////////////////////

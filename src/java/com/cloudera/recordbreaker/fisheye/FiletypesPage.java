@@ -16,6 +16,7 @@ package com.cloudera.recordbreaker.fisheye;
 
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.basic.Label;
@@ -29,19 +30,35 @@ import com.cloudera.recordbreaker.analyzer.TypeSummary;
  * The <code>SchemasPage</code> renders information about all known filetypes
  */
 public class FiletypesPage extends WebPage {
-  public FiletypesPage() {
-    List<TypeSummary> list = FishEye.getInstance().getAnalyzer().getTypeSummaries();
-    ListView<TypeSummary> listview = new ListView<TypeSummary>("listview", list) {
-      protected void populateItem(ListItem<TypeSummary> item) {
-        TypeSummary ts = item.getModelObject();
 
-        String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
-        item.add(new ExternalLink("typelabel", typeUrl, ts.getLabel()));
-      }
-    };
+  final class FiletypesListing extends WebMarkupContainer {
+    public FiletypesListing(String name) {
+      super(name);
+      FishEye fe = FishEye.getInstance();
+      List<TypeSummary> list = fe.getAnalyzer().getTypeSummaries();
+      ListView<TypeSummary> listview = new ListView<TypeSummary>("listview", list) {
+        protected void populateItem(ListItem<TypeSummary> item) {
+          TypeSummary ts = item.getModelObject();
 
-    add(new SettingsWarningBox());    
-    add(listview);
-    add(new Label("numFisheyeTypes", "" + list.size()));
+          String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
+          item.add(new ExternalLink("typelabel", typeUrl, ts.getLabel()));
+        }
+      };
+      add(listview);
+      add(new Label("numFisheyeTypes", "" + list.size()));
+
+      setOutputMarkupPlaceholderTag(true);
+      setVisibilityAllowed(false);
+    }
+    public void onConfigure() {
+      FishEye fe = FishEye.getInstance();    
+      setVisibilityAllowed(fe.hasFSAndCrawl());
+    }
+  }
+
+  public FiletypesPage() {  
+    add(new FiletypesListing("currentFiletypesListing"));
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());            
   }
 }
