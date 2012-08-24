@@ -76,11 +76,14 @@ public class FormatAnalyzer {
         // It's not one of the known formats, so apply LearnStructure (and
         // SchemaDictionary), then emit the resulting Avro data.
         try {
-          return new UnknownTextDataDescriptor(f, schemaDbDir, maxLines);
+          boolean isTextData = UnknownTextDataDescriptor.isTextData(f);
+          if (isTextData) {
+            return new UnknownTextDataDescriptor(f, schemaDbDir, maxLines);
+          }
         } catch (Exception iex) {
-          // If that doesn't work, then give up and call it unstructured
-          return new UnstructuredFileDescriptor(f);
         }
+        // If that doesn't work, then give up and call it unstructured        
+        return new UnstructuredFileDescriptor(f);
       }
     }
   }

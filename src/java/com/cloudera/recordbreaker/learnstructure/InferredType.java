@@ -141,7 +141,6 @@ public abstract class InferredType implements Writable {
         return (GenericContainer) pr.getData();
       }
     }
-    //System.err.println("Blargh!!  Failed on " + str);
     return null;
   }
   abstract ParseResult internalParse(String s, Map<String, Integer> targetUnionDecisions, boolean mustConsumeStr);

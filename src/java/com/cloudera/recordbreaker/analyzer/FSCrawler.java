@@ -83,8 +83,6 @@ public class FSCrawler {
     Date dateModified = new Date(f.lastModified());    
     try {
       analyzer.insertIntoFiles(f, isDir, owner, fileDateFormat.format(dateModified), crawlid, tgs);
-      System.err.println("Done!  added " + f);
-      
     } catch (SQLiteException sle) {
       throw new IOException(sle.getMessage());
     }

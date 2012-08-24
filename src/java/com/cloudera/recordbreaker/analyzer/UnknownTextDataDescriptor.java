@@ -16,6 +16,8 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.BufferedInputStream;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -36,6 +38,28 @@ import com.cloudera.recordbreaker.learnstructure.LearnStructure;
  * @see DataDescriptor
  */
 public class UnknownTextDataDescriptor implements DataDescriptor {
+  /**
+   * Test whether the input param is a text file.
+   * We do this by examining the first k bytes.  If 90% or more
+   * of them are ASCII chars, then we assume it's text.
+   */
+  final static double asciiThreshold = 0.9;
+  public static boolean isTextData(File f) throws IOException {
+    BufferedInputStream in = new BufferedInputStream(new FileInputStream(f));
+    byte buf[] = new byte[1024];
+    int numBytes = in.read(buf);
+    if (numBytes < 0) {
+      return false;
+    }
+    int numASCIIChars = 0;
+    for (int i = 0; i < numBytes; i++) {
+      if (buf[i] >= 32 && buf[i] < 128) {
+        numASCIIChars++;
+      }
+    }
+    return ((numASCIIChars / (1.0 * numBytes)) > asciiThreshold);
+  }
+  
   File f;
   File schemaDictDir;
   File workingAvroFile;
