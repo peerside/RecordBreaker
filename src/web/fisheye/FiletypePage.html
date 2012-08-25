@@ -71,22 +71,38 @@
         </div>
         <div class="span10">
           <div class="container">
-            <h1>Type: <span wicket:id="typetitle"/></h1>
+            <!-- The Settings warning box -->
+            <div class="errorbox" wicket:id="settingsWarningMsgContainer">
+              <div class="alert alert-error">
+                <strong>Warning: </strong><span wicket:id="settingsErrorLabel"></span>
+              </div>
+            </div>
+            
+            <h1>Type</h1>
+            <div class="errorbox" wicket:id="crawlWarningMsgContainer">
+              <div class="alert alert-info">
+                <strong>Note: </strong><span wicket:id="crawlErrorLabel"></span>
+              </div>
+            </div>
 
-            Files with this type:
-            <table class="table table-striped table-bordered table-condensed">
-              <thead>
-                <tr>
-                  <th>File</th>
-                  <th>Schema</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr wicket:id="observations">
-                  <td><a href="#" wicket:id="filelink"></a></td><td><a href="#" wicket:id="schemalink"></a></td>
-                </tr>
-              </tbody>
-            </table>
+            <div wicket:id="currentFiletypeDisplay">
+              <h2><span wicket:id="typetitle"/></h2>
+
+              Files with this type:
+              <table class="table table-striped table-bordered table-condensed">
+                <thead>
+                  <tr>
+                    <th>File</th>
+                    <th>Schema</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr wicket:id="observations">
+                    <td><a href="#" wicket:id="filelink"></a></td><td><a href="#" wicket:id="schemalink"></a></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div> <!-- /container -->
         </div>
       </div>

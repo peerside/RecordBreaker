@@ -20,6 +20,7 @@ import com.cloudera.recordbreaker.analyzer.SchemaSummary;
 import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
 
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.link.ExternalLink;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -35,42 +36,61 @@ import java.util.List;
  * @see WebPage
  */
 public class FilePage extends WebPage {
+  final class FilePageDisplay extends WebMarkupContainer {
+    public FilePageDisplay(String name, String fidStr) {
+      super(name);
+      FishEye fe = FishEye.getInstance();
+
+      if (fe.hasFSAndCrawl()) {
+        if (fidStr != null) {
+          try {
+            FileSummary fs = new FileSummary(fe.getAnalyzer(), Long.parseLong(fidStr));
+            add(new Label("filetitle", fs.getFname()));
+            add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath())).toString(), fs.getPath()));
+            add(new Label("owner", fs.getOwner()));
+            add(new Label("size", "" + fs.getSize()));
+            add(new Label("lastmodified", fs.getLastModified()));
+            add(new Label("crawledon", fs.getCrawl().getStartedDate()));
+
+            List<TypeGuessSummary> tgses = fs.getTypeGuesses();
+            TypeGuessSummary tgs = tgses.get(0);
+            TypeSummary ts = tgs.getTypeSummary();          
+            SchemaSummary ss = tgs.getSchemaSummary();
+
+            String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
+            String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
+            add(new ExternalLink("typelink", typeUrl, ts.getLabel()));
+            add(new ExternalLink("schemalink", schemaUrl, "Schema"));
+            return;
+          } catch (NumberFormatException nfe) {
+          }
+        }
+        add(new Label("filetitle", "unknown"));
+        add(new Label("filesubtitlelink", ""));
+        add(new Label("filesubtitle", ""));
+        add(new Label("owner", ""));
+        add(new Label("size", ""));
+        add(new Label("lastmodified", ""));
+        add(new Label("crawledon", ""));
+      }
+
+      setOutputMarkupPlaceholderTag(true);
+      setVisibilityAllowed(false);
+    }
+    public void onConfigure() {
+      FishEye fe = FishEye.getInstance();
+      setVisibilityAllowed(fe.hasFSAndCrawl());
+    }
+  }
+  
   public FilePage() {
-    add(new SettingsWarningBox());        
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());
+    add(new FilePageDisplay("currentFileDisplay", ""));
   }
   public FilePage(PageParameters params) {
-    String fidStr = params.get("fid").toString();
-    add(new SettingsWarningBox());        
-    if (fidStr != null) {
-      try {
-        FileSummary fs = new FileSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(fidStr));
-        add(new Label("filetitle", fs.getFname()));
-        //add(new Label("filesubtitle", "in " + fs.getPath()));
-        add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath())).toString(), fs.getPath()));
-        add(new Label("owner", fs.getOwner()));
-        add(new Label("size", "" + fs.getSize()));
-        add(new Label("lastmodified", fs.getLastModified()));
-        add(new Label("crawledon", fs.getCrawl().getStartedDate()));
-
-        List<TypeGuessSummary> tgses = fs.getTypeGuesses();
-        TypeGuessSummary tgs = tgses.get(0);
-        TypeSummary ts = tgs.getTypeSummary();          
-        SchemaSummary ss = tgs.getSchemaSummary();
-
-        String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
-        String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
-        add(new ExternalLink("typelink", typeUrl, ts.getLabel()));
-        add(new ExternalLink("schemalink", schemaUrl, "Schema"));
-        return;
-      } catch (NumberFormatException nfe) {
-      }
-    }
-    add(new Label("filetitle", "unknown"));
-    add(new Label("filesubtitlelink", ""));
-    add(new Label("filesubtitle", ""));
-    add(new Label("owner", ""));
-    add(new Label("size", ""));
-    add(new Label("lastmodified", ""));
-    add(new Label("crawledon", ""));
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());
+    add(new FilePageDisplay("currentFileDisplay", params.get("fid").toString()));
   }
 }

@@ -17,6 +17,7 @@ package com.cloudera.recordbreaker.fisheye;
 import com.cloudera.recordbreaker.analyzer.SchemaSummary;
 
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.markup.html.list.ListView;
@@ -81,39 +82,59 @@ public class SchemaPage extends WebPage {
     return listOfSchemaElts;
   }
   
+  final class SchemaPageDisplay extends WebMarkupContainer {
+    public SchemaPageDisplay(String name, String schemaidStr) {
+      super(name);
+      FishEye fe = FishEye.getInstance();
+
+      if (fe.hasFSAndCrawl()) {
+        List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
+        if (schemaidStr != null) {
+          try {
+            SchemaSummary ss = new SchemaSummary(fe.getAnalyzer(), Long.parseLong(schemaidStr));
+            listOfSchemaElts = getSchemaDigest(ss.getLabel());
+          } catch (NumberFormatException nfe) {
+          } catch (IOException ie) {
+          }
+        }
+
+        add(new ListView<List<JsonNode>>("biglistview", listOfSchemaElts) {
+          protected void populateItem(ListItem<List<JsonNode>> item) {      
+            List<JsonNode> myListOfSchemaElts = item.getModelObject();
+        
+            ListView<JsonNode> listview = new ListView<JsonNode>("listview", myListOfSchemaElts) {
+              protected void populateItem(ListItem<JsonNode> item2) {
+                JsonNode jnode = item2.getModelObject();
+        
+                item2.add(new Label("fieldname", "" + jnode.get("name")));
+                item2.add(new Label("fieldtype", "" + jnode.get("type")));
+                item2.add(new Label("fielddoc", "" + jnode.get("doc")));
+              }
+            };
+            item.add(listview);
+          }
+          });
+        add(new Label("numSchemaElements", "" + listOfSchemaElts.size()));
+      }
+      
+      setOutputMarkupPlaceholderTag(true);
+      setVisibilityAllowed(false);
+    }
+    public void onConfigure() {
+      FishEye fe = FishEye.getInstance();
+      setVisibilityAllowed(fe.hasFSAndCrawl());
+    }
+  }
+
   public SchemaPage() {
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());            
+    add(new SchemaPageDisplay("currentSchemaDisplay", ""));
   }
 
   public SchemaPage(PageParameters params) {
-    List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
-    String schemaidStr = params.get("schemaid").toString();
-    if (schemaidStr != null) {
-      try {
-        SchemaSummary ss = new SchemaSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(schemaidStr));
-        listOfSchemaElts = getSchemaDigest(ss.getLabel());
-      } catch (NumberFormatException nfe) {
-      } catch (IOException ie) {
-      }
-    }
-
-    ListView<List<JsonNode>> biglistview = new ListView<List<JsonNode>>("biglistview", listOfSchemaElts) {
-      protected void populateItem(ListItem<List<JsonNode>> item) {      
-        List<JsonNode> myListOfSchemaElts = item.getModelObject();
-        
-        ListView<JsonNode> listview = new ListView<JsonNode>("listview", myListOfSchemaElts) {
-          protected void populateItem(ListItem<JsonNode> item2) {
-            JsonNode jnode = item2.getModelObject();
-        
-            item2.add(new Label("fieldname", "" + jnode.get("name")));
-            item2.add(new Label("fieldtype", "" + jnode.get("type")));
-            item2.add(new Label("fielddoc", "" + jnode.get("doc")));
-          }
-        };
-        item.add(listview);
-      }
-    };
-
-    add(new Label("numSchemaElements", "" + listOfSchemaElts.size()));
-    add(biglistview);
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());            
+    add(new SchemaPageDisplay("currentSchemaDisplay", params.get("schemaid").toString()));
   }  
 }

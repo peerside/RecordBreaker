@@ -20,6 +20,7 @@ import com.cloudera.recordbreaker.analyzer.SchemaSummary;
 import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
 
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.link.ExternalLink;
@@ -37,37 +38,52 @@ import java.util.List;
  * @see WebPage
  */
 public class FiletypePage extends WebPage {
-  public FiletypePage() {
-  }
-  public FiletypePage(PageParameters params) {
-    String filetypeStr = params.get("typeid").toString();
-    if (filetypeStr != null) {
-      try {
-        // Metadata for type
-        TypeSummary ts = new TypeSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(filetypeStr));
-        add(new Label("typetitle", ts.getLabel()));
-        List<TypeGuessSummary> tgses = ts.getTypeGuesses();
+  final class FiletypeDisplay extends WebMarkupContainer {
+    public FiletypeDisplay(String name, String filetypeStr) {
+      super(name);
+      FishEye fe = FishEye.getInstance();
+      if (fe.hasFSAndCrawl()) {
+        if (filetypeStr == null) {
+          add(new Label("typetitle", ""));
+        } else {
+          try {
+            // Metadata for type
+            TypeSummary ts = new TypeSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(filetypeStr));
+            add(new Label("typetitle", ts.getLabel()));
+            List<TypeGuessSummary> tgses = ts.getTypeGuesses();
         
-        // Files that have this type
-        ListView<TypeGuessSummary> observationList = new ListView<TypeGuessSummary>("observations", tgses) {
-          protected void populateItem(ListItem<TypeGuessSummary> item) {
-            TypeGuessSummary tgs = item.getModelObject();
-            FileSummary fs = tgs.getFileSummary();
-            SchemaSummary ss = tgs.getSchemaSummary();
+            // Files that have this type
+            ListView<TypeGuessSummary> observationList = new ListView<TypeGuessSummary>("observations", tgses) {
+              protected void populateItem(ListItem<TypeGuessSummary> item) {
+                TypeGuessSummary tgs = item.getModelObject();
+                FileSummary fs = tgs.getFileSummary();
+                SchemaSummary ss = tgs.getSchemaSummary();
 
-            String fileUrl = urlFor(FilePage.class, new PageParameters("fid=" + fs.getFid())).toString();
-            item.add(new ExternalLink("filelink", fileUrl, fs.getFname()));
+                String fileUrl = urlFor(FilePage.class, new PageParameters("fid=" + fs.getFid())).toString();
+                item.add(new ExternalLink("filelink", fileUrl, fs.getFname()));
 
-            String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
-            item.add(new ExternalLink("schemalink", schemaUrl, "Schema"));
+                String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
+                item.add(new ExternalLink("schemalink", schemaUrl, "Schema"));
+              }
+            };
+            add(observationList);
+          } catch (NumberFormatException nfe) {
           }
-        };
-        add(observationList);
-        
-        return;
-      } catch (NumberFormatException nfe) {
+        }
       }
+      setOutputMarkupPlaceholderTag(true);
+      setVisibilityAllowed(false);
     }
-    add(new Label("typetitle", ""));
+  }
+
+  public FiletypePage() {
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());
+    add(new FiletypeDisplay("currentFiletypeDisplay", ""));
+  }
+  public FiletypePage(PageParameters params) {  
+    add(new SettingsWarningBox());
+    add(new CrawlWarningBox());
+    add(new FiletypeDisplay("currentFiletypeDisplay", params.get("typeid").toString()));
   }
 }
