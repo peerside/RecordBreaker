@@ -16,12 +16,16 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.BufferedReader;
 import java.io.IOException;
-
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.ArrayList;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -39,15 +43,17 @@ import au.com.bytecode.opencsv.CSVParser;
 public class CSVSchemaDescriptor implements SchemaDescriptor {
   static int MAX_LINES = 1000;
 
-  File f;
+  FileSystem fs;
+  Path p;
   boolean hasHeaderRow;
   Schema schema;
   String schemaIdentifier;
   String schemaSrcDesc;
   
-  public CSVSchemaDescriptor(File f) throws IOException {
-    this.f = f;
-    computeTypes(f);
+  public CSVSchemaDescriptor(FileSystem fs, Path p) throws IOException {
+    this.fs = fs;
+    this.p = p;
+    computeTypes();
   }
 
   /**
@@ -100,7 +106,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
    * <code>computeTypes</code> examines the CSV file and tries to figure out the
    * columnar data types.  It also tests if there's a CSV header that it can extract.
    */
-  void computeTypes(File f) throws IOException {   
+  void computeTypes() throws IOException {   
     //
     // 1.  Go through all columns in the CSV and identify cell data types
     //
@@ -108,7 +114,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     List<String> firstRow = new ArrayList<String>();
     List<List<Schema.Type>> allEltTypes = new ArrayList<List<Schema.Type>>();
     CSVParser parser = new CSVParser();    
-    BufferedReader in = new BufferedReader(new FileReader(f));
+    BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(p)));
     try {
       int lineno = 0;
       String s = null;
@@ -247,7 +253,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
         rowNum = 0;
         try {
           this.parser = new CSVParser();
-          in = new BufferedReader(new FileReader(f));
+          in = new BufferedReader(new InputStreamReader(fs.open(p)));
           nextElt = lookahead();          
         } catch (IOException iex) {
           this.nextElt = null;

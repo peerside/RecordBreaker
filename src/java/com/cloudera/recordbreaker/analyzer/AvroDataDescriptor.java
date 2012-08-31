@@ -19,6 +19,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 import org.apache.avro.Schema;
 
 /****************************************************************
@@ -30,20 +34,22 @@ import org.apache.avro.Schema;
  * @see DataDescriptor
  *****************************************************************/
 public class AvroDataDescriptor implements DataDescriptor {
-  File f;
+  FileSystem fs;
+  Path p;
   
   /**
    * Creates a new <code>AvroDataDescriptor</code> instance.
    */
-  public AvroDataDescriptor(File f) {
-    this.f = f;
+  public AvroDataDescriptor(FileSystem fs, Path p) {
+    this.fs = fs;
+    this.p = p;
   }
 
   /**
    * @return a <code>File</code> 
    */
-  public File getFilename() {
-    return this.f;
+  public Path getFilename() {
+    return this.p;
   }
 
   /**
@@ -62,7 +68,7 @@ public class AvroDataDescriptor implements DataDescriptor {
   public List<SchemaDescriptor> getSchemaDescriptor() {
     List<SchemaDescriptor> results = new ArrayList<SchemaDescriptor>();
     try {
-      results.add(new AvroSchemaDescriptor(f));
+      results.add(new AvroSchemaDescriptor(fs, p));
     } catch (IOException iex) {
     }
     return results;

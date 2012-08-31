@@ -24,13 +24,16 @@ import java.util.Date;
 import java.util.Random;
 import java.util.ArrayList;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 import com.almworks.sqlite4java.SQLite;
 import com.almworks.sqlite4java.SQLiteJob;
 import com.almworks.sqlite4java.SQLiteQueue;
 import com.almworks.sqlite4java.SQLiteStatement;
 import com.almworks.sqlite4java.SQLiteException;
 import com.almworks.sqlite4java.SQLiteConnection;
-
 
 /***************************************************************
  * <code>FSAnalyzer</code> crawls a filesystem and figures out
@@ -294,12 +297,15 @@ public class FSAnalyzer {
   /**
    * Add a new object to the set of all known files.  This involves several tables.
    */
-  long insertIntoFiles(File insertFile, final boolean isDir, final String owner, final String timeDateStamp, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException, IOException {
-    insertFile = insertFile.getCanonicalFile();
-    final String parentPath = insertFile.getParent();
-    final String fName = insertFile.getName();
-    final long size = insertFile.length();
+  long insertIntoFiles(FileSystem fs, Path insertFile, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException, IOException {
+    FileStatus fstatus = fs.getFileStatus(insertFile);
+    final String timeDateStamp = fileDateFormat.format(new Date(fstatus.getModificationTime()));
+    final String owner = fstatus.getOwner();
+    final boolean isDir = fstatus.isDir();
+    final long size = fstatus.getLen();
     
+    final String parentPath = insertFile.getParent().toString();
+    final String fName = insertFile.getName();
     final long fileId = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?, ?)");
@@ -349,8 +355,8 @@ public class FSAnalyzer {
   /**
    * Try to describe the contents of the given file
    */
-  DataDescriptor describeData(File f, int maxLines) throws IOException {
-    return formatAnalyzer.describeData(f, maxLines);
+  DataDescriptor describeData(FileSystem fs, Path p, int maxLines) throws IOException {
+    return formatAnalyzer.describeData(fs, p, maxLines);
   }
   
   ///////////////////////////////////////////////////
@@ -447,7 +453,6 @@ public class FSAnalyzer {
             stmt = db.prepare(fileInfoQueryWithPrefix);
             stmt.bind(1, isDir ? "True" : "False").bind(2, prefix);            
           }
-
           try {
             while (stmt.step()) {
               long fid = stmt.columnLong(0);
@@ -465,22 +470,22 @@ public class FSAnalyzer {
   /**
    * <code>getFilesForCrawl()</code> returns all the seen files for a given crawlid
    */
-  public List<File> getFilesForCrawl(final long crawlid) {
+  public List<Path> getFilesForCrawl(final long crawlid) {
     return getFileEntriesForCrawl(crawlid, "False");
   }
-  public List<File> getDirsForCrawl(final long crawlid) {
+  public List<Path> getDirsForCrawl(final long crawlid) {
     return getFileEntriesForCrawl(crawlid, "True");    
   }
   static String filenameForCrawlQuery = "SELECT path, fname FROM Files WHERE crawlid=? AND isDir = ?";        
-  private List<File> getFileEntriesForCrawl(final long crawlid, final String isDir) {
-    return dbQueue.execute(new SQLiteJob<List<File>>() {
-        protected List<File> job(SQLiteConnection db) throws SQLiteException {
-          List<File> output = new ArrayList<File>();          
+  private List<Path> getFileEntriesForCrawl(final long crawlid, final String isDir) {
+    return dbQueue.execute(new SQLiteJob<List<Path>>() {
+        protected List<Path> job(SQLiteConnection db) throws SQLiteException {
+          List<Path> output = new ArrayList<Path>();          
           SQLiteStatement stmt = db.prepare(filenameForCrawlQuery);
           try {
             stmt.bind(1, crawlid).bind(2, isDir);
             while (stmt.step()) {
-              output.add(new File(stmt.columnString(0), stmt.columnString(1)));
+              output.add(new Path(stmt.columnString(0), stmt.columnString(1)));
             }
           } catch (SQLiteException se) {
             se.printStackTrace();
@@ -536,15 +541,15 @@ public class FSAnalyzer {
   /**
    * Get the parents for the given directory from a given crawl
    */
-  public List<File> getDirParents(final long crawlid, final String targetDir) {
-    return dbQueue.execute(new SQLiteJob<List<File>>() {
-        protected List<File> job(SQLiteConnection db) throws SQLiteException {
-          List<File> output = new ArrayList<File>();
+  public List<Path> getDirParents(final long crawlid, final String targetDir) {
+    return dbQueue.execute(new SQLiteJob<List<Path>>() {
+        protected List<Path> job(SQLiteConnection db) throws SQLiteException {
+          List<Path> output = new ArrayList<Path>();
           SQLiteStatement stmt = db.prepare("select path||'/'||fname from Files WHERE crawlid = ? AND length(?) > length(path||'/'||fname) AND isDir = 'True' AND length(replace(?, path||'/'||fname, '')) < length(?)");
           try {
             stmt.bind(1, crawlid).bind(2, targetDir).bind(3, targetDir).bind(4, targetDir);
             while (stmt.step()) {
-              output.add(new File(stmt.columnString(0)));
+              output.add(new Path(stmt.columnString(0)));
             }
           } finally {
             stmt.dispose();
@@ -557,15 +562,15 @@ public class FSAnalyzer {
   /**
    * Get the parents for the given directory from a given crawl
    */
-  public List<File> getDirChildren(final long crawlid, final String targetDir) {
-    return dbQueue.execute(new SQLiteJob<List<File>>() {
-        protected List<File> job(SQLiteConnection db) throws SQLiteException {
-          List<File> output = new ArrayList<File>();
+  public List<Path> getDirChildren(final long crawlid, final String targetDir) {
+    return dbQueue.execute(new SQLiteJob<List<Path>>() {
+        protected List<Path> job(SQLiteConnection db) throws SQLiteException {
+          List<Path> output = new ArrayList<Path>();
           SQLiteStatement stmt = db.prepare("SELECT DISTINCT path||'/'||fname AS fullpath FROM Files WHERE isDir = 'True' AND crawlid = ? AND path = ? ORDER BY fname ASC");
           try {
             stmt.bind(1, crawlid).bind(2, targetDir);
             while (stmt.step()) {
-              output.add(new File(stmt.columnString(0)));
+              output.add(new Path(stmt.columnString(0)));
             }
           } finally {
             stmt.dispose();

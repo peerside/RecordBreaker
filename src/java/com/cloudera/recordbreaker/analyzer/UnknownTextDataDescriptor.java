@@ -27,6 +27,10 @@ import com.cloudera.recordbreaker.schemadict.SchemaSuggest;
 import com.cloudera.recordbreaker.schemadict.DictionaryMapping;
 import com.cloudera.recordbreaker.learnstructure.LearnStructure;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 /**
  * <code>UnknownTextDataDescriptor</code> encapsulates log files with which we are unfamiliar.
  * It is the only DataDescriptor implementation to use the LearnStructure and SchemaDictionary
@@ -44,23 +48,28 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
    * of them are ASCII chars, then we assume it's text.
    */
   final static double asciiThreshold = 0.9;
-  public static boolean isTextData(File f) throws IOException {
-    BufferedInputStream in = new BufferedInputStream(new FileInputStream(f));
-    byte buf[] = new byte[1024];
-    int numBytes = in.read(buf);
-    if (numBytes < 0) {
-      return false;
-    }
-    int numASCIIChars = 0;
-    for (int i = 0; i < numBytes; i++) {
-      if (buf[i] >= 32 && buf[i] < 128) {
-        numASCIIChars++;
+  public static boolean isTextData(FileSystem fs, Path p) throws IOException {
+    BufferedInputStream in = new BufferedInputStream(fs.open(p));
+    try {
+      byte buf[] = new byte[1024];
+      int numBytes = in.read(buf);
+      if (numBytes < 0) {
+        return false;
       }
+      int numASCIIChars = 0;
+      for (int i = 0; i < numBytes; i++) {
+        if (buf[i] >= 32 && buf[i] < 128) {
+          numASCIIChars++;
+        }
+      }
+      return ((numASCIIChars / (1.0 * numBytes)) > asciiThreshold);
+    } finally {
+      in.close();
     }
-    return ((numASCIIChars / (1.0 * numBytes)) > asciiThreshold);
   }
   
-  File f;
+  FileSystem fs;
+  Path p;
   File schemaDictDir;
   File workingAvroFile;
   File workingSchemaFile;
@@ -69,20 +78,22 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
   /**
    * Creates a new <code>UnknownTextDataDescriptor</code>.
    */
-  public UnknownTextDataDescriptor(File f, File schemaDictDir, int maxLines) throws IOException {
-    this.f = f;
+  public UnknownTextDataDescriptor(FileSystem fs, Path p, File schemaDictDir, int maxLines) throws IOException {
+    this.fs = fs;
+    this.p = p;
     this.schemaDictDir = schemaDictDir;    
     this.workingAvroFile = File.createTempFile("textdesc", "avro", null);
     this.workingSchemaFile = File.createTempFile("textdesc", "schema", null);
+    FileSystem localFS = FileSystem.getLocal(null);
 
     // 1.  We already have a synthesized Avro data, with anonymous fields.
     // 2.  Test it against the known database of types.
     // 3.  Return the top-k types/schemas that we discover, as long as they pass a threshold.
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, workingSchemaFile, null, null, workingAvroFile, false, maxLines);
+    ls.inferRecordFormat(fs, p, localFS, new Path(workingSchemaFile.getCanonicalPath()), null, null, new Path(workingAvroFile.getCanonicalPath()), false, maxLines);
 
     // The most basic schema descriptor is the raw one that captures the anonymous avro file
-    schemaDescriptors.add(new UnknownTextSchemaDescriptor(workingAvroFile));
+    schemaDescriptors.add(new UnknownTextSchemaDescriptor(localFS, new Path(workingAvroFile.getCanonicalPath())));
 
     // We might be able to find more interesting descriptors by using the SchemaDictionary
     //SchemaSuggest ss = new SchemaSuggest(schemaDictDir);
@@ -99,8 +110,8 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
   /**
    * @return the <code>File</code> value
    */
-  public File getFilename() {
-    return this.f;
+  public Path getFilename() {
+    return this.p;
   }
 
   /**

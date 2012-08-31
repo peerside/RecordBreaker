@@ -21,9 +21,12 @@ import java.util.Iterator;
 import java.io.IOException;
 
 import org.apache.avro.Schema;
-
-import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericDatumReader;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 /************************************************************************
  * <code>AvroSchemaDescriptor</code> returns Avro-specific Schema data.
@@ -34,22 +37,24 @@ import org.apache.avro.generic.GenericDatumReader;
  * @see SchemaDescriptor
  *************************************************************************/
 public class AvroSchemaDescriptor implements SchemaDescriptor {
-  File f;
+  FileSystem fs;
+  Path p;
   Schema schema;
   
   /**
    * Creates a new <code>AvroSchemaDescriptor</code> instance.
    * In particular, it loads the Avro file and grabs the Schema object.
    */
-  public AvroSchemaDescriptor(File f) throws IOException {
-    this.f = f;
-    DataFileReader<Void> reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
+  public AvroSchemaDescriptor(FileSystem fs, Path p) throws IOException {
+    this.fs = fs;
+    this.p = p;
+    //DataFileReader<Void> reader = new DataFileReader<Void>(fs, new GenericDatumReader<Void>());
+    DataFileStream<Void> reader = new DataFileStream<Void>(fs.open(p), new GenericDatumReader<Void>());    
     try {
       this.schema = reader.getSchema();
     } finally {
       reader.close();
     }
-    
   }
 
   /**
@@ -64,10 +69,12 @@ public class AvroSchemaDescriptor implements SchemaDescriptor {
   public Iterator getIterator() {
     return new Iterator() {
       Object nextElt = null;
-      DataFileReader<Void> reader = null;
+      //DataFileReader<Void> reader = null;
+      DataFileStream<Void> reader = null;      
       {
         try {
-          reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
+          //reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
+          reader = new DataFileStream<Void>(fs.open(p), new GenericDatumReader<Void>());          
           nextElt = lookahead();
         } catch (IOException iex) {
           this.nextElt = null;

@@ -14,7 +14,6 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.SortedMap;
@@ -29,6 +28,10 @@ import java.util.ArrayList;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -55,7 +58,7 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
    * Processes the input XML data and creates an Avro-compatible
    * Schema representation.
    */
-  public XMLSchemaDescriptor(File f) throws IOException {
+  public XMLSchemaDescriptor(FileSystem fs, Path p) throws IOException {
     SAXParserFactory factory = SAXParserFactory.newInstance();
     SAXParser parser = null;
     // Unfortunately, validation is often not possible
@@ -65,7 +68,7 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
       // The XMLProcessor builds up a tree of tags
       XMLProcessor xp = new XMLProcessor();
       parser = factory.newSAXParser();
-      parser.parse(f, xp);
+      parser.parse(fs.open(p), xp);
 
       // Grab the root tag
       this.rootTag = xp.getRoot();

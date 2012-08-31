@@ -15,12 +15,16 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.BufferedReader;
-
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 import au.com.bytecode.opencsv.CSVParser;
 
@@ -42,14 +46,14 @@ public class CSVDataDescriptor implements DataDescriptor {
   /**
    * Test whether a given file is amenable to CSV processing
    */
-  public static boolean isCSV(File f) {
-    String fname = f.getName();    
+  public static boolean isCSV(FileSystem fs, Path p) {
+    String fname = p.getName();    
     if (fname.endsWith(".csv")) {
       return true;
     }
     CSVParser parser = new CSVParser();
     try {
-      BufferedReader in = new BufferedReader(new FileReader(f));
+      BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(p)));
       try {
         int lineCount = 0;
         List<Integer> observedEltCounts = new ArrayList<Integer>();
@@ -87,7 +91,8 @@ public class CSVDataDescriptor implements DataDescriptor {
     return false;
   }
 
-  File f;
+  FileSystem fs;
+  Path p;
   
   /**
    * Creates a new <code>CSVDataDescriptor</code> instance.
@@ -95,15 +100,16 @@ public class CSVDataDescriptor implements DataDescriptor {
    * @param f a <code>File</code> value
    * @exception IOException if an error occurs
    */
-  public CSVDataDescriptor(File f) throws IOException {
-    this.f = f;
+  public CSVDataDescriptor(FileSystem fs, Path p) throws IOException {
+    this.fs = fs;
+    this.p = p;
   }
 
   /**
    * @return the <code>File</code>.
    */
-  public File getFilename() {
-    return this.f;
+  public Path getFilename() {
+    return this.p;
   }
 
   /**
@@ -124,7 +130,7 @@ public class CSVDataDescriptor implements DataDescriptor {
   public List<SchemaDescriptor> getSchemaDescriptor() {
     List<SchemaDescriptor> results = new ArrayList<SchemaDescriptor>();
     try {
-      results.add(new CSVSchemaDescriptor(f));
+      results.add(new CSVSchemaDescriptor(fs, p));
     } catch (IOException iex) {
     }
     return results;

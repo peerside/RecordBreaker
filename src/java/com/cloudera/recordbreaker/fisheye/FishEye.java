@@ -25,6 +25,9 @@ import org.mortbay.resource.ResourceCollection;
 
 import com.almworks.sqlite4java.SQLiteException;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+
 import java.io.*;
 import java.util.*;
 import javax.servlet.*;
@@ -155,7 +158,7 @@ public class FishEye {
     }
     return null;
   }
-  public List<File> getDirParents(String targetDir) {
+  public List<Path> getDirParents(String targetDir) {
     String fsUrl = analyzer.getConfigProperty("fsurl");
     if (fsUrl == null) {
       return null;
@@ -169,7 +172,7 @@ public class FishEye {
     }
     return null;
   }
-  public List<File> getDirChildren(String targetDir) {
+  public List<Path> getDirChildren(String targetDir) {
     String fsUrl = analyzer.getConfigProperty("fsurl");
     if (fsUrl == null) {
       return null;

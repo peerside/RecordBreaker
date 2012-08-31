@@ -14,8 +14,7 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import java.io.File;
-
+import org.apache.hadoop.fs.Path;
 import java.util.List;
 
 /***************************************************************************************
@@ -35,9 +34,9 @@ public interface DataDescriptor {
   /**
    * <code>getFilename</code> just gives the name of the file being described.
    *
-   * @return a <code>File</code> value
+   * @return a <code>Path</code> value
    */
-  public File getFilename();
+  public Path getFilename();
 
   /**
    * <code>getFileTypeIdentifier</code> returns a single-string descriptor for the file type.

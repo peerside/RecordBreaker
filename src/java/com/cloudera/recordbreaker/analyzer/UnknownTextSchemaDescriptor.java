@@ -16,14 +16,16 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.ArrayList;
 import java.io.IOException;
 
 import org.apache.avro.Schema;
-
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 
 /************************************************************************
  * <code>AvroSchemaDescriptor</code> returns Avro-specific Schema data.
@@ -34,8 +36,8 @@ import org.apache.avro.generic.GenericDatumReader;
  * @see SchemaDescriptor
  *************************************************************************/
 public class UnknownTextSchemaDescriptor extends AvroSchemaDescriptor {
-  public UnknownTextSchemaDescriptor(File f) throws IOException {
-    super(f);
+  public UnknownTextSchemaDescriptor(FileSystem fs, Path p) throws IOException {
+    super(fs, p);
   }
   /**
    * @return a <code>String</code> that annotates the schema

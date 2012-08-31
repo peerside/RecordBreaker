@@ -23,6 +23,10 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 import org.apache.avro.Schema;
 
 /***********************************************************************
@@ -34,7 +38,8 @@ import org.apache.avro.Schema;
  * @see DataDescriptor
  ***********************************************************************/
 public class TextRegexpDataDescriptor implements DataDescriptor {
-  File f;
+  FileSystem fs;
+  Path p;
   String typeIdentifier;
   List<Pattern> regexps;
   List<Schema> schemas;
@@ -57,17 +62,18 @@ public class TextRegexpDataDescriptor implements DataDescriptor {
    * Create a new instance of this descriptor with the same structural params,
    * but tailored for the input File object.
    */
-  public TextRegexpDataDescriptor cloneWithFile(File f) {
+  public TextRegexpDataDescriptor cloneWithFile(FileSystem fs, Path p) {
     TextRegexpDataDescriptor retItem = new TextRegexpDataDescriptor(typeIdentifier, regexps, schemas);
-    retItem.f = f;
+    retItem.fs = fs;
+    retItem.p = p;
     return retItem;
   }
 
   /**
    * Test whether the input File corresponds to this data format.
    */
-  public boolean testData(File f) throws IOException {
-    TextRegexpDataDescriptor candidateDataDesc = cloneWithFile(f);
+  public boolean testData(FileSystem fs, Path p) throws IOException {
+    TextRegexpDataDescriptor candidateDataDesc = cloneWithFile(fs, p);
     List<SchemaDescriptor> candidateSchemaDescs = candidateDataDesc.getSchemaDescriptor();
 
     for (SchemaDescriptor candidateSchemaDesc: candidateSchemaDescs) {
@@ -91,8 +97,8 @@ public class TextRegexpDataDescriptor implements DataDescriptor {
   ///////////////////////////////////
   // DataDescriptor
   //////////////////////////////////
-  public File getFilename() {
-    return this.f;
+  public Path getFilename() {
+    return this.p;
   }
   public String getFileTypeIdentifier() {
     return typeIdentifier;
@@ -105,7 +111,7 @@ public class TextRegexpDataDescriptor implements DataDescriptor {
   public List<SchemaDescriptor> getSchemaDescriptor() {
     List<SchemaDescriptor> results = new ArrayList<SchemaDescriptor>();
     try {
-      results.add(new TextRegexpSchemaDescriptor(f, typeIdentifier, regexps, schemas));
+      results.add(new TextRegexpSchemaDescriptor(fs, p, typeIdentifier, regexps, schemas));
     } catch (Exception iex) {
     }
     return results;

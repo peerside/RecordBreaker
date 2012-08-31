@@ -19,6 +19,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 /******************************************************************
  * <code>XMLDataDescriptor</code> captures information about an HDFS .xml file.
  *
@@ -28,20 +32,22 @@ import java.util.ArrayList;
  * @see DataDescriptor
  ******************************************************************/
 public class XMLDataDescriptor implements DataDescriptor {
-  File f = null;
+  FileSystem fs = null;
+  Path p = null;
   
   /**
    * Creates a new <code>XMLDataDescriptor</code> instance.
    */
-  public XMLDataDescriptor(File f) throws IOException {
-    this.f = f;
+  public XMLDataDescriptor(FileSystem fs, Path p) throws IOException {
+    this.fs = fs;
+    this.p = p;
   }
 
   /**
    * @return the <code>File</code> value
    */
-  public File getFilename() {
-    return this.f;
+  public Path getFilename() {
+    return this.p;
   }
 
   /**
@@ -58,7 +64,7 @@ public class XMLDataDescriptor implements DataDescriptor {
   public List<SchemaDescriptor> getSchemaDescriptor() {
     List<SchemaDescriptor> results = new ArrayList<SchemaDescriptor>();
     try {
-      results.add(new XMLSchemaDescriptor(f));
+      results.add(new XMLSchemaDescriptor(fs, p));
     } catch (IOException iex) {
       iex.printStackTrace();
     }

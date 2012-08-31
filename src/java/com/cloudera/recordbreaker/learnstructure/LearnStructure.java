@@ -23,6 +23,10 @@ import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.avro.generic.GenericDatumWriter;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 /*********************************************************
  * LearnStructure is the main file for figuring out pattern-extractors and schemas for a text file.
  *
@@ -42,7 +46,7 @@ public class LearnStructure {
   
   /**
    */
-  public void inferRecordFormat(File f, File schemaFile, File parseTreeFile, File jsonDataFile, File avroDataFile, boolean verbose, int maxLines) throws IOException {    
+  public void inferRecordFormat(FileSystem fs, Path p, FileSystem fs2, Path schemaFile, Path parseTreeFile, Path jsonDataFile, Path avroDataFile, boolean verbose, int maxLines) throws IOException {    
     // Store parse errors and results
     List<Integer> unparseableLineNos = new ArrayList<Integer>();
     List<String> unparseableStrs = new ArrayList<String>();
@@ -53,7 +57,7 @@ public class LearnStructure {
     // Transform the text into a list of "chunks".  A single chunk corresponds to a line of text.  A chunk is a list of Tokens.
     //
     long startRead = System.currentTimeMillis();
-    BufferedReader in = new BufferedReader(new FileReader(f));
+    BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(p)));
     try {
       String s = in.readLine();
       int lineno = 0;
@@ -109,7 +113,7 @@ public class LearnStructure {
     //
     Schema s = typeTree.getAvroSchema();
     if (schemaFile != null) {
-      BufferedWriter out = new BufferedWriter(new FileWriter(schemaFile));
+      BufferedWriter out = new BufferedWriter(new OutputStreamWriter(fs2.create(schemaFile)));
       try {
         out.write(s.toString(true));
       } finally {
@@ -117,7 +121,7 @@ public class LearnStructure {
       }
     }
     if (parseTreeFile != null) {
-      DataOutputStream outd = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(parseTreeFile)));
+      DataOutputStream outd = new DataOutputStream(new BufferedOutputStream(fs2.create(parseTreeFile)));
       try {
         typeTree.write(outd);
       } finally {
@@ -131,10 +135,10 @@ public class LearnStructure {
     if (jsonDataFile != null) {
       Schema schema = typeTree.getAvroSchema();
       GenericDatumWriter jsonGDWriter = new GenericDatumWriter(schema);      
-      BufferedOutputStream outJson = new BufferedOutputStream(new FileOutputStream(jsonDataFile));
+      BufferedOutputStream outJson = new BufferedOutputStream(fs2.create(jsonDataFile));
       JsonEncoder encoder = EncoderFactory.get().jsonEncoder(schema, outJson);
       try {
-        in = new BufferedReader(new FileReader(f));
+        in = new BufferedReader(new InputStreamReader(fs.open(p)));
         try {
           //System.err.println("Type tree root is " + typeTree);
           String str = in.readLine();
@@ -162,10 +166,10 @@ public class LearnStructure {
 
       GenericDatumWriter gdWriter = new GenericDatumWriter(schema);
       DataFileWriter outData = new DataFileWriter(gdWriter);
-      outData = outData.create(schema, avroDataFile);
+      outData = outData.create(schema, fs2.create(avroDataFile));
 
       try {
-        in = new BufferedReader(new FileReader(f));
+        in = new BufferedReader(new InputStreamReader(fs.open(p)));
         try {
           String str = in.readLine();
           while (str != null) {
@@ -203,9 +207,10 @@ public class LearnStructure {
       System.err.println("Usage: LearnStructure <input-datafile> <outdir> (-emitAvro (true)|false)");
       return;
     }
+    FileSystem localFS = FileSystem.getLocal(null);
     boolean emitAvro = true;
     int i = 0;
-    File f = new File(argv[i++]).getCanonicalFile();
+    Path f = new Path(new File(argv[i++]).getCanonicalPath());
     File outdir = new File(argv[i++]).getCanonicalFile();
     for (; i < argv.length; i++) {
       if ("-emitAvro".equals(argv[i])) {
@@ -214,21 +219,21 @@ public class LearnStructure {
       }
     }
 
-    System.err.println("Input file: " + f.getCanonicalPath());
+    System.err.println("Input file: " + f.toString());
     System.err.println("Output directory: " + outdir.getCanonicalPath());
     if (outdir.exists()) {
       throw new IOException("Output directory already exists: " + outdir);
     }
     outdir.mkdirs();
-    File schemaFile = new File(outdir, SCHEMA_FILENAME);
-    File parseTreeFile = new File(outdir, PARSER_FILENAME);    
-    File jsonDataFile = null;
-    File avroDataFile = null;
+    Path schemaFile = new Path(outdir.getCanonicalPath(), SCHEMA_FILENAME);
+    Path parseTreeFile = new Path(outdir.getCanonicalPath(), PARSER_FILENAME);    
+    Path jsonDataFile = null;
+    Path avroDataFile = null;
     if (emitAvro) {
-      jsonDataFile = new File(outdir, JSONDATA_FILENAME);    
-      avroDataFile = new File(outdir, DATA_FILENAME);
+      jsonDataFile = new Path(outdir.getCanonicalPath(), JSONDATA_FILENAME);    
+      avroDataFile = new Path(outdir.getCanonicalPath(), DATA_FILENAME);
     }
     LearnStructure ls = new LearnStructure();
-    ls.inferRecordFormat(f, schemaFile, parseTreeFile, jsonDataFile, avroDataFile, true, -1);
+    ls.inferRecordFormat(localFS, f, localFS, schemaFile, parseTreeFile, jsonDataFile, avroDataFile, true, -1);
   }
 }

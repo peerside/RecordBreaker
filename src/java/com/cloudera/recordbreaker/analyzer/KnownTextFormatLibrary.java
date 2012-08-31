@@ -25,6 +25,10 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 
@@ -133,10 +137,10 @@ public class KnownTextFormatLibrary {
    * Analyze the input file and figure out if it's one of the formats in the
    * library list.
    */
-  public DataDescriptor createDescriptorForKnownFormat(File f) throws IOException {
+  public DataDescriptor createDescriptorForKnownFormat(FileSystem fs, Path p) throws IOException {
     for (TextRegexpDataDescriptor candidateDescriptor: possibleDescriptors) {
-      if (candidateDescriptor.testData(f)) {
-        return candidateDescriptor.cloneWithFile(f);
+      if (candidateDescriptor.testData(fs, p)) {
+        return candidateDescriptor.cloneWithFile(fs, p);
       }
     }
     return null;

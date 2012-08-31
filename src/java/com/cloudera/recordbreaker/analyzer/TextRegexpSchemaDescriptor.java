@@ -1,15 +1,19 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.FileReader;
+import java.io.IOException;
 import java.io.BufferedReader;
-
+import java.io.InputStreamReader;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -26,7 +30,8 @@ import org.apache.avro.generic.GenericData;
  * @see SchemaDescriptor
  **********************************************************************/
 public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
-  File f;
+  FileSystem fs;
+  Path p;
   String schemaLabel;
   List<Schema> schemaOptions;
   List<Pattern> patterns;
@@ -42,8 +47,9 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
    * @param schemaOptions a <code>List<Schema></code> value
    * @exception Exception if an error occurs
    */
-  public TextRegexpSchemaDescriptor(File f, String schemaLabel, List<Pattern> patterns, List<Schema> schemaOptions) throws Exception {
-    this.f = f;
+  public TextRegexpSchemaDescriptor(FileSystem fs, Path p, String schemaLabel, List<Pattern> patterns, List<Schema> schemaOptions) throws Exception {
+    this.fs = fs;
+    this.p = p;
     this.schemaLabel = schemaLabel;
     this.schemaOptions = schemaOptions;
     this.patterns = patterns;
@@ -67,7 +73,7 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
       BufferedReader in;
       {
         try {
-          this.in = new BufferedReader(new FileReader(f));
+          this.in = new BufferedReader(new InputStreamReader(fs.open(p)));
           this.nextElt = lookahead();          
         } catch (IOException iex) {
           this.nextElt = null;

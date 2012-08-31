@@ -19,6 +19,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Iterator;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.generic.GenericData;
@@ -54,36 +58,38 @@ public class FormatAnalyzer {
    * @param f a <code>File</code> value
    * @return a <code>DataDescriptor</code> value
    */
-  public DataDescriptor describeData(File f, int maxLines) throws IOException {
-    String fname = f.getName();
+  public DataDescriptor describeData(FileSystem fs, Path p, int maxLines) throws IOException {
+    FileStatus fstatus = fs.getFileStatus(p);
+    String fname = p.getName();
+
     // Test to see if the file is one of a handful of known structured formats.
-    if (CSVDataDescriptor.isCSV(f)) {
-      return new CSVDataDescriptor(f);
+    if (CSVDataDescriptor.isCSV(fs, p)) {
+      return new CSVDataDescriptor(fs, p);
     } else if (fname.endsWith(".xml")) {
-      return new XMLDataDescriptor(f);
+      return new XMLDataDescriptor(fs, p);
     } else if (fname.endsWith(".avro")) {
-      return new AvroDataDescriptor(f);
+      return new AvroDataDescriptor(fs, p);
     } else {
       // Even if it's text, it could have a regular and expected structure
       // (e.g., Apache access logs).  The formatLibrary object keeps a list
       // of these cases.  Ask the formatLibrary to test the input data and
       // see if it corresponds to one of the known formats.
       //
-      DataDescriptor retval = formatLibrary.createDescriptorForKnownFormat(f);
+      DataDescriptor retval = formatLibrary.createDescriptorForKnownFormat(fs, p);
       if (retval != null) {
         return retval;
       } else {
         // It's not one of the known formats, so apply LearnStructure (and
         // SchemaDictionary), then emit the resulting Avro data.
         try {
-          boolean isTextData = UnknownTextDataDescriptor.isTextData(f);
+          boolean isTextData = UnknownTextDataDescriptor.isTextData(fs, p);
           if (isTextData) {
-            return new UnknownTextDataDescriptor(f, schemaDbDir, maxLines);
+            return new UnknownTextDataDescriptor(fs, p, schemaDbDir, maxLines);
           }
         } catch (Exception iex) {
         }
         // If that doesn't work, then give up and call it unstructured        
-        return new UnstructuredFileDescriptor(f);
+        return new UnstructuredFileDescriptor(fs, p);
       }
     }
   }
@@ -100,11 +106,12 @@ public class FormatAnalyzer {
       return;
     }
 
-    File inputFile = new File(argv[0]);
-    File schemaDbDir = new File(argv[1]);
+    FileSystem fs = FileSystem.getLocal(null);
+    Path inputFile = new Path(new File(argv[0]).getCanonicalPath());
+    File schemaDbDir = new File(argv[1]).getCanonicalFile();
     FormatAnalyzer fa = new FormatAnalyzer(schemaDbDir);
 
-    DataDescriptor descriptor = fa.describeData(inputFile, -1);
+    DataDescriptor descriptor = fa.describeData(fs, inputFile, -1);
     System.err.println("Filename: " + descriptor.getFilename());
     System.err.println("Filetype identifier: " + descriptor.getFileTypeIdentifier());
     List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();

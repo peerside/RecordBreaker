@@ -14,9 +14,12 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import java.io.File;
 import java.util.List;
 import java.util.ArrayList;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 
 /********************************************************************
  * <code>UnstructuredFileDescriptor</code> holds no structured data.
@@ -28,13 +31,15 @@ import java.util.ArrayList;
  * @see DataDescriptor
  ********************************************************************/
 public class UnstructuredFileDescriptor implements DataDescriptor {
-  File f;
-  public UnstructuredFileDescriptor(File f) {
-    this.f = f;
+  FileSystem fs;
+  Path p;
+  public UnstructuredFileDescriptor(FileSystem fs, Path p) {
+    this.fs = fs;
+    this.p = p;
   }
 
-  public File getFilename() {
-    return this.f;
+  public Path getFilename() {
+    return this.p;
   }
 
   public String getFileTypeIdentifier() {

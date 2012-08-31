@@ -15,14 +15,20 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
-import java.util.Date;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Date;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.Iterator;
 import java.util.Hashtable;
 import java.util.ArrayList;
 import java.text.SimpleDateFormat;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.conf.Configuration;
 
 import java.io.IOException;
 import com.almworks.sqlite4java.SQLiteException;
@@ -42,12 +48,14 @@ public class FSCrawler {
   Hashtable<Long, Thread> pendingCrawls = new Hashtable<Long, Thread>();
   Hashtable<Long, CrawlRuntimeStatus> crawlStatusInfo = new Hashtable<Long, CrawlRuntimeStatus>();
   FSAnalyzer analyzer;
+  FileSystem fs;
 
   /**
    * Needs an analyzer to work
    */
   public FSCrawler(FSAnalyzer analyzer) {
     this.analyzer = analyzer;
+    this.fs = null;
   }
 
   /**
@@ -55,12 +63,13 @@ public class FSCrawler {
    * This isn't the most efficient thing in the world; it would be better
    * to add a batch at a time.
    */
-  protected void addSingleFile(File f, boolean isDir, long crawlid) throws IOException {
-    // REMIND --- need to add support for HDFS files here
-    List<TypeGuess> tgs = new ArrayList<TypeGuess>();    
+  protected synchronized void addSingleFile(FileSystem fs, Path p, long crawlid) throws IOException {
+    FileStatus fstatus = fs.getFileStatus(p);
+    boolean isDir = fstatus.isDir();    
+    List<TypeGuess> tgs = new ArrayList<TypeGuess>();
 
     if (! isDir) {
-      DataDescriptor descriptor = analyzer.describeData(f, MAX_ANALYSIS_LINES);
+      DataDescriptor descriptor = analyzer.describeData(fs, p, MAX_ANALYSIS_LINES);
       try {
         List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();
 
@@ -77,13 +86,10 @@ public class FSCrawler {
         ex.printStackTrace();
       }
     }
-    
-    // Need to grab the owner of the file somehow!!!
-    String owner = "tmpowner";
-    Date dateModified = new Date(f.lastModified());    
     try {
-      analyzer.insertIntoFiles(f, isDir, owner, fileDateFormat.format(dateModified), crawlid, tgs);
+      analyzer.insertIntoFiles(fs, p, crawlid, tgs);
     } catch (SQLiteException sle) {
+      sle.printStackTrace();
       throw new IOException(sle.getMessage());
     }
   }
@@ -95,17 +101,18 @@ public class FSCrawler {
    * b) Run analysis code to figure out the file details
    * c) Invoke addSingleFile() appropriately.
    */
-  protected void recursiveCrawlBuildList(File f, int subdirDepth, long crawlId, List<File> todoFileList, List<File> todoDirList) throws IOException {
-    // REMIND --- need to add support for HDFS files here
-    f = f.getCanonicalFile();
-    if (! f.isDirectory()) {
-      todoFileList.add(f);
+  protected void recursiveCrawlBuildList(FileSystem fs, Path p, int subdirDepth, long crawlId, List<Path> todoFileList, List<Path> todoDirList) throws IOException {
+    FileStatus fstatus = fs.getFileStatus(p);
+    if (! fstatus.isDir()) {
+      todoFileList.add(p);
     } else {
       if (subdirDepth > 0) {
-        todoDirList.add(f);        
-        for (File subfile: f.listFiles()) {
-          subfile = subfile.getCanonicalFile();
-          recursiveCrawlBuildList(subfile, subdirDepth-1, crawlId, todoFileList, todoDirList);
+        todoDirList.add(p);
+        Path paths[] = new Path[1];
+        paths[0] = p;
+        for (FileStatus subfilestatus: fs.listStatus(p)) {
+          Path subfile = subfilestatus.getPath();
+          recursiveCrawlBuildList(fs, subfile, subdirDepth-1, crawlId, todoFileList, todoDirList);
         }
       }
     }
@@ -124,108 +131,102 @@ public class FSCrawler {
       if (fsId < 0) {
         return false;
       }
-      if (fsUrl.startsWith("file://")) {
-        String fsnameRoot = fsUrl.substring("file://".length());
-        if (! fsnameRoot.startsWith("/")) {
-          fsnameRoot = "/" + fsnameRoot;
-        }
-        File fsRootDir = new File(fsnameRoot);
-        final File startDir = fsRootDir.getCanonicalFile();
-      
-        final long crawlid = analyzer.getCreatePendingCrawl(fsId, true);
+      final FileSystem fs = FileSystem.get(new URI(fsUrl), new Configuration());
+      final Path startDir = new Path(fsUrl);
+      final long crawlid = analyzer.getCreatePendingCrawl(fsId, true);
 
-        Thread pendingThread = pendingCrawls.get(crawlid);
-        if (pendingThread == null) {
-          Thread t = new Thread() {
-              public void run() {
-                try {
-                  synchronized (pendingCrawls) {
-                    pendingCrawls.put(crawlid, this);
-                  }
-                  synchronized (crawlStatusInfo) {
-                    crawlStatusInfo.put(crawlid, new CrawlRuntimeStatus("Initializing crawl"));
-                  }
-                  // Build the file and dir-level todo lists
-                  List<File> todoFileList = new ArrayList<File>();
-                  List<File> todoDirList = new ArrayList<File>();
-                  recursiveCrawlBuildList(startDir, subdirDepth, crawlid, todoFileList, todoDirList);
+      Thread pendingThread = pendingCrawls.get(crawlid);
+      if (pendingThread == null) {
+        Thread t = new Thread() {
+            public void run() {
+              try {
+                synchronized (pendingCrawls) {
+                  pendingCrawls.put(crawlid, this);
+                }
+                synchronized (crawlStatusInfo) {
+                  crawlStatusInfo.put(crawlid, new CrawlRuntimeStatus("Initializing crawl"));
+                }
+                // Build the file and dir-level todo lists
+                List<Path> todoFileList = new ArrayList<Path>();
+                List<Path> todoDirList = new ArrayList<Path>();
+                recursiveCrawlBuildList(fs, startDir, subdirDepth, crawlid, todoFileList, todoDirList);
 
-                  // Get the files to process
-                  TreeSet<String> observedFilenames = new TreeSet<String>();
-                  for (File f: analyzer.getFilesForCrawl(crawlid)) {
-                    observedFilenames.add(f.getCanonicalPath());
-                  }
-                  for (Iterator<File> it = todoFileList.iterator(); it.hasNext(); ) {
-                    File f = it.next();
-                    if (observedFilenames.contains(f.getCanonicalPath())) {
-                      it.remove();
-                    }
-                  }
-
-                  // Get the dirs to process
-                  TreeSet<String> observedDirnames = new TreeSet<String>();
-                  for (File f: analyzer.getDirsForCrawl(crawlid)) {
-                    observedDirnames.add(f.getCanonicalPath());
-                  }
-                  for (Iterator<File> it = todoDirList.iterator(); it.hasNext(); ) {
-                    File f = it.next();
-                    if (observedDirnames.contains(f.getCanonicalPath())) {
-                      it.remove();
-                    }
-                  }
-                  
-                  synchronized (crawlStatusInfo) {
-                    CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
-                    cstatus.setMessage("Processing files");
-                    cstatus.setNumToProcess(todoFileList.size());
-                    cstatus.setNumDone(0);
-                  }
-
-                  int numDone = 0;
-                  for (File f: todoDirList) {
-                    try {
-                      addSingleFile(f, true, crawlid);
-                    } catch (Exception iex) {
-                      iex.printStackTrace();
-                    }
-                  }
-                  for (File f: todoFileList) {
-                    synchronized (crawlStatusInfo) {
-                      CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
-                      cstatus.setMessage("Processing file " + f.getPath());
-                    }
-                    try {
-                      addSingleFile(f, false, crawlid);
-                    } catch (Exception iex) {
-                      iex.printStackTrace();
-                    }
-                    numDone++;
-                    synchronized (crawlStatusInfo) {
-                      CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
-                      cstatus.setNumDone(numDone);
-                      if (cstatus.shouldFinish()) {
-                        break;
-                      }
-                    }
-                  }
-                } catch (IOException iex) {
-                  iex.printStackTrace();
-                } finally {
-                  try {
-                    synchronized (pendingCrawls) {
-                      pendingCrawls.remove(crawlid);
-                      analyzer.completeCrawl(crawlid);
-                    }
-                  } catch (SQLiteException sle) {
+                // Get the files to process
+                TreeSet<String> observedFilenames = new TreeSet<String>();
+                for (Path p: analyzer.getFilesForCrawl(crawlid)) {
+                  observedFilenames.add(p.toString());
+                }
+                for (Iterator<Path> it = todoFileList.iterator(); it.hasNext(); ) {
+                  Path p = it.next();
+                  if (observedFilenames.contains(p.toString())) {
+                    it.remove();
                   }
                 }
+
+                // Get the dirs to process
+                TreeSet<String> observedDirnames = new TreeSet<String>();
+                for (Path p: analyzer.getDirsForCrawl(crawlid)) {
+                  observedDirnames.add(p.toString());
+                }
+                for (Iterator<Path> it = todoDirList.iterator(); it.hasNext(); ) {
+                  Path p = it.next();
+                  if (observedDirnames.contains(p.toString())) {
+                    it.remove();
+                  }
+                }
+                  
+                synchronized (crawlStatusInfo) {
+                  CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
+                  cstatus.setMessage("Processing files");
+                  cstatus.setNumToProcess(todoFileList.size());
+                  cstatus.setNumDone(0);
+                }
+
+                int numDone = 0;
+                for (Path p: todoDirList) {
+                  try {
+                    addSingleFile(fs, p, crawlid);
+                  } catch (Exception iex) {
+                    iex.printStackTrace();
+                  }
+                }
+                for (Path p: todoFileList) {
+                  synchronized (crawlStatusInfo) {
+                    CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
+                    cstatus.setMessage("Processing file " + p.toString());
+                  }
+                  try {
+                    addSingleFile(fs, p, crawlid);
+                  } catch (Exception iex) {
+                    iex.printStackTrace();
+                  }
+                  numDone++;
+                  synchronized (crawlStatusInfo) {
+                    CrawlRuntimeStatus cstatus = crawlStatusInfo.get(crawlid);
+                    cstatus.setNumDone(numDone);
+                    if (cstatus.shouldFinish()) {
+                      break;
+                    }
+                  }
+                }
+              } catch (IOException iex) {
+                iex.printStackTrace();
+              } finally {
+                try {
+                  synchronized (pendingCrawls) {
+                    pendingCrawls.remove(crawlid);
+                    analyzer.completeCrawl(crawlid);
+                  }
+                } catch (SQLiteException sle) {
+                }
               }
-            };
-          t.start();
-        }
-        return true;
+            }
+          };
+        t.start();
       }
-    } catch (IOException iex) {
+      return true;
+    } catch (Exception iex) {
+      iex.printStackTrace();
     }
     return false;
   }

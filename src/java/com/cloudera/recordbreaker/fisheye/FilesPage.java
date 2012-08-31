@@ -22,9 +22,11 @@ import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.link.ExternalLink;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 
-import java.io.File;
 import java.util.List;
 import java.util.ArrayList;
+
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 
 import com.cloudera.recordbreaker.analyzer.TypeSummary;
 import com.cloudera.recordbreaker.analyzer.FileSummary;
@@ -37,15 +39,15 @@ import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
 public class FilesPage extends WebPage {
   final class DirLabelPair {
     volatile String label;
-    volatile File dir;
-    public DirLabelPair(String label, File dir) {
+    volatile Path dir;
+    public DirLabelPair(String label, Path dir) {
       this.label = label;
       this.dir = dir;
     }
     public String getLabel() {
       return label;
     }
-    public File getDir() {
+    public Path getDir() {
       return dir;
     }
   }
@@ -60,16 +62,16 @@ public class FilesPage extends WebPage {
       
       if (fe.hasFSAndCrawl()) {
         List<DirLabelPair> parentDirPairList = new ArrayList<DirLabelPair>();
-        List<File> dirList = fe.getDirParents(targetDir);
-        dirList.add(new File(targetDir));
-        File lastDir = null;
+        List<Path> dirList = fe.getDirParents(targetDir);
+        dirList.add(new Path(targetDir));
+        Path lastDir = null;
         if (dirList != null) {
-          for (File curDir: dirList) {
+          for (Path curDir: dirList) {
             String prefix = "";
             if (lastDir != null) {
-              prefix = lastDir.getPath();
+              prefix = lastDir.toString();
             }
-            String label = curDir.getPath().substring(prefix.length());
+            String label = curDir.toString().substring(prefix.length());
             parentDirPairList.add(new DirLabelPair(label, curDir));
             lastDir = curDir;
           }
@@ -81,8 +83,8 @@ public class FilesPage extends WebPage {
         final List<DirLabelPair> childDirPairList = new ArrayList<DirLabelPair>();
         dirList = FishEye.getInstance().getDirChildren(targetDir);
         if (dirList != null) {
-          for (File curDir: dirList) {
-            String label = curDir.getPath().substring(targetDir.length());
+          for (Path curDir: dirList) {
+            String label = curDir.toString().substring(targetDir.length());
             childDirPairList.add(new DirLabelPair(label, curDir));
           }
         }
@@ -91,7 +93,7 @@ public class FilesPage extends WebPage {
             protected void populateItem(ListItem<DirLabelPair> item) {
               DirLabelPair pair = item.getModelObject();
 
-              String dirUrl = urlFor(FilesPage.class, new PageParameters("targetdir=" + pair.getDir().getPath())).toString();
+              String dirUrl = urlFor(FilesPage.class, new PageParameters("targetdir=" + pair.getDir().toString())).toString();
               item.add(new ExternalLink("dirlink", dirUrl, pair.getLabel()));
             }
           });
@@ -102,7 +104,7 @@ public class FilesPage extends WebPage {
                   protected void populateItem(ListItem<DirLabelPair> item) {
                     DirLabelPair pair = item.getModelObject();
 
-                    String dirUrl = urlFor(FilesPage.class, new PageParameters("targetdir=" + pair.getDir().getPath())).toString();
+                    String dirUrl = urlFor(FilesPage.class, new PageParameters("targetdir=" + pair.getDir().toString())).toString();
                     item.add(new ExternalLink("childdirlink", dirUrl, pair.getLabel()));
                   }
                 });
