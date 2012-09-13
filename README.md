@@ -23,9 +23,9 @@ figure out the structure of files it finds.  You can run it by typing:
 
 
 
-Where <portnum> is the HTTP port where it will provide data to the
-user, and <localstoreagedir> is where it will maintain information
-about a target filesystem.    
+Where __portnum__ is the HTTP port where FishEye will provide data to the
+user, and __localstoreagedir__ is where it will maintain information
+about a target filesystem.     
 
 
 Installation
