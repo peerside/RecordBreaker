@@ -28,7 +28,7 @@
       <dependency org="log4j" name="log4j" rev="${log4j.version}" />
       <dependency org="org.apache.avro" name="avro" rev="${avro.version}" />
       <dependency org="org.apache.avro" name="avro-tools" rev="${avro-tools.version}" />
-      <dependency org="org.apache.hadoop" name="hadoop-core" rev="0.20.2" />
+      <dependency org="org.apache.hadoop" name="hadoop-core" rev="${hadoop-core.version}" />
       <dependency org="org.apache.rat" name="apache-rat-tasks" rev="0.7" />
       <dependency org="org.apache.rat" name="apache-rat" rev="0.7" />
       <dependency org="junit" name="junit" rev="4.8.1" />
