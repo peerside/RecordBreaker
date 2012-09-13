@@ -7,7 +7,26 @@ RecordBreaker is a project that automatically turns your text-formatted data (se
 
 You can (and should!) read the full RecordBreaker tutorial here: [http://cloudera.github.com/RecordBreaker/](http://cloudera.github.com/RecordBreaker/)
 
-The RecordBreaker repository is hosted at GitHub, here: [https://github.com/cloudera/RecordBreaker](https://github.com/cloudera/RecordBreaker)
+The RecordBreaker repository is hosted at GitHub, here:
+[https://github.com/cloudera/RecordBreaker](https://github.com/cloudera/RecordBreaker)
+
+One interesting part of RecordBreaker is the FishEye system.  It's a
+web-based tool for examining and managing the diverse datasets likely
+to be found in a typical HDFS installation.  It draws features from
+both filesystem management and database administration tools.  Most
+interestingly, it uses RecordBreaker techniques to automatically
+figure out the structure of files it finds.  You can run it by typing:
+
+
+
+    bin/learnstructure fisheye -run <portnum> <localstoragedir>
+
+
+
+Where <portnum> is the HTTP port where it will provide data to the
+user, and <localstoreagedir> is where it will maintain information
+about a target filesystem.    
+
 
 Installation
 ----------------------------------------------------------------------------------------
