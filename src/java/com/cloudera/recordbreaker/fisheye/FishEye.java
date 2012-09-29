@@ -30,8 +30,10 @@ import org.apache.hadoop.fs.FileSystem;
 
 import java.io.*;
 import java.util.*;
+import java.net.URI;
 import javax.servlet.*;
 import javax.servlet.http.*;
+import java.net.URISyntaxException;
 
 import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
 import com.cloudera.recordbreaker.analyzer.FSCrawler;
@@ -81,38 +83,38 @@ public class FishEye {
   }
 
   public boolean restartIncompleteCrawl() {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl != null) {
-      long fsid = analyzer.getCreateFilesystem(fsUrl, true);
+    URI fsURI = getFSURI();
+    if (fsURI != null) {
+      long fsid = analyzer.getCreateFilesystem(fsURI, true);
       long pendingCrawlId = analyzer.getCreatePendingCrawl(fsid, false);
       if (pendingCrawlId >= 0) {
-        return crawler.getStartNonblockingCrawl(fsUrl);
+        return crawler.getStartNonblockingCrawl(fsURI);
       }
     }
     return false;
   }
 
   public CrawlRuntimeStatus checkOngoingCrawl() {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl != null) {
-      CrawlRuntimeStatus crs = crawler.isCrawlOngoing(fsUrl);
+    URI fsUri = getFSURI();
+    if (fsUri != null) {
+      CrawlRuntimeStatus crs = crawler.isCrawlOngoing(fsUri);
       return crs;
     }
     return null;
   }
 
   public boolean checkCreateCrawl() {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl != null) {
-      return crawler.getStartNonblockingCrawl(fsUrl);
+    URI fsUri = getFSURI();
+    if (fsUri != null) {
+      return crawler.getStartNonblockingCrawl(fsUri);
     }
     return false;
   }
 
-  public boolean registerAndCrawlFilesystem(String fsUrl) throws IOException {
+  public boolean registerAndCrawlFilesystem(URI fsURI) throws IOException {
     // REMIND - check the filesystem before proceeding.
-    analyzer.setConfigProperty("fsurl", fsUrl);
-    analyzer.getCreateFilesystem(fsUrl, true);        
+    analyzer.setConfigProperty("fsuri", fsURI.toString());
+    analyzer.getCreateFilesystem(fsURI, true);        
     return checkCreateCrawl();
   }
 
@@ -126,44 +128,54 @@ public class FishEye {
     return fisheyeDir;
   }
   public boolean hasFSAndCrawl() {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl != null) {
-      long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+    URI fsURI = getFSURI();
+    if (fsURI != null) {
+      long fsid = analyzer.getCreateFilesystem(fsURI, false);
       if (fsid >= 0) {
         return analyzer.getLatestCompleteCrawl(fsid) >= 0;
       }
     }
     return false;
   }
-  public String getFSUrl() {
-    return analyzer.getConfigProperty("fsurl");
-  }
-  public void cancelFS() {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    crawler.killOngoingCrawl(fsUrl);
-    analyzer.setConfigProperty("fsurl", null);
-  }
-  public String getTopDir() {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl == null) {
+  public URI getFSURI() {
+    try {
+      String uriStr = analyzer.getConfigProperty("fsuri");
+      if (uriStr == null) {
+        return null;
+      } else {
+        return new URI(uriStr);
+      }
+    } catch (URISyntaxException use) {
+      use.printStackTrace();
       return null;
     }
-    long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+  }
+  public void cancelFS() {
+    URI fsUri = getFSURI();
+    crawler.killOngoingCrawl(fsUri);
+    analyzer.setConfigProperty("fsuri", null);
+  }
+  public String getTopDir() {
+    URI fsUri = getFSURI();
+    if (fsUri == null) {
+      return null;
+    }
+    long fsid = analyzer.getCreateFilesystem(fsUri, false);
     if (fsid >= 0) {
       long crawlid = analyzer.getLatestCompleteCrawl(fsid);
       if (crawlid >= 0) {
-        String td = analyzer.getTopDir(crawlid);
-        return td;
+        Path td = analyzer.getTopDir(crawlid);
+        return td.toString();
       }
     }
     return null;
   }
   public List<Path> getDirParents(String targetDir) {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl == null) {
+    URI fsUri = getFSURI();
+    if (fsUri == null) {
       return null;
     }
-    long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+    long fsid = analyzer.getCreateFilesystem(fsUri, false);
     if (fsid >= 0) {
       long crawlid = analyzer.getLatestCompleteCrawl(fsid);
       if (crawlid >= 0) {
@@ -173,11 +185,11 @@ public class FishEye {
     return null;
   }
   public List<Path> getDirChildren(String targetDir) {
-    String fsUrl = analyzer.getConfigProperty("fsurl");
-    if (fsUrl == null) {
+    URI fsUri = getFSURI();
+    if (fsUri == null) {
       return null;
     }
-    long fsid = analyzer.getCreateFilesystem(fsUrl, false);
+    long fsid = analyzer.getCreateFilesystem(fsUri, false);
     if (fsid >= 0) {
       long crawlid = analyzer.getLatestCompleteCrawl(fsid);
       if (crawlid >= 0) {

@@ -160,7 +160,7 @@ public class FilesPage extends WebPage {
     FishEye fe = FishEye.getInstance();
     String targetDir = fe.getTopDir() != null ? fe.getTopDir() : "/";    
     add(new SettingsWarningBox());
-    add(new CrawlWarningBox());    
+    add(new CrawlWarningBox());
     add(new FileListing("currentDirListing", targetDir));
   }
   public FilesPage(PageParameters params) {

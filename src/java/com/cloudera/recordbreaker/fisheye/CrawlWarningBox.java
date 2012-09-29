@@ -18,6 +18,8 @@ import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.model.PropertyModel;
 
+import java.net.URI;
+
 /************************************************
  * Application-wide warning box that tells user
  * when there is no available crawl for this filesystem.
@@ -32,11 +34,11 @@ public class CrawlWarningBox extends WebMarkupContainer {
     }
     public String getErrorMsg() {
       FishEye fe = FishEye.getInstance();
-      String fsUrl = fe.getFSUrl();
+      URI fsURI = fe.getFSURI();
       String user = fe.getUsername();
 
       String errorMsg = null;      
-      if (fsUrl == null) {
+      if (fsURI == null) {
         errorMsg = "FishEye has no filesystem so there is nothing to display.  Fix this in Settings.";
       } else if (! fe.hasFSAndCrawl()) {
         errorMsg = "FishEye has a filesystem, but has not yet completed a crawl so there is nothing to display.  See crawl progress in Settings.";

@@ -14,6 +14,7 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
+import java.net.URI;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -80,7 +81,7 @@ public class FSAnalyzer {
   ///////////////////////////////////////////////
   // Manage Crawls and Filesystems
   ///////////////////////////////////////////////
-  public long getCreateFilesystem(final String fsname, boolean canCreate) {
+  public long getCreateFilesystem(final URI fsuri, boolean canCreate) {
     // REMIND -- must check to make sure FS is valid before accepting it.
     // (E.g., for HDFS see if we can contact it)
     
@@ -88,7 +89,7 @@ public class FSAnalyzer {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("SELECT fsid FROM Filesystems WHERE fsname = ?");
           try {
-            stmt.bind(1, fsname);
+            stmt.bind(1, fsuri.toString());
             if (stmt.step()) {
               long resultId = stmt.columnLong(0);
               return resultId;
@@ -110,7 +111,7 @@ public class FSAnalyzer {
           protected Long job(SQLiteConnection db) throws SQLiteException {
             SQLiteStatement stmt = db.prepare("INSERT into Filesystems VALUES(null, ?)");
             try {
-              stmt.bind(1, fsname);
+              stmt.bind(1, fsuri.toString());
               stmt.step();
               return db.getLastInsertId();
             } finally {
@@ -303,9 +304,25 @@ public class FSAnalyzer {
     final String owner = fstatus.getOwner();
     final boolean isDir = fstatus.isDir();
     final long size = fstatus.getLen();
-    
-    final String parentPath = insertFile.getParent().toString();
-    final String fName = insertFile.getName();
+
+    String fnameString = null;
+    String parentPathString = null;
+    if (isDir && insertFile.getParent() == null) {
+      parentPathString = "";
+      fnameString = insertFile.toString();
+    } else {
+      fnameString = insertFile.getName();
+      parentPathString = insertFile.getParent().toString();
+
+      // REMIND --- mjc --- If we want to modify the Files table s.t. it does
+      // not contain the filesystem prefix, then this would be the place to do it.
+
+      if (! parentPathString.endsWith("/")) {
+        parentPathString = parentPathString + "/";
+      }
+    }
+    final String parentPath = parentPathString;
+    final String fName = fnameString;
     final long fileId = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?, ?)");
@@ -451,7 +468,11 @@ public class FSAnalyzer {
             stmt.bind(1, isDir ? "True" : "False");            
           } else {
             stmt = db.prepare(fileInfoQueryWithPrefix);
-            stmt.bind(1, isDir ? "True" : "False").bind(2, prefix);            
+            String prefixStr = prefix;
+            if (! prefixStr.endsWith("/")) {
+              prefixStr += "/";
+            }
+            stmt.bind(1, isDir ? "True" : "False").bind(2, prefixStr);            
           }
           try {
             while (stmt.step()) {
@@ -520,14 +541,14 @@ public class FSAnalyzer {
   /**
    * Get the top-level directory from a given crawl
    */
-  public String getTopDir(final long crawlid)  {
-    return dbQueue.execute(new SQLiteJob<String>() {
-        protected String job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT path||'/'||fname FROM Files WHERE crawlid = ? AND isDir = 'True' ORDER BY length(path||'/'||fname) ASC LIMIT 1");
+  public Path getTopDir(final long crawlid)  {
+    return dbQueue.execute(new SQLiteJob<Path>() {
+        protected Path job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT path, fname FROM Files WHERE crawlid = ? AND isDir = 'True' ORDER BY length(path||fname) ASC LIMIT 1");
           try {
             stmt.bind(1, crawlid);
             if (stmt.step()) {
-              return stmt.columnString(0);
+              return new Path(stmt.columnString(0) + stmt.columnString(1));
             } else {
               return null;
             }
@@ -541,15 +562,19 @@ public class FSAnalyzer {
   /**
    * Get the parents for the given directory from a given crawl
    */
-  public List<Path> getDirParents(final long crawlid, final String targetDir) {
+  public List<Path> getDirParents(final long crawlid, final String targetDirStr) {
     return dbQueue.execute(new SQLiteJob<List<Path>>() {
         protected List<Path> job(SQLiteConnection db) throws SQLiteException {
           List<Path> output = new ArrayList<Path>();
-          SQLiteStatement stmt = db.prepare("select path||'/'||fname from Files WHERE crawlid = ? AND length(?) > length(path||'/'||fname) AND isDir = 'True' AND length(replace(?, path||'/'||fname, '')) < length(?)");
+          SQLiteStatement stmt = db.prepare("select path, fname from Files WHERE crawlid = ? AND length(?) > length(path||fname) AND isDir = 'True' AND replace(?, path||fname, '') LIKE '/%'");
           try {
-            stmt.bind(1, crawlid).bind(2, targetDir).bind(3, targetDir).bind(4, targetDir);
-            while (stmt.step()) {
-              output.add(new Path(stmt.columnString(0)));
+            Path targetDir = new Path(targetDirStr);
+            if (targetDir.getParent() != null) {
+              stmt.bind(1, crawlid).bind(2, targetDir.toString()).bind(3, targetDir.toString());
+              while (stmt.step()) {
+                Path p = new Path(stmt.columnString(0) + stmt.columnString(1));
+                output.add(p);
+              }
             }
           } finally {
             stmt.dispose();
@@ -566,11 +591,15 @@ public class FSAnalyzer {
     return dbQueue.execute(new SQLiteJob<List<Path>>() {
         protected List<Path> job(SQLiteConnection db) throws SQLiteException {
           List<Path> output = new ArrayList<Path>();
-          SQLiteStatement stmt = db.prepare("SELECT DISTINCT path||'/'||fname AS fullpath FROM Files WHERE isDir = 'True' AND crawlid = ? AND path = ? ORDER BY fname ASC");
+          SQLiteStatement stmt = db.prepare("SELECT DISTINCT path, fname AS fullpath FROM Files WHERE isDir = 'True' AND crawlid = ? AND path = ? ORDER BY fname ASC");
           try {
-            stmt.bind(1, crawlid).bind(2, targetDir);
+            String targetDirNormalizedStr = targetDir;
+            if (! targetDirNormalizedStr.endsWith("/")) {
+              targetDirNormalizedStr += "/";
+            }
+            stmt.bind(1, crawlid).bind(2, targetDirNormalizedStr);
             while (stmt.step()) {
-              output.add(new Path(stmt.columnString(0)));
+              output.add(new Path(stmt.columnString(0), stmt.columnString(1)));
             }
           } finally {
             stmt.dispose();

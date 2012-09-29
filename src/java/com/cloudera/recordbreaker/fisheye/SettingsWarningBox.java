@@ -18,6 +18,8 @@ import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.model.PropertyModel;
 
+import java.net.URI;
+
 /************************************************
  * Application-wide warning box that tells user
  * when settings need immediate attention.
@@ -32,7 +34,7 @@ public class SettingsWarningBox extends WebMarkupContainer {
     }
     public String getErrorMsg() {
       FishEye fe = FishEye.getInstance();
-      String fsUrl = fe.getFSUrl();
+      URI fsUrl = fe.getFSURI();
       String user = fe.getUsername();
 
       String errorMsg = null;      
@@ -54,6 +56,6 @@ public class SettingsWarningBox extends WebMarkupContainer {
   }
   public void onConfigure() {
     FishEye fe = FishEye.getInstance();    
-    setVisibilityAllowed((fe.getFSUrl() == null) || (fe.getUsername() == null));
+    setVisibilityAllowed((fe.getFSURI() == null) || (fe.getUsername() == null));
   }
 }

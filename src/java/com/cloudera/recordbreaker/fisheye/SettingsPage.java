@@ -37,8 +37,10 @@ import org.apache.wicket.util.value.ValueMap;
 import com.cloudera.recordbreaker.analyzer.CrawlSummary;
 import com.cloudera.recordbreaker.analyzer.CrawlRuntimeStatus;
 
-import java.io.IOException;
+import java.net.URI;
 import java.util.List;
+import java.io.IOException;
+import java.net.URISyntaxException;
 
 /************************************************
  * Wicket Page class that allows user to edit Settings
@@ -49,6 +51,8 @@ import java.util.List;
  * @see WebPage
  *************************************************/
 public class SettingsPage extends WebPage {
+  static String HDFS_PROTOCOL = "hdfs://";
+  static String LOCALFS_PROTOCOL = "file://";
 
   /////////////////////////////////////////////////////
   // User login form
@@ -136,15 +140,31 @@ public class SettingsPage extends WebPage {
       FishEye fe = FishEye.getInstance();
       ValueMap vals = getModelObject();      
       boolean success = false;
-      String targetFs = null;
+      URI targetURI = null;
       try {
         if (hdfsUrl != null && hdfsUrl.length() > 0) {
-          targetFs = "hdfs://" + hdfsUrl;
+          if (! hdfsUrl.startsWith(HDFS_PROTOCOL)) {
+            hdfsUrl = HDFS_PROTOCOL + hdfsUrl;
+          }
+          try {
+            targetURI = new URI(hdfsUrl);
+          } catch (URISyntaxException use) {
+            // REMIND -- mjc -- Need to communicate error back to user
+            use.printStackTrace();
+          }
         } else if (fsUrl != null && fsUrl.length() > 0) {
-          targetFs = "file://" + fsUrl;
+          if (! fsUrl.startsWith(LOCALFS_PROTOCOL)) {
+            fsUrl = LOCALFS_PROTOCOL + fsUrl;            
+          }
+          try {
+            targetURI = new URI(fsUrl);
+          } catch (URISyntaxException use) {
+            // REMIND -- mjc -- Need to communicate error back to user
+            use.printStackTrace();
+          }
         }
-        if (targetFs != null) {
-          success = fe.registerAndCrawlFilesystem(targetFs);
+        if (targetURI != null) {
+          success = fe.registerAndCrawlFilesystem(targetURI);
         } else {
           success = false;
         }
@@ -152,7 +172,7 @@ public class SettingsPage extends WebPage {
       }
 
       if (success) {
-        vals.put("currentfs", targetFs);
+        vals.put("currentfs", targetURI.toString());
         fsErrorMsgDisplay.setVisibilityAllowed(false);
         setResponsePage(new SettingsPage());
       } else {
@@ -166,7 +186,7 @@ public class SettingsPage extends WebPage {
       vals.put("currentfs", "");      
     }
     public void onConfigure() {
-      setVisibilityAllowed(FishEye.getInstance().getFSUrl() == null);
+      setVisibilityAllowed(FishEye.getInstance().getFSURI() == null);
     }
   }
 
@@ -182,7 +202,12 @@ public class SettingsPage extends WebPage {
       //
       add(new Label("currentfs", new Model<String>() {
             public String getObject() {
-              return FishEye.getInstance().getFSUrl();
+              URI fsuri = FishEye.getInstance().getFSURI();
+              if (fsuri == null) {
+                return "";
+              } else {
+                return fsuri.toString();
+              }
             }
       }));
       add(new Label("numcompletedcrawls", new Model<String>() {
@@ -258,7 +283,7 @@ public class SettingsPage extends WebPage {
       setResponsePage(new SettingsPage());      
     }
     public void onConfigure() {
-      setVisibilityAllowed(FishEye.getInstance().getFSUrl() != null);
+      setVisibilityAllowed(FishEye.getInstance().getFSURI() != null);
     }
   }
 

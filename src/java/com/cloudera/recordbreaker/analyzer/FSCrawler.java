@@ -124,17 +124,17 @@ public class FSCrawler {
    * If the crawl is created or is already ongoing, it returns true.
    * If the crawl is not currently going and cannot start, it returns false. 
    */
-  public synchronized boolean getStartNonblockingCrawl(final String fsUrl) {
+  public synchronized boolean getStartNonblockingCrawl(final URI fsURI) {
     try {
       final int subdirDepth = MAX_CRAWL_DEPTH;
-      long fsId = analyzer.getCreateFilesystem(fsUrl, true);    
+      long fsId = analyzer.getCreateFilesystem(fsURI, true);    
       if (fsId < 0) {
         return false;
       }
-      final FileSystem fs = FileSystem.get(new URI(fsUrl), new Configuration());
-      final Path startDir = new Path(fsUrl);
-      final long crawlid = analyzer.getCreatePendingCrawl(fsId, true);
+      final FileSystem fs = FileSystem.get(fsURI, new Configuration());
+      final Path startDir = fs.makeQualified(new Path(fsURI.getPath()));
 
+      final long crawlid = analyzer.getCreatePendingCrawl(fsId, true);
       Thread pendingThread = pendingCrawls.get(crawlid);
       if (pendingThread == null) {
         Thread t = new Thread() {
@@ -186,7 +186,7 @@ public class FSCrawler {
                 for (Path p: todoDirList) {
                   try {
                     addSingleFile(fs, p, crawlid);
-                  } catch (Exception iex) {
+                  } catch (IOException iex) {
                     iex.printStackTrace();
                   }
                 }
@@ -197,7 +197,7 @@ public class FSCrawler {
                   }
                   try {
                     addSingleFile(fs, p, crawlid);
-                  } catch (Exception iex) {
+                  } catch (IOException iex) {
                     iex.printStackTrace();
                   }
                   numDone++;
@@ -234,8 +234,8 @@ public class FSCrawler {
   /**
    * Is there an ongoing (running) crawl for the given filesystem?
    */
-  public CrawlRuntimeStatus isCrawlOngoing(String fsUrl) {
-    long fsId = analyzer.getCreateFilesystem(fsUrl, false);
+  public CrawlRuntimeStatus isCrawlOngoing(URI fsURI) {
+    long fsId = analyzer.getCreateFilesystem(fsURI, false);
     if (fsId < 0) {
       return null;
     }
@@ -256,8 +256,8 @@ public class FSCrawler {
    * is an ongoing crawl that completes, it will return true.
    * If there was no ongoing crawl, it will return false.
    */
-  protected boolean waitForOngoingCrawl(String fsUrl, boolean shouldKill) {
-    long fsId = analyzer.getCreateFilesystem(fsUrl, false);
+  protected boolean waitForOngoingCrawl(URI fsURI, boolean shouldKill) {
+    long fsId = analyzer.getCreateFilesystem(fsURI, false);
     if (fsId < 0) {
       return false;
     }
@@ -283,8 +283,8 @@ public class FSCrawler {
     }
   }
 
-  public void killOngoingCrawl(String fsUrl) {
-    long fsId = analyzer.getCreateFilesystem(fsUrl, false);
+  public void killOngoingCrawl(URI fsURI) {
+    long fsId = analyzer.getCreateFilesystem(fsURI, false);
     if (fsId >= 0) {
       synchronized (pendingCrawls) {
         final long crawlid = analyzer.getCreatePendingCrawl(fsId, false);
@@ -302,10 +302,10 @@ public class FSCrawler {
    * Kick off a crawl at the indicated directory and filesystem,
    * to the indicated depth.
    */
-  public boolean blockingCrawl(String fsUrl) throws IOException, SQLiteException {
-    boolean crawlStarted = getStartNonblockingCrawl(fsUrl);
+  public boolean blockingCrawl(URI fsURI) throws IOException, SQLiteException {
+    boolean crawlStarted = getStartNonblockingCrawl(fsURI);
     if (crawlStarted) {
-      waitForOngoingCrawl(fsUrl, false);
+      waitForOngoingCrawl(fsURI, false);
     }
     return crawlStarted;
   }
@@ -329,7 +329,7 @@ public class FSCrawler {
         File crawlTarget = new File(argv[i++]).getCanonicalFile();
         System.err.println("About to crawl " + crawlTarget);
         FSCrawler crawler = new FSCrawler(fsa);
-        crawler.blockingCrawl("file://" + crawlTarget);
+        crawler.blockingCrawl(new URI("file://" + crawlTarget));
       } else if ("--test".equals(op)) {
         List<SchemaSummary> summaryList = fsa.getSchemaSummaries();
         System.err.println("Schema summary list has " + summaryList.size() + " entries");
