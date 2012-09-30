@@ -35,7 +35,8 @@ public class CrawlWarningBox extends WebMarkupContainer {
     public String getErrorMsg() {
       FishEye fe = FishEye.getInstance();
       URI fsURI = fe.getFSURI();
-      String user = fe.getUsername();
+      AccessController accessCtrl = fe.getAccessController();      
+      String user = accessCtrl.getCurrentUser();
 
       String errorMsg = null;      
       if (fsURI == null) {

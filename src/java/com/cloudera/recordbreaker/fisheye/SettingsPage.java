@@ -75,9 +75,11 @@ public class SettingsPage extends WebPage {
         });
     }
     public void onSubmit() {
-      FishEye fe = FishEye.getInstance();      
+      FishEye fe = FishEye.getInstance();
+      AccessController accessCtrl = fe.getAccessController();
+      
       ValueMap vals = getModelObject();
-      if (fe.login((String) vals.get("loginusername"), (String) vals.get("loginpassword"))) {
+      if (accessCtrl.login((String) vals.get("loginusername"), (String) vals.get("loginpassword"))) {
         vals.put("currentuser", (String) vals.get("loginusername"));
 
         loginErrorMsgDisplay.setVisibilityAllowed(false);
@@ -93,7 +95,9 @@ public class SettingsPage extends WebPage {
       vals.put("loginpassword", "");      
     }
     public void onConfigure() {
-      setVisibilityAllowed(FishEye.getInstance().getUsername() == null);
+      FishEye fe = FishEye.getInstance();
+      AccessController accessCtrl = fe.getAccessController();
+      setVisibilityAllowed(accessCtrl.getCurrentUser() == null);
     }
   }
 
@@ -107,11 +111,15 @@ public class SettingsPage extends WebPage {
     }
     public void onSubmit() {
       FishEye fe = FishEye.getInstance();
-      fe.logout();
+      AccessController accessCtrl = fe.getAccessController();
+      
+      accessCtrl.logout();
       setResponsePage(new SettingsPage());      
     }
     public void onConfigure() {
-      setVisibilityAllowed(FishEye.getInstance().getUsername() != null);
+      FishEye fe = FishEye.getInstance();      
+      AccessController accessCtrl = fe.getAccessController();      
+      setVisibilityAllowed(accessCtrl.getCurrentUser() != null);
     }
   }
 
@@ -290,8 +298,9 @@ public class SettingsPage extends WebPage {
   final WebMarkupContainer loginErrorMsgDisplay = new WebMarkupContainer("loginErrorMsgContainer");
   final WebMarkupContainer fsErrorMsgDisplay = new WebMarkupContainer("fsErrorMsgContainer");
   public SettingsPage() {
-    FishEye fe = FishEye.getInstance();    
-    final String username = fe.getUsername();
+    FishEye fe = FishEye.getInstance();
+    AccessController accessCtrl = fe.getAccessController();
+    final String username = accessCtrl.getCurrentUser();
     final ValueMap logins = new ValueMap();    
     logins.put("currentuser", username);
     this.setOutputMarkupPlaceholderTag(true);        

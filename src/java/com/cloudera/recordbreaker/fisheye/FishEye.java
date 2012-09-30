@@ -54,10 +54,10 @@ public class FishEye {
   static FishEye fisheyeInstance;
   FSAnalyzer analyzer;
   FSCrawler crawler;
+  AccessController accessCtrl;
   Date startTime;
   int fisheyePort;
   File fisheyeDir;
-  String username;
 
   public static FishEye getInstance() {
     return fisheyeInstance;
@@ -70,7 +70,6 @@ public class FishEye {
       }
     }
     this.startTime = new Date(System.currentTimeMillis());
-    this.username = null;
     this.fisheyeDir = fisheyeDir;
     this.fisheyePort = port;
 
@@ -78,6 +77,7 @@ public class FishEye {
     File fisheyeSchemas = new File(fisheyeDir, FISHEYE_SCHEMA_REPO);
     this.analyzer = new FSAnalyzer(fisheyeStore, fisheyeSchemas);
     this.crawler = new FSCrawler(analyzer);
+    this.accessCtrl = new AccessController();
     FishEye.fisheyeInstance = this;
     restartIncompleteCrawl();
   }
@@ -201,20 +201,8 @@ public class FishEye {
   public FSAnalyzer getAnalyzer() {
     return analyzer;
   }
-  public String getUsername() {
-    return this.username;
-  }
-  public void logout() {
-    this.username = null;
-  }
-  public boolean login(String username, String password) {
-    // For now, login always succeeds
-    if (username.equals(password)) {
-      this.username = username;
-      return true;
-    } else {
-      return false;
-    }
+  public AccessController getAccessController() {
+    return accessCtrl;
   }
 
   public void run() throws Exception {

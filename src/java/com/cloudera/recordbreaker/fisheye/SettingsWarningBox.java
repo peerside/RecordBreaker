@@ -35,7 +35,8 @@ public class SettingsWarningBox extends WebMarkupContainer {
     public String getErrorMsg() {
       FishEye fe = FishEye.getInstance();
       URI fsUrl = fe.getFSURI();
-      String user = fe.getUsername();
+      AccessController accessCtrl = fe.getAccessController();
+      String user = accessCtrl.getCurrentUser();
 
       String errorMsg = null;      
       if (fsUrl == null && user == null) {
@@ -56,6 +57,7 @@ public class SettingsWarningBox extends WebMarkupContainer {
   }
   public void onConfigure() {
     FishEye fe = FishEye.getInstance();    
-    setVisibilityAllowed((fe.getFSURI() == null) || (fe.getUsername() == null));
+    AccessController accessCtrl = fe.getAccessController();
+    setVisibilityAllowed((fe.getFSURI() == null) || (accessCtrl.getCurrentUser() == null));
   }
 }
