@@ -23,15 +23,19 @@ public class FileSummaryData {
   long crawlid;
   String fname;
   String owner;
+  String group;
+  String permissions;
   long size;
   String lastModified;
   String path;
   
-  public FileSummaryData(long fid, long crawlid, String fname, String owner, long size, String lastModified, String path) {
+  public FileSummaryData(long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path) {
     this.fid = fid;
     this.crawlid = crawlid;
     this.fname = fname;
     this.owner = owner;
+    this.group = group;
+    this.permissions = permissions;
     this.size = size;
     this.lastModified = lastModified;
     this.path = path;

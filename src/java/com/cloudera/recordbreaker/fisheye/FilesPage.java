@@ -127,6 +127,9 @@ public class FilesPage extends WebPage {
               item.add(new ExternalLink("filelink", fileUrl, fs.getFname()));
 
               item.add(new Label("sizelabel", "" + fs.getSize()));
+              item.add(new Label("ownerlabel", fs.getOwner()));
+              item.add(new Label("grouplabel", fs.getGroup()));
+              item.add(new Label("permissionslabel", fs.getPermissions()));                            
 
               List<TypeGuessSummary> tgs = fs.getTypeGuesses();
               if (tgs.size() > 0) {

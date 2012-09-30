@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 import com.almworks.sqlite4java.SQLite;
 import com.almworks.sqlite4java.SQLiteJob;
@@ -56,7 +57,7 @@ public class FSAnalyzer {
   static String CREATE_TABLE_CONFIG = "CREATE TABLE Configs(propertyname varchar(128), property varchar(256));";
   static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, crawlstarted date, crawlfinished date, inprogress text, fsid integer, foreign key(fsid) references Filesystems(fsid));";
   static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
-  static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, isDir string, crawlid integer, fname varchar(256), owner varchar(16), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
+  static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, isDir string, crawlid integer, fname varchar(256), owner varchar(16), groupowner varchar(16), permissions varchar(32), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
   static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
   static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemalabel varchar(64), schemadescriptor varchar(1024));";
   static String CREATE_TABLE_GUESSES = "CREATE TABLE TypeGuesses(fid integer, typeid integer, schemaid integer, score double, foreign key(fid) references Files(fid), foreign key(typeid) references Types(typeid), foreign key(schemaid) references Schemas(schemaid));";
@@ -302,6 +303,8 @@ public class FSAnalyzer {
     FileStatus fstatus = fs.getFileStatus(insertFile);
     final String timeDateStamp = fileDateFormat.format(new Date(fstatus.getModificationTime()));
     final String owner = fstatus.getOwner();
+    final String group = fstatus.getGroup();
+    final String permissions = fstatus.getPermission().toString();
     final boolean isDir = fstatus.isDir();
     final long size = fstatus.getLen();
 
@@ -325,9 +328,9 @@ public class FSAnalyzer {
     final String fName = fnameString;
     final long fileId = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?, ?)");
+          SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
           try {
-            stmt.bind(1, isDir ? "True" : "False").bind(2, crawlId).bind(3, fName).bind(4, owner).bind(5, size).bind(6, timeDateStamp).bind(7, parentPath);
+            stmt.bind(1, isDir ? "True" : "False").bind(2, crawlId).bind(3, fName).bind(4, owner).bind(5, group).bind(6, permissions).bind(7, size).bind(8, timeDateStamp).bind(9, parentPath);
             stmt.step();
             return db.getLastInsertId();
           } finally {
@@ -523,11 +526,11 @@ public class FSAnalyzer {
   public FileSummaryData getFileSummaryData(final long fid) {
     return dbQueue.execute(new SQLiteJob<FileSummaryData>() {
         protected FileSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT crawlid, fname, owner, size, modified, path from Files WHERE fid = ?");
+          SQLiteStatement stmt = db.prepare("SELECT crawlid, fname, owner, groupowner, permissions, size, modified, path FROM Files WHERE fid = ?");
           try {
             stmt.bind(1, fid);
             if (stmt.step()) {
-              return new FileSummaryData(fid, stmt.columnLong(0), stmt.columnString(1), stmt.columnString(2), stmt.columnLong(3), stmt.columnString(4), stmt.columnString(5));
+              return new FileSummaryData(fid, stmt.columnLong(0), stmt.columnString(1), stmt.columnString(2), stmt.columnString(3), stmt.columnString(4), stmt.columnLong(5), stmt.columnString(6), stmt.columnString(7));
             } else {
               return null;
             }

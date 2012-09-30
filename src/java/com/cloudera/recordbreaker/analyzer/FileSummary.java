@@ -54,6 +54,18 @@ public class FileSummary {
     }
     return fsd.owner;
   }
+  public String getGroup() {
+    if (!hasData) {
+      getData();
+    }
+    return fsd.group;
+  }
+  public String getPermissions() {
+    if (!hasData) {
+      getData();
+    }
+    return fsd.permissions;
+  }
   public long getSize() {
     if (!hasData) {
       getData();

@@ -99,14 +99,17 @@
                 <thead>
                   <tr>
                     <th>file</th>
-                    <th>size</th>                  
+                    <th>size</th>
+                    <th>owner</th>
+                    <th>group</th>
+                    <th>permissions</th>                                      
                     <th>type</th>
                     <th>schema</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr wicket:id="filelisting">
-                    <td><a href="#" wicket:id="filelink"></a></td><td><span wicket:id="sizelabel"/></td><td><a href="#" wicket:id="typelink"/></td><td><a href="#" wicket:id="schemalink"/></td>
+                    <td><a href="#" wicket:id="filelink"></a></td><td><span wicket:id="sizelabel"/></td><td><span wicket:id="ownerlabel"/></td><td><span wicket:id="grouplabel"/></td><td><span wicket:id="permissionslabel"/></td><td><a href="#" wicket:id="typelink"/></td><td><a href="#" wicket:id="schemalink"/></td>
                   </tr>
                 </tbody>
               </table>
