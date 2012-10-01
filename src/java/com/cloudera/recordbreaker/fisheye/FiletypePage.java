@@ -49,10 +49,14 @@ public class FiletypePage extends WebPage {
           try {
             // Metadata for type
             TypeSummary ts = new TypeSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(filetypeStr));
+            
             add(new Label("typetitle", ts.getLabel()));
             List<TypeGuessSummary> tgses = ts.getTypeGuesses();
-        
+            add(new Label("typecount", "" + tgses.size()));
+
+                    
             // Files that have this type
+            /**
             ListView<TypeGuessSummary> observationList = new ListView<TypeGuessSummary>("observations", tgses) {
               protected void populateItem(ListItem<TypeGuessSummary> item) {
                 TypeGuessSummary tgs = item.getModelObject();
@@ -67,12 +71,13 @@ public class FiletypePage extends WebPage {
               }
             };
             add(observationList);
+            **/
           } catch (NumberFormatException nfe) {
           }
         }
       }
       setOutputMarkupPlaceholderTag(true);
-      setVisibilityAllowed(false);
+      setVisibilityAllowed(true);
     }
   }
 
