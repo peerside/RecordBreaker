@@ -41,7 +41,7 @@ import com.almworks.sqlite4java.SQLiteException;
  ***********************************************************/
 public class FSCrawler {
   final static int MAX_ANALYSIS_LINES = 400;
-  final static int MAX_CRAWL_DEPTH = 5;
+  final static int INFINITE_CRAWL_DEPTH = -1;
   
   static SimpleDateFormat fileDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -106,7 +106,7 @@ public class FSCrawler {
     if (! fstatus.isDir()) {
       todoFileList.add(p);
     } else {
-      if (subdirDepth > 0) {
+      if (subdirDepth > 0 || subdirDepth < 0) {
         todoDirList.add(p);
         Path paths[] = new Path[1];
         paths[0] = p;
@@ -126,7 +126,7 @@ public class FSCrawler {
    */
   public synchronized boolean getStartNonblockingCrawl(final URI fsURI) {
     try {
-      final int subdirDepth = MAX_CRAWL_DEPTH;
+      final int subdirDepth = INFINITE_CRAWL_DEPTH;
       long fsId = analyzer.getCreateFilesystem(fsURI, true);    
       if (fsId < 0) {
         return false;
