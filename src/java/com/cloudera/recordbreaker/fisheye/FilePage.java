@@ -37,6 +37,8 @@ import java.util.List;
  */
 public class FilePage extends WebPage {
   final class FilePageDisplay extends WebMarkupContainer {
+    FileSummary fs = null;
+    
     public FilePageDisplay(String name, String fidStr) {
       super(name);
       FishEye fe = FishEye.getInstance();
@@ -44,24 +46,29 @@ public class FilePage extends WebPage {
       if (fe.hasFSAndCrawl()) {
         if (fidStr != null) {
           try {
-            FileSummary fs = new FileSummary(fe.getAnalyzer(), Long.parseLong(fidStr));
+            this.fs = new FileSummary(fe.getAnalyzer(), Long.parseLong(fidStr));
+            List<TypeGuessSummary> tgses = fs.getTypeGuesses();
+            
             add(new Label("filetitle", fs.getFname()));
-            add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath())).toString(), fs.getPath()));
+            add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath().getParent().toString())).toString(), fs.getPath().getParent().toString()));
             add(new Label("owner", fs.getOwner()));
             add(new Label("size", "" + fs.getSize()));
             add(new Label("lastmodified", fs.getLastModified()));
             add(new Label("crawledon", fs.getCrawl().getStartedDate()));
 
-            List<TypeGuessSummary> tgses = fs.getTypeGuesses();
-            TypeGuessSummary tgs = tgses.get(0);
-            TypeSummary ts = tgs.getTypeSummary();          
-            SchemaSummary ss = tgs.getSchemaSummary();
-
-            String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
-            String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
-            add(new ExternalLink("typelink", typeUrl, ts.getLabel()));
-            add(new ExternalLink("schemalink", schemaUrl, "Schema"));
-            return;
+            if (tgses.size() > 0) {
+              TypeGuessSummary tgs = tgses.get(0);
+              TypeSummary ts = tgs.getTypeSummary();          
+              SchemaSummary ss = tgs.getSchemaSummary();
+              String typeUrl = urlFor(FiletypePage.class, new PageParameters("typeid=" + ts.getTypeId())).toString();
+              String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
+              add(new Label("typelink", "<a href=\"" + typeUrl + "\">" + ts.getLabel() + "</a>").setEscapeModelStrings(false));
+              add(new Label("schemalink", "<a href=\"" + schemaUrl + "\">" + "Schema" + "</a>").setEscapeModelStrings(false));
+            } else {
+              add(new Label("typelink", ""));
+              add(new Label("schemalink", ""));
+            }
+            return;            
           } catch (NumberFormatException nfe) {
           }
         }
@@ -79,18 +86,21 @@ public class FilePage extends WebPage {
     }
     public void onConfigure() {
       FishEye fe = FishEye.getInstance();
-      setVisibilityAllowed(fe.hasFSAndCrawl());
+      AccessController accessCtrl = fe.getAccessController();
+      setVisibilityAllowed(fe.hasFSAndCrawl() && (fs != null && accessCtrl.hasReadAccess(fs)));
     }
   }
   
   public FilePage() {
     add(new SettingsWarningBox());
     add(new CrawlWarningBox());
+    add(new AccessControlWarningBox("accessControlWarningBox", null));    
     add(new FilePageDisplay("currentFileDisplay", ""));
   }
   public FilePage(PageParameters params) {
     add(new SettingsWarningBox());
     add(new CrawlWarningBox());
+    add(new AccessControlWarningBox("accessControlWarningBox", Integer.parseInt(params.get("fid").toString())));
     add(new FilePageDisplay("currentFileDisplay", params.get("fid").toString()));
   }
 }

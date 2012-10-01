@@ -16,6 +16,9 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.util.*;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+
 /*****************************************************
  * <code>FileSummary</code> is an interface to info about a File.
  * The data is "materialized" from the database upon the first call to
@@ -60,7 +63,7 @@ public class FileSummary {
     }
     return fsd.group;
   }
-  public String getPermissions() {
+  public FsPermission getPermissions() {
     if (!hasData) {
       getData();
     }
@@ -78,7 +81,10 @@ public class FileSummary {
     }
     return fsd.lastModified;
   }
-  public String getPath() {
+  public Path getPath() {
+    return new Path(getParentDir(), getFname());
+  }
+  public String getParentDir() {
     if (!hasData) {
       getData();
     }

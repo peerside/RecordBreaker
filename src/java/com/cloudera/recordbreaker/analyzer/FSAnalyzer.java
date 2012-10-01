@@ -304,8 +304,9 @@ public class FSAnalyzer {
     final String timeDateStamp = fileDateFormat.format(new Date(fstatus.getModificationTime()));
     final String owner = fstatus.getOwner();
     final String group = fstatus.getGroup();
-    final String permissions = fstatus.getPermission().toString();
     final boolean isDir = fstatus.isDir();
+    FsPermission fsp = fstatus.getPermission();
+    final String permissions = (isDir ? "d" : "-") + fsp.getUserAction().SYMBOL + fsp.getGroupAction().SYMBOL + fsp.getOtherAction().SYMBOL;
     final long size = fstatus.getLen();
 
     String fnameString = null;
@@ -461,7 +462,7 @@ public class FSAnalyzer {
    */
   static String fileInfoQueryWithoutPrefix = "SELECT fid FROM Files WHERE isDir = ?";
   static String fileInfoQueryWithPrefix = "SELECT fid FROM Files WHERE isDir = ? AND path = ?";
-  public List<FileSummary> getFileSummaries(final boolean isDir, final String prefix) {
+  public List<FileSummary> getFileSummariesInDir(final boolean isDir, final String prefix) {
     return dbQueue.execute(new SQLiteJob<List<FileSummary>>() {
         protected List<FileSummary> job(SQLiteConnection db) throws SQLiteException {
           List<FileSummary> output = new ArrayList<FileSummary>();
@@ -490,6 +491,26 @@ public class FSAnalyzer {
           return output;
         }}).complete();
   }
+
+  static String singletonFileInfoQuery = "SELECT fid FROM Files WHERE path||fname = ?";  
+  public FileSummary getSingleFileSummary(final String fullName) {
+    return dbQueue.execute(new SQLiteJob<FileSummary>() {
+        protected FileSummary job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare(singletonFileInfoQuery);
+          stmt.bind(1, fullName);            
+          try {
+            if (stmt.step()) {
+              long fid = stmt.columnLong(0);
+              return new FileSummary(FSAnalyzer.this, fid);
+            }
+          } catch (SQLiteException se) {
+            se.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return null;
+        }}).complete();
+  }    
 
   /**
    * <code>getFilesForCrawl()</code> returns all the seen files for a given crawlid
@@ -565,18 +586,18 @@ public class FSAnalyzer {
   /**
    * Get the parents for the given directory from a given crawl
    */
-  public List<Path> getDirParents(final long crawlid, final String targetDirStr) {
-    return dbQueue.execute(new SQLiteJob<List<Path>>() {
-        protected List<Path> job(SQLiteConnection db) throws SQLiteException {
-          List<Path> output = new ArrayList<Path>();
-          SQLiteStatement stmt = db.prepare("select path, fname from Files WHERE crawlid = ? AND length(?) > length(path||fname) AND isDir = 'True' AND replace(?, path||fname, '') LIKE '/%'");
+  public List<FileSummary> getDirParents(final long crawlid, final String targetDirStr) {
+    return dbQueue.execute(new SQLiteJob<List<FileSummary>>() {
+        protected List<FileSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<FileSummary> output = new ArrayList<FileSummary>();
+          SQLiteStatement stmt = db.prepare("select fid, path, fname from Files WHERE crawlid = ? AND length(?) > length(path||fname) AND isDir = 'True' AND replace(?, path||fname, '') LIKE '/%'");
           try {
             Path targetDir = new Path(targetDirStr);
             if (targetDir.getParent() != null) {
               stmt.bind(1, crawlid).bind(2, targetDir.toString()).bind(3, targetDir.toString());
               while (stmt.step()) {
-                Path p = new Path(stmt.columnString(0) + stmt.columnString(1));
-                output.add(p);
+                //Path p = new Path(stmt.columnString(0) + stmt.columnString(1));
+                output.add(new FileSummary(FSAnalyzer.this, stmt.columnLong(0)));
               }
             }
           } finally {
@@ -588,13 +609,13 @@ public class FSAnalyzer {
   }
 
   /**
-   * Get the parents for the given directory from a given crawl
+   * Get the childiren dirs for the given directory from a given crawl
    */
-  public List<Path> getDirChildren(final long crawlid, final String targetDir) {
-    return dbQueue.execute(new SQLiteJob<List<Path>>() {
-        protected List<Path> job(SQLiteConnection db) throws SQLiteException {
-          List<Path> output = new ArrayList<Path>();
-          SQLiteStatement stmt = db.prepare("SELECT DISTINCT path, fname AS fullpath FROM Files WHERE isDir = 'True' AND crawlid = ? AND path = ? ORDER BY fname ASC");
+  public List<FileSummary> getDirChildren(final long crawlid, final String targetDir) {
+    return dbQueue.execute(new SQLiteJob<List<FileSummary>>() {
+        protected List<FileSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<FileSummary> output = new ArrayList<FileSummary>();
+          SQLiteStatement stmt = db.prepare("SELECT DISTINCT fid AS fullpath FROM Files WHERE isDir = 'True' AND crawlid = ? AND path = ? ORDER BY fname ASC");
           try {
             String targetDirNormalizedStr = targetDir;
             if (! targetDirNormalizedStr.endsWith("/")) {
@@ -602,7 +623,7 @@ public class FSAnalyzer {
             }
             stmt.bind(1, crawlid).bind(2, targetDirNormalizedStr);
             while (stmt.step()) {
-              output.add(new Path(stmt.columnString(0), stmt.columnString(1)));
+              output.add(new FileSummary(FSAnalyzer.this, stmt.columnLong(0)));
             }
           } finally {
             stmt.dispose();

@@ -73,8 +73,8 @@
           <div class="container">
             <!-- The Settings warning box -->
             <div class="errorbox" wicket:id="settingsWarningMsgContainer">
-              <div class="alert alert-error">
-                <strong>Warning: </strong><span wicket:id="settingsErrorLabel"></span>
+              <div class="alert alert-info">
+                <strong>Note: </strong><span wicket:id="settingsErrorLabel"></span>
               </div>
             </div>
 
@@ -85,12 +85,18 @@
               </div>
             </div>
 
+            <div class="errorbox" wicket:id="accessControlWarningBox">
+              <div class="alert alert-error">
+                <strong>Access Denied! </strong>You do not have read access rights for this directory.
+              </div>
+            </div>
+            
             <div wicket:id="currentDirListing">
               <p>This directory has <span wicket:id="numFisheyeFiles"></span> files.</p>
 
               <!-- Parent dir listing -->
               <ul class="breadcrumb">
-                <li wicket:id="parentdirlisting"><a href="#" wicket:id="dirlink"/> <span class="divider"> &nbsp;</span></li>
+                <li wicket:id="parentdirlisting"><span wicket:id="dirlabel"/> <span class="divider"> &nbsp;</span></li>
                 <li><span wicket:id="lastParentDirEntry"></span></li>
               </ul>
 
@@ -118,7 +124,7 @@
               <div wicket:id="subdirbox">
                 <ul class="breadcrumb">
                   <li><i><span class="muted">Subdirectories:</span></i> &nbsp;</li>                
-                  <li wicket:id="childdirlisting"><a href="#" wicket:id="childdirlink"/> <span class="divider"> &nbsp;</span></li>
+                  <li wicket:id="childdirlisting"><span wicket:id="childdirlabel"/> <span class="divider"> &nbsp;</span></li>
                 </ul>
               </div>
             </div>

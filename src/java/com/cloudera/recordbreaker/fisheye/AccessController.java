@@ -17,6 +17,8 @@ package com.cloudera.recordbreaker.fisheye;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import com.cloudera.recordbreaker.analyzer.FileSummary;
+
 /*************************************************************
  * The <code>AccessController</code> object manages the user login
  * and tests access rights.
@@ -70,8 +72,10 @@ public class AccessController {
   // (REMIND -- mjc -- eventually this will need to contact
   // a back-end user database in order to support groups.
   //////////////////////////////////////////////////////
-  public boolean hasReadAccess(String fileOwner, String fileGroup, String filePermissions) {
-    FsPermission fsp = new FsPermission(filePermissions);
+  public boolean hasReadAccess(FileSummary fs) {
+    String fileOwner = fs.getOwner();
+    String fileGroup = fs.getGroup();
+    FsPermission fsp = fs.getPermissions();
 
     // Check world-readable
     FsAction otherAction = fsp.getOtherAction();

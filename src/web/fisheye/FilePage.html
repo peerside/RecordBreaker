@@ -73,8 +73,8 @@
           <div class="container">
             <!-- The Settings warning box -->
             <div class="errorbox" wicket:id="settingsWarningMsgContainer">
-              <div class="alert alert-error">
-                <strong>Warning: </strong><span wicket:id="settingsErrorLabel"></span>
+              <div class="alert alert-info">
+                <strong>Note: </strong><span wicket:id="settingsErrorLabel"></span>
               </div>
             </div>
             
@@ -82,6 +82,12 @@
             <div class="errorbox" wicket:id="crawlWarningMsgContainer">
               <div class="alert alert-info">
                 <strong>Note: </strong><span wicket:id="crawlErrorLabel"></span>
+              </div>
+            </div>
+
+            <div class="errorbox" wicket:id="accessControlWarningBox">
+              <div class="alert alert-error">
+                <strong>Access Denied! </strong>You do not have read access rights for this file.
               </div>
             </div>
 
@@ -110,11 +116,11 @@
                   </tr>
                   <tr>
                     <td>type</td>
-                    <td><a href="#" wicket:id="typelink"></a></td>
+                    <td><span wicket:id="typelink" /></td>
                   </tr>
                   <tr>
                     <td>schema</td>
-                    <td><a href="#" wicket:id="schemalink"></a></td>
+                    <td><span wicket:id="schemalink" /></td>
                   </tr>
                 </tbody>
               </table>

@@ -14,6 +14,8 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
+import org.apache.hadoop.fs.permission.FsPermission;
+
 /**
  * The actual data for a file is contained in a <code>FileSummaryData</code> obj.
  *
@@ -24,7 +26,7 @@ public class FileSummaryData {
   String fname;
   String owner;
   String group;
-  String permissions;
+  FsPermission permissions;
   long size;
   String lastModified;
   String path;
@@ -35,7 +37,7 @@ public class FileSummaryData {
     this.fname = fname;
     this.owner = owner;
     this.group = group;
-    this.permissions = permissions;
+    this.permissions = FsPermission.valueOf(permissions);
     this.size = size;
     this.lastModified = lastModified;
     this.path = path;

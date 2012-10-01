@@ -35,8 +35,9 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 import java.net.URISyntaxException;
 
-import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
 import com.cloudera.recordbreaker.analyzer.FSCrawler;
+import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
+import com.cloudera.recordbreaker.analyzer.FileSummary;
 import com.cloudera.recordbreaker.analyzer.CrawlRuntimeStatus;
 
 /***************************************************************
@@ -170,7 +171,7 @@ public class FishEye {
     }
     return null;
   }
-  public List<Path> getDirParents(String targetDir) {
+  public List<FileSummary> getDirParents(String targetDir) {
     URI fsUri = getFSURI();
     if (fsUri == null) {
       return null;
@@ -184,7 +185,7 @@ public class FishEye {
     }
     return null;
   }
-  public List<Path> getDirChildren(String targetDir) {
+  public List<FileSummary> getDirChildren(String targetDir) {
     URI fsUri = getFSURI();
     if (fsUri == null) {
       return null;
