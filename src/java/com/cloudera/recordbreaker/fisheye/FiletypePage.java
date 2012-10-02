@@ -54,8 +54,11 @@ public class FiletypePage extends WebPage {
             List<TypeGuessSummary> tgses = ts.getTypeGuesses();
             add(new Label("typecount", "" + tgses.size()));
 
-                    
-            // Files that have this type
+            //
+            // REMIND -- mjc -- I think this file-listing display is more trouble than its worth, at least
+            // when examining filesystems of non-trivial size.  But I'm not 100% sure yet, so it will stick
+            // around a bit...
+            //
             /**
             ListView<TypeGuessSummary> observationList = new ListView<TypeGuessSummary>("observations", tgses) {
               protected void populateItem(ListItem<TypeGuessSummary> item) {

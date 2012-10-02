@@ -59,7 +59,7 @@ public class FSAnalyzer {
   static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
   static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, isDir string, crawlid integer, fname varchar(256), owner varchar(16), groupowner varchar(16), permissions varchar(32), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
   static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
-  static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemalabel varchar(64), schemadescriptor varchar(1024));";
+  static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemaidentifier varchar(1024), schemadescription varchar(32));";
   static String CREATE_TABLE_GUESSES = "CREATE TABLE TypeGuesses(fid integer, typeid integer, schemaid integer, score double, foreign key(fid) references Files(fid), foreign key(typeid) references Types(typeid), foreign key(schemaid) references Schemas(schemaid));";
   void createTables() throws SQLiteException {
     dbQueue.execute(new SQLiteJob<Object>() {
@@ -259,12 +259,12 @@ public class FSAnalyzer {
    * Helper fn <code>getCreateSchema</code> returns the id of a specified Schema in the Schemas table.
    * The row is created, if necessary.
    */
-  long getCreateSchema(final String schemaLabel, final String schemaDesc) throws SQLiteException {
+  long getCreateSchema(final String schemaIdentifier, final String schemaDesc) throws SQLiteException {
     long schemaid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          final SQLiteStatement stmt = db.prepare("SELECT schemaid FROM Schemas WHERE schemalabel = ? AND schemadescriptor = ?");
+          final SQLiteStatement stmt = db.prepare("SELECT schemaid FROM Schemas WHERE schemaidentifier = ? AND schemadescription = ?");
           try {
-            stmt.bind(1, schemaLabel).bind(2, schemaDesc);
+            stmt.bind(1, schemaIdentifier).bind(2, schemaDesc);
             if (stmt.step()) {
               long resultId = stmt.columnLong(0);
               return resultId;
@@ -286,7 +286,7 @@ public class FSAnalyzer {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           final SQLiteStatement stmt = db.prepare("INSERT into Schemas VALUES(null, ?, ?)");
           try {
-            stmt.bind(1, schemaLabel).bind(2, schemaDesc);
+            stmt.bind(1, schemaIdentifier).bind(2, schemaDesc);
             stmt.step();
             return db.getLastInsertId();      
           } finally {
@@ -346,10 +346,10 @@ public class FSAnalyzer {
     for (TypeGuess tg: typeGuesses) {
       String typeLabel = tg.getTypeLabel();
       String typeDesc = tg.getTypeDesc();
-      String schemaLabel = tg.getSchemaLabel();
+      String schemaIdentifier = tg.getSchemaIdentifier();
       String schemaDesc = tg.getSchemaDesc();
       typeIds.add(getCreateType(typeLabel, typeDesc));
-      schemaIds.add(getCreateSchema(schemaLabel, schemaDesc));
+      schemaIds.add(getCreateSchema(schemaIdentifier, schemaDesc));
     }
     dbQueue.execute(new SQLiteJob<Object>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
@@ -414,7 +414,7 @@ public class FSAnalyzer {
   public SchemaSummaryData getSchemaSummaryData(final long schemaid) {
     return dbQueue.execute(new SQLiteJob<SchemaSummaryData>() {
         protected SchemaSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT schemalabel, schemadescriptor FROM Schemas WHERE schemaid = ?");
+          SQLiteStatement stmt = db.prepare("SELECT schemaidentifier, schemadescription FROM Schemas WHERE schemaid = ?");
           try {
             stmt.bind(1, schemaid);
             if (stmt.step()) {
@@ -803,12 +803,29 @@ public class FSAnalyzer {
   ///////////////////////////////////////////
   static String typeGuessQueryForFile = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE fid = ?";
   static String typeGuessQueryForSchema = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE schemaid = ?";
-  static String typeGuessQueryForType = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE typeid = ?";    
+  static String typeGuessQueryForType = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE typeid = ?";
   public List<TypeGuessSummary> getTypeGuessesForFile(final long fid) {
     return getTypeGuesses(typeGuessQueryForFile, fid);
   }
   public List<TypeGuessSummary> getTypeGuessesForSchema(final long schemaid) {
     return getTypeGuesses(typeGuessQueryForSchema, schemaid);
+  }
+  static String countFilesQueryForSchema = "SELECT COUNT(DISTINCT fid) FROM TypeGuesses WHERE schemaid = ?";
+  public long countFilesForSchema(final long schemaid) {
+    return dbQueue.execute(new SQLiteJob<Long>() {
+        protected Long job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare(countFilesQueryForSchema);
+          try {
+            stmt.bind(1, schemaid);
+            if (stmt.step()) {
+              return stmt.columnLong(0);
+            }
+          } finally {
+            stmt.dispose();
+          }
+          return -1L;
+        }
+      }).complete();
   }
   public List<TypeGuessSummary> getTypeGuessesForType(final long typeid) {
     return getTypeGuesses(typeGuessQueryForType, typeid);

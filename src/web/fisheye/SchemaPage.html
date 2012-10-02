@@ -86,8 +86,9 @@
             </div>
 
             <div wicket:id="currentSchemaDisplay">
-              <p>Fisheye is currently boring into <span wicket:id="numSchemaElements"></span> schema(s).</p>            
+              <h2>of type '<span wicket:id="schemaDesc"/>'</h2>
 
+              <p>This schema has <span wicket:id="numSchemaElements"></span> field(s).  <span wicket:id="numFilesWithSchema"></span> file(s) have this schema.</p>
               <table>
                 <tr wicket:id="biglistview">
                   <table class="table table-striped table-bordered table-condensed">

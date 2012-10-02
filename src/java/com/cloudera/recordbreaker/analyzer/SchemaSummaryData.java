@@ -19,12 +19,12 @@ package com.cloudera.recordbreaker.analyzer;
  */
 public class SchemaSummaryData {
   long schemaId;
-  String schemaLabel;
+  String schemaIdentifier;
   String schemaDesc;
   
-  public SchemaSummaryData(long schemaId, String schemaLabel, String schemaDesc) {
+  public SchemaSummaryData(long schemaId, String schemaIdentifier, String schemaDesc) {
     this.schemaId = schemaId;
-    this.schemaLabel = schemaLabel;
+    this.schemaIdentifier = schemaIdentifier;
     this.schemaDesc = schemaDesc;
   }
 }

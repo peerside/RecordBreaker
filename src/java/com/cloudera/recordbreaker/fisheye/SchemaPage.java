@@ -89,12 +89,23 @@ public class SchemaPage extends WebPage {
 
       if (fe.hasFSAndCrawl()) {
         List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
+        long numFilesWithSchema = -1;
+        String schemaDescription = "";
         if (schemaidStr != null) {
           try {
-            SchemaSummary ss = new SchemaSummary(fe.getAnalyzer(), Long.parseLong(schemaidStr));
-            listOfSchemaElts = getSchemaDigest(ss.getLabel());
+            long schemaId = Long.parseLong(schemaidStr);
+            SchemaSummary ss = new SchemaSummary(fe.getAnalyzer(), schemaId);
+            if (ss.getIdentifier().length() > 0) {
+              listOfSchemaElts = getSchemaDigest(ss.getIdentifier());
+            } else {
+              listOfSchemaElts = new ArrayList<List<JsonNode>>();
+            }
+            schemaDescription = ss.getDesc();
+            numFilesWithSchema = fe.getAnalyzer().countFilesForSchema(schemaId);
           } catch (NumberFormatException nfe) {
+            nfe.printStackTrace();
           } catch (IOException ie) {
+            ie.printStackTrace();            
           }
         }
 
@@ -114,7 +125,10 @@ public class SchemaPage extends WebPage {
             item.add(listview);
           }
           });
+
+        add(new Label("schemaDesc", schemaDescription));
         add(new Label("numSchemaElements", "" + listOfSchemaElts.size()));
+        add(new Label("numFilesWithSchema", "" + numFilesWithSchema));
       }
       
       setOutputMarkupPlaceholderTag(true);

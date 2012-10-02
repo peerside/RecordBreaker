@@ -25,14 +25,14 @@ package com.cloudera.recordbreaker.analyzer;
 public class TypeGuess {
   String typeLabel;
   String typeDesc;
-  String schemaLabel;
+  String schemaIdentifier;
   String schemaDesc;
   double score;
     
-  public TypeGuess(String typeLabel, String typeDesc, String schemaLabel, String schemaDesc, double score) {
+  public TypeGuess(String typeLabel, String typeDesc, String schemaIdentifier, String schemaDesc, double score) {
     this.typeLabel = typeLabel;
     this.typeDesc = typeDesc;
-    this.schemaLabel = schemaLabel;
+    this.schemaIdentifier = schemaIdentifier;
     this.schemaDesc = schemaDesc;
     this.score = score;
   }
@@ -42,8 +42,8 @@ public class TypeGuess {
   String getTypeDesc() {
     return typeDesc;
   }
-  String getSchemaLabel() {
-    return schemaLabel;
+  String getSchemaIdentifier() {
+    return schemaIdentifier;
   }
   String getSchemaDesc() {
     return schemaDesc;

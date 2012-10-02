@@ -75,7 +75,7 @@ public class FSCrawler {
 
         if (schemas == null || schemas.size() == 0) {
           tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
-                                "no schema", "no schema", 1.0));
+                                "", "no schema", 1.0));
         } else {
           for (SchemaDescriptor sd: schemas) {
             tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),

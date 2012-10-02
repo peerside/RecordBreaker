@@ -45,11 +45,11 @@ public class SchemaSummary {
     this.ssd = analyzer.getSchemaSummaryData(this.schemaId);
     this.hasData = true;
   }
-  public String getLabel() {
+  public String getIdentifier() {
     if (!hasData) {
       getData();
     }
-    return ssd.schemaLabel;
+    return ssd.schemaIdentifier;
   }
   public String getDesc() {
     if (!hasData) {

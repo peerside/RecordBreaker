@@ -52,7 +52,7 @@ public class SchemasPage extends WebPage {
 
             StringBuffer schemalabel = new StringBuffer();
             try {
-              List<List<JsonNode>> listOfSchemaElts = SchemaPage.getSchemaDigest(ss.getLabel());
+              List<List<JsonNode>> listOfSchemaElts = SchemaPage.getSchemaDigest(ss.getIdentifier());
               for (Iterator<JsonNode> it = listOfSchemaElts.get(0).iterator(); it.hasNext(); ) {
                 JsonNode curNode = it.next();
                 schemalabel.append(curNode.get("name"));
