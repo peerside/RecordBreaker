@@ -69,6 +69,10 @@ public class FormatAnalyzer {
       return new XMLDataDescriptor(fs, p);
     } else if (fname.endsWith(".avro")) {
       return new AvroDataDescriptor(fs, p);
+    } else if (AvroSequenceFileDataDescriptor.isAvroSequenceFile(fs, p)) {
+      return new AvroSequenceFileDataDescriptor(fs, p);
+    } else if (SequenceFileDataDescriptor.isSequenceFile(fs, p)) {
+      return new SequenceFileDataDescriptor(fs, p);
     } else {
       // Even if it's text, it could have a regular and expected structure
       // (e.g., Apache access logs).  The formatLibrary object keeps a list
