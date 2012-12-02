@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.compress.BZip2Codec;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.avro.Schema;
@@ -193,11 +194,14 @@ public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
       Configuration conf = new Configuration();
       FileSystem fs = FileSystem.getLocal(conf);
       Path p = new Path(argv[1]);
-      SequenceFile.Writer outseq = new SequenceFile.Writer(fs,
-                                                           conf,
-                                                           p,
-                                                           IntWritable.class,
-                                                           UTF8.class);
+
+      SequenceFile.Writer outseq = SequenceFile.createWriter(fs,
+                                                             conf,
+                                                             p,
+                                                             IntWritable.class,
+                                                             UTF8.class,
+                                                             SequenceFile.CompressionType.BLOCK,
+                                                             new BZip2Codec());
       try {
         outseq.append(new IntWritable(1), new UTF8("Foo"));
         outseq.append(new IntWritable(2), new UTF8("Bar"));
