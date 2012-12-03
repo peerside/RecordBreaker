@@ -15,6 +15,7 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileInputStream;
 import java.io.BufferedInputStream;
@@ -126,5 +127,9 @@ public class UnknownTextDataDescriptor implements DataDescriptor {
    */
   public List<SchemaDescriptor> getSchemaDescriptor() {
     return schemaDescriptors;
+  }
+
+  public InputStream getRawBytes() throws IOException {
+    return fs.open(p);
   }
 }

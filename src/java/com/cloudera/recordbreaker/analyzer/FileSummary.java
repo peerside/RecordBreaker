@@ -15,6 +15,8 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.util.*;
+import java.io.IOException;
+import java.io.InputStream;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -39,6 +41,13 @@ public class FileSummary {
   void getData() {
     this.fsd = analyzer.getFileSummaryData(this.fid);
     this.hasData = true;
+  }
+
+  public InputStream getRawBytes() throws IOException {
+    if (!hasData) {
+      getData();
+    }
+    return analyzer.getRawBytes(getPath());
   }
 
   public long getFid() {

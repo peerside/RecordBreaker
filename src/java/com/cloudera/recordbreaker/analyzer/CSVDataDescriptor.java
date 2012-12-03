@@ -17,6 +17,7 @@ package com.cloudera.recordbreaker.analyzer;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -134,5 +135,13 @@ public class CSVDataDescriptor implements DataDescriptor {
     } catch (IOException iex) {
     }
     return results;
+  }
+
+  /**
+   * <code>getRawBytes</code> just calls the FS to grab the file bytes.
+   * It's up to the caller to close the stream.
+   */
+  public InputStream getRawBytes() throws IOException {
+    return fs.open(p);
   }
 }

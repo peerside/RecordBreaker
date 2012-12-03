@@ -17,6 +17,8 @@ package com.cloudera.recordbreaker.analyzer;
 import java.net.URI;
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.TreeMap;
@@ -24,11 +26,13 @@ import java.util.List;
 import java.util.Date;
 import java.util.Random;
 import java.util.ArrayList;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.conf.Configuration;
 
 import com.almworks.sqlite4java.SQLite;
 import com.almworks.sqlite4java.SQLiteJob;
@@ -379,7 +383,7 @@ public class FSAnalyzer {
   DataDescriptor describeData(FileSystem fs, Path p, int maxLines) throws IOException {
     return formatAnalyzer.describeData(fs, p, maxLines);
   }
-  
+
   ///////////////////////////////////////////////////
   // ACCESSORS FOR SCHEMAS
   ///////////////////////////////////////////////////
@@ -631,6 +635,14 @@ public class FSAnalyzer {
           return output;
         }
       }).complete();
+  }
+
+  public InputStream getRawBytes(Path p) throws IOException {
+    try {
+      return FileSystem.get(new URI(getConfigProperty("fsuri")), new Configuration()).open(p);
+    } catch (URISyntaxException use) {
+      return null;
+    }
   }
   
   ///////////////////////////////////////////////////

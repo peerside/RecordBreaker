@@ -19,6 +19,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.model.PropertyModel;
 
 import java.net.URI;
+import java.io.Serializable;
 
 /************************************************
  * Application-wide warning box that tells user
@@ -29,7 +30,7 @@ import java.net.URI;
  * @since 1.0
  *************************************************/
 public class CrawlWarningBox extends WebMarkupContainer {
-  final class CrawlErrorMsgHandler {
+  final class CrawlErrorMsgHandler implements Serializable {
     public CrawlErrorMsgHandler() {
     }
     public String getErrorMsg() {

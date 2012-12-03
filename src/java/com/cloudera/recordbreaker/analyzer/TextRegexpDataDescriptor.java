@@ -16,6 +16,7 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -115,5 +116,9 @@ public class TextRegexpDataDescriptor implements DataDescriptor {
     } catch (Exception iex) {
     }
     return results;
+  }
+
+  public InputStream getRawBytes() throws IOException {
+    return fs.open(p);
   }
 }

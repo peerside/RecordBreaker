@@ -14,8 +14,11 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import org.apache.hadoop.fs.Path;
 import java.util.List;
+import java.io.IOException;
+import java.io.InputStream;
+import org.apache.hadoop.fs.Path;
+
 
 /***************************************************************************************
  * <code>DataDescriptor</code> is a generic interface for providing data about a given
@@ -55,4 +58,12 @@ public interface DataDescriptor {
    * @return a <code>List<SchemaDescriptor></code> value
    */
   public List<SchemaDescriptor> getSchemaDescriptor();
+
+  /**
+   * The <code>getRawBytes</code> method returns the underlying bytestream for the file,
+   * with no schema interpretation at all.
+   *
+   * @return an <code>InputStream</code>
+   */
+  public InputStream getRawBytes() throws IOException;
 }

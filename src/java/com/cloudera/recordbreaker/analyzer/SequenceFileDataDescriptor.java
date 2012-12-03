@@ -17,6 +17,7 @@ package com.cloudera.recordbreaker.analyzer;
 import java.util.List;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.io.InputStream;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -73,5 +74,13 @@ public class SequenceFileDataDescriptor implements DataDescriptor {
     } catch (IOException iex) {
     }
     return results;
+  }
+
+  /**
+   * <code>getRawBytes</code> just calls the FS to grab the file bytes.
+   * It's up to the caller to close the stream.
+   */
+  public InputStream getRawBytes() throws IOException {
+    return fs.open(p);
   }
 }

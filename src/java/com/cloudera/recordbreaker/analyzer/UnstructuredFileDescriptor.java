@@ -16,6 +16,8 @@ package com.cloudera.recordbreaker.analyzer;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.io.IOException;
+import java.io.InputStream;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,5 +50,9 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
 
   public List<SchemaDescriptor> getSchemaDescriptor() {
     return new ArrayList<SchemaDescriptor>();
+  }
+
+  public InputStream getRawBytes() throws IOException {
+    return fs.open(p);
   }
 }

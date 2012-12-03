@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.io.InputStream;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,5 +70,13 @@ public class XMLDataDescriptor implements DataDescriptor {
       iex.printStackTrace();
     }
     return results;
+  }
+
+  /**
+   * <code>getRawBytes</code> just calls the FS to grab the file bytes.
+   * It's up to the caller to close the stream.
+   */
+  public InputStream getRawBytes() throws IOException {
+    return fs.open(p);
   }
 }
