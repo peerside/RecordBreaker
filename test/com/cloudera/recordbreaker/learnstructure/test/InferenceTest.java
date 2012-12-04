@@ -20,6 +20,9 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.Iterator;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
 
@@ -45,53 +48,54 @@ public abstract class InferenceTest {
    */
   boolean runSingletonTest(File workingDir, File inputData) {
     File tmpSingletonDir = new File(workingDir, "testinference-" + inputData.getName());
-    tmpSingletonDir.mkdir();
-    File avroFile = new File(tmpSingletonDir, LearnStructure.DATA_FILENAME);
-    File schemaFile = new File(tmpSingletonDir, LearnStructure.SCHEMA_FILENAME);
-    
     try {
+      FileSystem localFS = FileSystem.getLocal(new Configuration());
+      tmpSingletonDir.mkdir();
+      Path schemaFile = new Path(tmpSingletonDir.getCanonicalPath(), LearnStructure.SCHEMA_FILENAME);
+      Path parseTreeFile = new Path(tmpSingletonDir.getCanonicalPath(), LearnStructure.PARSER_FILENAME);
+      Path jsonDataFile = new Path(tmpSingletonDir.getCanonicalPath(), LearnStructure.JSONDATA_FILENAME);
+      Path avroFile = new Path(tmpSingletonDir.getCanonicalPath(), LearnStructure.DATA_FILENAME);
+
       LearnStructure ls = new LearnStructure();
+      // Check to see how many records exist in the original input
+      int lineCount = 0;
+      BufferedReader in2 = new BufferedReader(new FileReader(inputData));
       try {
-        // Infer structure
-        ls.inferRecordFormat(inputData, tmpSingletonDir, true);
-
-        // Test the inferred structure
-        // First, load in the avro file and see how many records there are.
-        int avroCount = 0;
-        DataFileReader in = new DataFileReader(avroFile, new GenericDatumReader());
-        try {
-          Iterator it = in.iterator();
-          while (it.hasNext()) {
-            avroCount++;
-            it.next();
-          }
-        } finally {
-          in.close();
+        while (in2.readLine() != null) {
+          lineCount++;
         }
-
-        // Also, check to see how many records exist in the original input
-        int lineCount = 0;
-        BufferedReader in2 = new BufferedReader(new FileReader(inputData));
-        try {
-          while (in2.readLine() != null) {
-            lineCount++;
-          }
-        } finally {
-          in2.close();
-        }
-
-        // Was the synthesized parser able to figure out the file?
-        double parseRatio = avroCount / (1.0 * lineCount);
-        return (parseRatio > MIN_PARSE_RATIO);
-      } catch (IOException e) {
-        try {
-          System.err.println("File: " + inputData.getCanonicalPath());
-        } catch (IOException ex) {
-          ex.printStackTrace();
-        }
-        e.printStackTrace();
-        return false;
+      } finally {
+        in2.close();
       }
+
+      // Infer structure
+      ls.inferRecordFormat(localFS, new Path(inputData.getCanonicalPath()), localFS, schemaFile, parseTreeFile, jsonDataFile, avroFile, false, lineCount);
+
+      // Test the inferred structure
+      // First, load in the avro file and see how many records there are.
+      int avroCount = 0;
+      DataFileReader in = new DataFileReader(new File(avroFile.toString()), new GenericDatumReader());
+      try {
+        Iterator it = in.iterator();
+        while (it.hasNext()) {
+          avroCount++;
+          it.next();
+        }
+      } finally {
+        in.close();
+      }
+
+      // Was the synthesized parser able to figure out the file?
+      double parseRatio = avroCount / (1.0 * lineCount);
+      return (parseRatio > MIN_PARSE_RATIO);
+    } catch (IOException e) {
+      try {
+        System.err.println("File: " + inputData.getCanonicalPath());
+      } catch (IOException ex) {
+        ex.printStackTrace();
+      }
+      e.printStackTrace();
+      return false;
     } finally {
       // remove temp files
       tmpSingletonDir.delete();
