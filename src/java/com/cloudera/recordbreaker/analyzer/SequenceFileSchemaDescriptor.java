@@ -43,23 +43,16 @@ import org.apache.avro.reflect.ReflectData;
  * @version 1.0
  * @since 1.0
  **************************************************************/
-public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
-  FileSystem fs;
-  Path p;
-  Schema schema;
-  Schema keySchema;
-  Schema valSchema;
-  Class keyClass;
-  Class valClass;
-  String schemaSrcDesc;
-
+public class SequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
+  public static String SCHEMA_ID = "seqfile";
   /**
    * A new <code>SequenceFileSchemaDescriptor</code> takes a path and a filesystem
    */
-  public SequenceFileSchemaDescriptor(FileSystem fs, Path p) throws IOException {
-    this.fs = fs;
-    this.p = p;
-    computeSchema();
+  public SequenceFileSchemaDescriptor(DataDescriptor dd) throws IOException {
+    super(dd);
+  }
+  public SequenceFileSchemaDescriptor(DataDescriptor dd, String schemaRepr) {
+    super(dd, schemaRepr);
   }
 
   /**
@@ -67,16 +60,16 @@ public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
    */
   void computeSchema() throws IOException {
     try {
-      SequenceFile.Reader in = new SequenceFile.Reader(fs, p, new Configuration());
+      SequenceFile.Reader in = new SequenceFile.Reader(FSAnalyzer.getInstance().getFS(), dd.getFilename(), new Configuration());
       try {
         //
         // Build Avro schemas out of the SequenceFile key/val classes.  We will use
         // these them to display schema information to the user.
         //
-        this.keyClass = in.getKeyClass();
-        this.valClass = in.getValueClass();
-        this.keySchema = ReflectData.get().getSchema(keyClass);
-        this.valSchema = ReflectData.get().getSchema(valClass);
+        Class keyClass = in.getKeyClass();
+        Class valClass = in.getValueClass();
+        Schema keySchema = ReflectData.get().getSchema(keyClass);
+        Schema valSchema = ReflectData.get().getSchema(valClass);
 
         //
         // Build a "pair record" with "key" and "value" fields to hold the subschemas.
@@ -85,19 +78,11 @@ public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
         fieldList.add(new Schema.Field("key", keySchema, "", null));
         fieldList.add(new Schema.Field("val", valSchema, "", null));
         this.schema = Schema.createRecord(fieldList);
-        this.schemaSrcDesc = "sequencefile";
       } finally {
         in.close();
       }
     } catch (IOException iex) {
     }
-  }
-
-  /**
-   * Return the previously-assembled schema
-   */
-  public Schema getSchema() {
-    return schema;
   }
 
   /**
@@ -108,9 +93,13 @@ public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
     return new Iterator() {
       Object nextElt = null;
       SequenceFile.Reader in = null;
+      Class keyClass;
+      Class valClass;
       {
         try {
-          in = new SequenceFile.Reader(fs, p, new Configuration());
+          in = new SequenceFile.Reader(FSAnalyzer.getInstance().getFS(), dd.getFilename(), new Configuration());
+          keyClass = in.getKeyClass();
+          valClass = in.getValueClass();
           nextElt = lookahead();
         } catch (IOException iex) {
           this.nextElt = null;
@@ -154,20 +143,13 @@ public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
   }
 
   /**
-   * A string that uniquely identifies the file's schema.  Not necessarily
-   * human-readable.
-   */
-  public String getSchemaIdentifier() {
-    return schema.toString();
-  }
-
-  /**
    * Human-readable string that summarizes the file's structure
    */
   public String getSchemaSourceDescription() {
-    return schemaSrcDesc;
+    return SCHEMA_ID;
   }
 
+  /**
   public static void main(String argv[]) throws IOException {
     if (argv.length < 1) {
       System.err.println("SequenceFileSchemaDescriptor (-test <file>|-write <outfile>)");
@@ -213,5 +195,6 @@ public class SequenceFileSchemaDescriptor implements SchemaDescriptor {
       System.err.println("Did not recognize params.");
     }
   }
+  **/
 }
 

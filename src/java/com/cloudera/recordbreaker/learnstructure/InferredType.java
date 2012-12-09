@@ -193,14 +193,12 @@ class BaseType extends InferredType {
     this.sampleStrs = sampleStrs;
     this.tokenClassIdentifier = token.getClassId();
     this.tokenParameter = token.getParameter();
-    //System.err.println("Token parameter: " + tokenParameter);
     this.schema = computeAvroSchema();
   }
   public BaseType(int tokenClassIdentifier, List<String> sampleStrs, String tokenParameter) {
     this.sampleStrs = sampleStrs;
     this.tokenClassIdentifier = tokenClassIdentifier;
     this.tokenParameter = tokenParameter;
-    //System.err.println("Token parameter: " + tokenParameter);
     this.schema = computeAvroSchema();
   }
   public InferredType hoistUnions() {
@@ -276,6 +274,7 @@ class BaseType extends InferredType {
     this.schema = computeAvroSchema();
   }
   public void write(DataOutput out) throws IOException {
+    out.write(BASE_TYPE);
     out.writeInt(sampleStrs.size());
     for (int i = 0; i < sampleStrs.size(); i++) {
       UTF8.writeString(out, sampleStrs.get(i));

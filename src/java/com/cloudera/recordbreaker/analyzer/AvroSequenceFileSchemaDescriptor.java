@@ -50,25 +50,21 @@ import org.apache.avro.mapred.AvroWrapper;
  * @version 1.0
  * @since 1.0
  **************************************************************/
-public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
-  FileSystem fs;
-  Path p;
-  Schema schema;
-  Schema keySchema;
-  Schema valSchema;
-  String schemaSrcDesc;
-
-  public AvroSequenceFileSchemaDescriptor(FileSystem fs, Path p) throws IOException {
-    this.fs = fs;
-    this.p = p;
-    computeSchema();
+public class AvroSequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
+  public static String SCHEMA_ID = "avrosequencefile";
+  
+  public AvroSequenceFileSchemaDescriptor(DataDescriptor dd) throws IOException {
+    super(dd);
+  }
+  public AvroSequenceFileSchemaDescriptor(DataDescriptor dd, String schemaRepr) throws IOException {
+    super(dd, schemaRepr);
   }
 
   void computeSchema() throws IOException {
     try {
       AvroSequenceFile.Reader.Options options = new AvroSequenceFile.Reader.Options()
-        .withFileSystem(fs)
-        .withInputPath(p)
+        .withFileSystem(FSAnalyzer.getInstance().getFS())
+        .withInputPath(dd.getFilename())
         .withConfiguration(new Configuration());
       AvroSequenceFile.Reader in = new AvroSequenceFile.Reader(options);
       try {
@@ -79,8 +75,8 @@ public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
         TreeMap<Text, Text> kvs = seqFileMetadata.getMetadata();
         Text keySchemaStr = kvs.get(AvroSequenceFile.METADATA_FIELD_KEY_SCHEMA);
         Text valSchemaStr = kvs.get(AvroSequenceFile.METADATA_FIELD_VALUE_SCHEMA);
-        this.keySchema = Schema.parse(keySchemaStr.toString());
-        this.valSchema = Schema.parse(valSchemaStr.toString());
+        Schema keySchema = Schema.parse(keySchemaStr.toString());
+        Schema valSchema = Schema.parse(valSchemaStr.toString());
 
         //
         // Build a "pair record" with "key" and "value" fields to hold the subschemas.
@@ -89,19 +85,11 @@ public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
         fieldList.add(new Schema.Field("key", keySchema, "", null));
         fieldList.add(new Schema.Field("val", valSchema, "", null));
         this.schema = Schema.createRecord(fieldList);
-        this.schemaSrcDesc = "avrosequencefile";
       } finally {
         in.close();
       }
     } catch (IOException iex) {
     }
-  }
-
-  /**
-   * Return the previously-assembled schema
-   */
-  public Schema getSchema() {
-    return schema;
   }
 
   /**
@@ -113,8 +101,8 @@ public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
       Object nextElt = null;
       AvroSequenceFile.Reader reader = null;
       AvroSequenceFile.Reader.Options options = new AvroSequenceFile.Reader.Options()
-        .withFileSystem(fs)
-        .withInputPath(p)
+        .withFileSystem(FSAnalyzer.getInstance().getFS())
+        .withInputPath(dd.getFilename())
         .withConfiguration(new Configuration());
       {
         try {
@@ -163,20 +151,13 @@ public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
   }
 
   /**
-   * A string that uniquely identifies the file's schema.  Not necessarily
-   * human-readable.
-   */
-  public String getSchemaIdentifier() {
-    return schema.toString();
-  }
-
-  /**
    * Human-readable string that summarizes the file's structure
    */
   public String getSchemaSourceDescription() {
-    return schemaSrcDesc;
+    return SCHEMA_ID;
   }
 
+  /**
   public static void main(String argv[]) throws IOException {
     if (argv.length < 2) {
       System.err.println("AvroSequenceFileSchemaDescriptor (-test <file>|-write <out>|-read <in>)");
@@ -217,9 +198,6 @@ public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
       Schema valSchema = Schema.createRecord("base", "doc", "", false);
       valSchema.setFields(schemaFields);
 
-      System.err.println("Writing key schema: " + keySchema);
-      System.err.println("Writing value schema: " + valSchema);      
-      
       AvroSequenceFile.Writer.Options options = new AvroSequenceFile.Writer.Options()
         .withFileSystem(fs)
         .withOutputPath(p)
@@ -281,4 +259,5 @@ public class AvroSequenceFileSchemaDescriptor implements SchemaDescriptor {
       System.err.println("Did not recognize params.");
     }
   }
+  **/      
 }

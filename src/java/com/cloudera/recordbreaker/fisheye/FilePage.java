@@ -147,12 +147,14 @@ public class FilePage extends WebPage {
     add(new CrawlWarningBox());
     add(new SettingsWarningBox());    
     add(new AccessControlWarningBox("accessControlWarningBox", null));
-    add(new FilePageDisplay("currentFileDisplay", ""));    
+    add(new FilePageDisplay("currentFileDisplay", ""));
+    add(new FileContentsTable());
   }
   public FilePage(PageParameters params) {
     add(new CrawlWarningBox());
     add(new SettingsWarningBox());    
     add(new AccessControlWarningBox("accessControlWarningBox", Integer.parseInt(params.get("fid").toString())));
-    add(new FilePageDisplay("currentFileDisplay", params.get("fid").toString()));    
+    add(new FilePageDisplay("currentFileDisplay", params.get("fid").toString()));
+    add(new FileContentsTable(Long.parseLong(params.get("fid").toString())));
   }
 }

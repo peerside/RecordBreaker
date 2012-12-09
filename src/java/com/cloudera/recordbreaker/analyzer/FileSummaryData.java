@@ -30,8 +30,9 @@ public class FileSummaryData {
   long size;
   String lastModified;
   String path;
+  DataDescriptor dd;
   
-  public FileSummaryData(long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path) {
+  public FileSummaryData(long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path, DataDescriptor dd) {
     this.fid = fid;
     this.crawlid = crawlid;
     this.fname = fname;
@@ -41,5 +42,6 @@ public class FileSummaryData {
     this.size = size;
     this.lastModified = lastModified;
     this.path = path;
+    this.dd = dd;
   }
 }

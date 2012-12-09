@@ -20,11 +20,9 @@ package com.cloudera.recordbreaker.analyzer;
 public class TypeSummaryData {
   long typeid;
   String typeLabel;
-  String typeDesc;
 
-  public TypeSummaryData(long typeid, String typeLabel, String typeDesc) {
+  public TypeSummaryData(long typeid, String typeLabel) {
     this.typeid = typeid;
     this.typeLabel = typeLabel;
-    this.typeDesc = typeDesc;
   }
 }

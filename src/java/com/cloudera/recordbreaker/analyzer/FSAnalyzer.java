@@ -49,6 +49,10 @@ import com.almworks.sqlite4java.SQLiteConnection;
  * @author "Michael Cafarella" <mjc@cloudera.com>
  ***************************************************************/
 public class FSAnalyzer {
+  static FSAnalyzer fsaInstance;
+  public static FSAnalyzer getInstance() {
+    return fsaInstance;
+  }
   ////////////////////////////////////////
   // All the SQL statements we need
   ////////////////////////////////////////
@@ -62,9 +66,10 @@ public class FSAnalyzer {
   static String CREATE_TABLE_CRAWL = "CREATE TABLE Crawls(crawlid integer primary key autoincrement, crawlstarted date, crawlfinished date, inprogress text, fsid integer, foreign key(fsid) references Filesystems(fsid));";
   static String CREATE_TABLE_FILESYSTEM = "CREATE TABLE Filesystems(fsid integer primary key autoincrement, fsname text);";    
   static String CREATE_TABLE_FILES = "CREATE TABLE Files(fid integer primary key autoincrement, isDir string, crawlid integer, fname varchar(256), owner varchar(16), groupowner varchar(16), permissions varchar(32), size integer, modified date, path varchar(256), foreign key(crawlid) references Crawls(crawlid));";
-  static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64), typedescriptor varchar(1024));";
-  static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemaidentifier varchar(1024), schemadescription varchar(32));";
-  static String CREATE_TABLE_GUESSES = "CREATE TABLE TypeGuesses(fid integer, typeid integer, schemaid integer, score double, foreign key(fid) references Files(fid), foreign key(typeid) references Types(typeid), foreign key(schemaid) references Schemas(schemaid));";
+  static String CREATE_TABLE_TYPES = "CREATE TABLE Types(typeid integer primary key autoincrement, typelabel varchar(64));";
+  static String CREATE_TABLE_TYPE_GUESSES = "CREATE TABLE TypeGuesses(fid integer, typeid integer, foreign key(fid) references Files(fid), foreign key(typeid) references Types(typeid));";
+  static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemarepr varchar(1024), schemasrcdescription varchar(32), schemapayload blob);";
+  static String CREATE_TABLE_GUESSES = "CREATE TABLE SchemaGuesses(fid integer, schemaid integer, foreign key(fid) references Files(fid), foreign key(schemaid) references Schemas(schemaid));";
   void createTables() throws SQLiteException {
     dbQueue.execute(new SQLiteJob<Object>() {
         protected Object job(SQLiteConnection db) throws SQLiteException {
@@ -74,6 +79,7 @@ public class FSAnalyzer {
             db.exec(CREATE_TABLE_CRAWL);
             db.exec(CREATE_TABLE_FILES);    
             db.exec(CREATE_TABLE_TYPES);
+            db.exec(CREATE_TABLE_TYPE_GUESSES);
             db.exec(CREATE_TABLE_SCHEMAS);
             db.exec(CREATE_TABLE_GUESSES);    
           } finally {
@@ -128,6 +134,21 @@ public class FSAnalyzer {
       return -1L;
     }
   };
+
+  public FileSystem getFS() {
+    String uriStr = getConfigProperty("fsuri");
+    if (uriStr == null) {
+      return null;
+    }
+    try {
+      URI uri = new URI(uriStr);
+      return FileSystem.get(uri, new Configuration());
+    } catch (IOException iex) {
+      return null;
+    } catch (URISyntaxException use) {
+      return null;
+    }
+  }
   
   /**
    * Helper fn <code>getNewOrPendingCrawl</code> returns the id of a Crawl for the specified filesystem.
@@ -222,12 +243,12 @@ public class FSAnalyzer {
    * Helper fn <code>getCreateType</code> returns the id of a specified Type in the Types table.
    * The row is created, if necessary.
    */
-  long getCreateType(final String typeLabel, final String typeDesc) throws SQLiteException {
+  long getCreateType(final String typeLabel) throws SQLiteException {
     long typeid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT typeid FROM Types WHERE typelabel = ? AND typedescriptor = ?");
+          SQLiteStatement stmt = db.prepare("SELECT typeid FROM Types WHERE typelabel = ?");
           try {
-            stmt.bind(1, typeLabel).bind(2, typeDesc);
+            stmt.bind(1, typeLabel);
             if (stmt.step()) {
               long resultId = stmt.columnLong(0);
               return resultId;
@@ -247,9 +268,9 @@ public class FSAnalyzer {
     // Time to insert
     return dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("INSERT into Types VALUES(null, ?, ?)");
+          SQLiteStatement stmt = db.prepare("INSERT into Types VALUES(null, ?)");
           try {
-            stmt.bind(1, typeLabel).bind(2, typeDesc);
+            stmt.bind(1, typeLabel);
             stmt.step();
             return db.getLastInsertId();
           } finally {
@@ -263,10 +284,13 @@ public class FSAnalyzer {
    * Helper fn <code>getCreateSchema</code> returns the id of a specified Schema in the Schemas table.
    * The row is created, if necessary.
    */
-  long getCreateSchema(final String schemaIdentifier, final String schemaDesc) throws SQLiteException {
+  long getCreateSchema(SchemaDescriptor sd) throws SQLiteException {
+    final String schemaIdentifier = (sd == null) ? "" : sd.getSchemaIdentifier();
+    final String schemaDesc = (sd == null) ? "no schema" : sd.getSchemaSourceDescription();
+    final byte[] payload = (sd == null) ? new byte[0] : ((GenericSchemaDescriptor) sd).getPayload();
     long schemaid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          final SQLiteStatement stmt = db.prepare("SELECT schemaid FROM Schemas WHERE schemaidentifier = ? AND schemadescription = ?");
+          final SQLiteStatement stmt = db.prepare("SELECT schemaid FROM Schemas WHERE schemarepr = ? AND schemasrcdescription = ?");
           try {
             stmt.bind(1, schemaIdentifier).bind(2, schemaDesc);
             if (stmt.step()) {
@@ -288,9 +312,9 @@ public class FSAnalyzer {
     // Time to insert
     return dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
-          final SQLiteStatement stmt = db.prepare("INSERT into Schemas VALUES(null, ?, ?)");
+          final SQLiteStatement stmt = db.prepare("INSERT into Schemas VALUES(null, ?, ?, ?)");
           try {
-            stmt.bind(1, schemaIdentifier).bind(2, schemaDesc);
+            stmt.bind(1, schemaIdentifier).bind(2, schemaDesc).bind(3, payload);
             stmt.step();
             return db.getLastInsertId();      
           } finally {
@@ -299,20 +323,88 @@ public class FSAnalyzer {
         }
       }).complete();
   }
-    
+
   /**
-   * Add a new object to the set of all known files.  This involves several tables.
+   * Add a single brand-new file to the system.  Parse it, obtain structure, etc, if needed.
    */
-  long insertIntoFiles(FileSystem fs, Path insertFile, final long crawlId, final List<TypeGuess> typeGuesses) throws SQLiteException, IOException {
+  void addSingleFile(FileSystem fs, Path insertFile, long crawlId) throws IOException {
     FileStatus fstatus = fs.getFileStatus(insertFile);
-    final String timeDateStamp = fileDateFormat.format(new Date(fstatus.getModificationTime()));
-    final String owner = fstatus.getOwner();
-    final String group = fstatus.getGroup();
+    addFileMetadata(fstatus, crawlId);
+    final boolean isDir = fstatus.isDir();
+
+    if (! isDir) {
+      final List<Long> typeGuesses = new ArrayList<Long>();
+      DataDescriptor descriptor = formatAnalyzer.describeData(fs, insertFile);
+      List<SchemaDescriptor> schemas = null;
+      try {
+        schemas = descriptor.getSchemaDescriptor();
+
+        if (schemas == null || schemas.size() == 0) {
+          typeGuesses.add(getCreateType(descriptor.getFileTypeIdentifier()));
+          typeGuesses.add(getSingleFileSummary(descriptor.getFilename().toString()).getFid());
+          typeGuesses.add(getCreateSchema(null));
+        } else {
+          for (SchemaDescriptor sd: schemas) {
+            typeGuesses.add(getCreateType(descriptor.getFileTypeIdentifier()));
+            typeGuesses.add(getSingleFileSummary(descriptor.getFilename().toString()).getFid());
+            typeGuesses.add(getCreateSchema(sd));
+          }
+        }
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      }
+
+      dbQueue.execute(new SQLiteJob<Object>() {
+          protected Long job(SQLiteConnection db) throws SQLiteException {
+            for (int i = 0; i < typeGuesses.size(); i+=3) {
+              long typeId = typeGuesses.get(i);
+              long fileId = typeGuesses.get(i+1);              
+              long schemaId = typeGuesses.get(i+2);            
+
+              SQLiteStatement stmt = db.prepare("INSERT into TypeGuesses VALUES(?, ?)");
+              try {
+                stmt.bind(1, fileId).bind(2, typeId);
+                stmt.step();
+              } finally {
+                stmt.dispose();
+              }
+            }
+            return null;
+          }
+        }).complete();
+
+      dbQueue.execute(new SQLiteJob<Object>() {
+          protected Long job(SQLiteConnection db) throws SQLiteException {
+            for (int i = 0; i < typeGuesses.size(); i+=3) {
+              long typeId = typeGuesses.get(i);
+              long fileId = typeGuesses.get(i+1);              
+              long schemaId = typeGuesses.get(i+2);            
+
+              SQLiteStatement stmt = db.prepare("INSERT into SchemaGuesses VALUES(?, ?)");
+              try {
+                stmt.bind(1, fileId).bind(2, schemaId);
+                stmt.step();
+              } finally {
+                stmt.dispose();
+              }
+            }
+            return null;
+          }
+        }).complete();
+    }
+  }
+
+  /**
+   * <code>addFileMetadata</code> stores the pathname, size, owner, etc.
+   */
+  void addFileMetadata(final FileStatus fstatus, final long crawlId) {
+    // Compute strings to represent file metadata
+    Path insertFile = fstatus.getPath(); 
     final boolean isDir = fstatus.isDir();
     FsPermission fsp = fstatus.getPermission();
     final String permissions = (isDir ? "d" : "-") + fsp.getUserAction().SYMBOL + fsp.getGroupAction().SYMBOL + fsp.getOtherAction().SYMBOL;
-    final long size = fstatus.getLen();
 
+    // Compute formal pathname representation
     String fnameString = null;
     String parentPathString = null;
     if (isDir && insertFile.getParent() == null) {
@@ -335,7 +427,7 @@ public class FSAnalyzer {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           SQLiteStatement stmt = db.prepare("INSERT into Files VALUES(null, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
           try {
-            stmt.bind(1, isDir ? "True" : "False").bind(2, crawlId).bind(3, fName).bind(4, owner).bind(5, group).bind(6, permissions).bind(7, size).bind(8, timeDateStamp).bind(9, parentPath);
+            stmt.bind(1, isDir ? "True" : "False").bind(2, crawlId).bind(3, fName).bind(4, fstatus.getOwner()).bind(5, fstatus.getGroup()).bind(6, permissions).bind(7, fstatus.getLen()).bind(8, fileDateFormat.format(new Date(fstatus.getModificationTime()))).bind(9, parentPath);
             stmt.step();
             return db.getLastInsertId();
           } finally {
@@ -343,45 +435,6 @@ public class FSAnalyzer {
           }
         }
       }).complete();
-
-    // Go through all the associated typeGuesses
-    final List<Long> typeIds = new ArrayList<Long>();
-    final List<Long> schemaIds = new ArrayList<Long>();    
-    for (TypeGuess tg: typeGuesses) {
-      String typeLabel = tg.getTypeLabel();
-      String typeDesc = tg.getTypeDesc();
-      String schemaIdentifier = tg.getSchemaIdentifier();
-      String schemaDesc = tg.getSchemaDesc();
-      typeIds.add(getCreateType(typeLabel, typeDesc));
-      schemaIds.add(getCreateSchema(schemaIdentifier, schemaDesc));
-    }
-    dbQueue.execute(new SQLiteJob<Object>() {
-        protected Long job(SQLiteConnection db) throws SQLiteException {
-          for (int i = 0; i < typeGuesses.size(); i++) {
-            TypeGuess tg = typeGuesses.get(i);
-            long typeId = typeIds.get(i);
-            long schemaId = schemaIds.get(i);            
-            double score = tg.getScore();
-
-            SQLiteStatement stmt = db.prepare("INSERT into TypeGuesses VALUES(?, ?, ?, ?)");
-            try {
-              stmt.bind(1, fileId).bind(2, typeId).bind(3, schemaId).bind(4, score);
-              stmt.step();
-            } finally {
-              stmt.dispose();
-            }
-          }
-          return null;
-        }
-      }).complete();
-    return fileId;
-  }
-
-  /**
-   * Try to describe the contents of the given file
-   */
-  DataDescriptor describeData(FileSystem fs, Path p, int maxLines) throws IOException {
-    return formatAnalyzer.describeData(fs, p, maxLines);
   }
 
   ///////////////////////////////////////////////////
@@ -418,7 +471,7 @@ public class FSAnalyzer {
   public SchemaSummaryData getSchemaSummaryData(final long schemaid) {
     return dbQueue.execute(new SQLiteJob<SchemaSummaryData>() {
         protected SchemaSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT schemaidentifier, schemadescription FROM Schemas WHERE schemaid = ?");
+          SQLiteStatement stmt = db.prepare("SELECT schemarepr, schemasrcdescription FROM Schemas WHERE schemaid = ?");
           try {
             stmt.bind(1, schemaid);
             if (stmt.step()) {
@@ -551,17 +604,73 @@ public class FSAnalyzer {
   public FileSummaryData getFileSummaryData(final long fid) {
     return dbQueue.execute(new SQLiteJob<FileSummaryData>() {
         protected FileSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT crawlid, fname, owner, groupowner, permissions, size, modified, path FROM Files WHERE fid = ?");
+          FileSummaryData fsd = null;
+          boolean isDir = false;
+          long crawlid = 0L;
+          String fname = null;
+          String owner = null;
+          String groupowner = null;
+          String permissions = null;
+          long size = 0L;
+          String modified = null;
+          String path = null;
+          String identifier = null;          
+
+          SQLiteStatement stmt = db.prepare("SELECT isDir, crawlid, fname, owner, groupowner, permissions, size, modified, path FROM Files WHERE Files.fid = ?");
           try {
             stmt.bind(1, fid);
             if (stmt.step()) {
-              return new FileSummaryData(fid, stmt.columnLong(0), stmt.columnString(1), stmt.columnString(2), stmt.columnString(3), stmt.columnString(4), stmt.columnLong(5), stmt.columnString(6), stmt.columnString(7));
-            } else {
-              return null;
+              isDir = "True".equals(stmt.columnString(0));
+              crawlid = stmt.columnLong(1);
+              fname = stmt.columnString(2);
+              owner = stmt.columnString(3);
+              groupowner = stmt.columnString(4);
+              permissions = stmt.columnString(5);
+              size = stmt.columnLong(6);
+              modified = stmt.columnString(7);
+              path = stmt.columnString(8);
             }
           } finally {
             stmt.dispose();
           }
+
+          if (isDir) {
+            stmt = db.prepare("SELECT typelabel FROM Types, TypeGuesses WHERE TypeGuesses.fid = ? AND Types.typeid = TypeGuesses.typeid");
+            try {
+              if (stmt.step()) {
+                identifier = stmt.columnString(1);
+              }
+            } finally {
+              stmt.dispose();
+            }
+            
+            stmt = db.prepare("SELECT Schemas.schemaid, Schemas.schemarepr, Schemas.schemasrcdescription, Schemas.schemapayload FROM Schemas, SchemaGuesses WHERE SchemaGuesses.fid = ? AND SchemaGuesses.schemaid = Schemas.schemaid");
+            try {
+              List<String> schemaReprs = new ArrayList<String>();
+              List<String> schemaDescs = new ArrayList<String>();
+              List<byte[]> schemaBlobs = new ArrayList<byte[]>();
+              
+              stmt.bind(1, fid);
+              while (stmt.step()) {
+                schemaReprs.add(stmt.columnString(1));
+                schemaDescs.add(stmt.columnString(2));
+                schemaBlobs.add(stmt.columnBlob(3));
+              }
+
+              try {
+                DataDescriptor dd = formatAnalyzer.loadDataDescriptor(null, new Path(path + fname), identifier, schemaReprs, schemaDescs, schemaBlobs);
+                fsd = new FileSummaryData(fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, dd);
+              } catch (IOException iex) {
+                iex.printStackTrace();
+                return null;
+              }
+            } finally {
+              stmt.dispose();
+            }
+          } else {
+            fsd = new FileSummaryData(fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, null);            
+          }
+          return fsd;
         }
       }).complete();
   }
@@ -638,11 +747,7 @@ public class FSAnalyzer {
   }
 
   public InputStream getRawBytes(Path p) throws IOException {
-    try {
-      return FileSystem.get(new URI(getConfigProperty("fsuri")), new Configuration()).open(p);
-    } catch (URISyntaxException use) {
-      return null;
-    }
+    return getFS().open(p);
   }
   
   ///////////////////////////////////////////////////
@@ -730,11 +835,11 @@ public class FSAnalyzer {
   public TypeSummaryData getTypeSummaryData(final long typeid) {
     return dbQueue.execute(new SQLiteJob<TypeSummaryData>() {
         protected TypeSummaryData job(SQLiteConnection db) throws SQLiteException {
-          SQLiteStatement stmt = db.prepare("SELECT typelabel, typedescriptor FROM Types WHERE typeid = ?");
+          SQLiteStatement stmt = db.prepare("SELECT typelabel FROM Types WHERE typeid = ?");
           try {
             stmt.bind(1, typeid);
             if (stmt.step()) {
-              return new TypeSummaryData(typeid, stmt.columnString(0), stmt.columnString(1));
+              return new TypeSummaryData(typeid, stmt.columnString(0));
             } else {
               return null;
             }
@@ -813,16 +918,16 @@ public class FSAnalyzer {
   ///////////////////////////////////////////
   // Get type guesses
   ///////////////////////////////////////////
-  static String typeGuessQueryForFile = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE fid = ?";
-  static String typeGuessQueryForSchema = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE schemaid = ?";
-  static String typeGuessQueryForType = "SELECT fid, typeid, schemaid, score FROM TypeGuesses WHERE typeid = ?";
+  static String typeGuessQueryForFile = "SELECT SchemaGuesses.fid, TypeGuesses.typeid, SchemaGuesses.schemaid FROM TypeGuesses, SchemaGuesses WHERE TypeGuesses.fid = ? AND TypeGuesses.fid = SchemaGuesses.fid";
+  static String typeGuessQueryForSchema = "SELECT SchemaGuesses.fid, TypeGuesses.typeid, SchemaGuesses.schemaid FROM TypeGuesses, SchemaGuesses WHERE SchemaGuesses.schemaid = ? AND TypeGuesses.fid = SchemaGuesses.fid";
+  static String typeGuessQueryForType = "SELECT SchemaGuesses.fid, TypeGuesses.typeid, SchemaGuesses.schemaid FROM TypeGuesses, SchemaGuesses WHERE TypeGuesses.typeid = ? AND TypeGuesses.fid = SchemaGuesses.fid";
   public List<TypeGuessSummary> getTypeGuessesForFile(final long fid) {
     return getTypeGuesses(typeGuessQueryForFile, fid);
   }
   public List<TypeGuessSummary> getTypeGuessesForSchema(final long schemaid) {
     return getTypeGuesses(typeGuessQueryForSchema, schemaid);
   }
-  static String countFilesQueryForSchema = "SELECT COUNT(DISTINCT fid) FROM TypeGuesses WHERE schemaid = ?";
+  static String countFilesQueryForSchema = "SELECT COUNT(DISTINCT fid) FROM SchemaGuesses WHERE schemaid = ?";
   public long countFilesForSchema(final long schemaid) {
     return dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
@@ -850,7 +955,7 @@ public class FSAnalyzer {
           try {
             stmt.bind(1, idval);
             while (stmt.step()) {
-              outputList.add(new TypeGuessSummary(FSAnalyzer.this, stmt.columnLong(0), stmt.columnLong(1), stmt.columnLong(2), stmt.columnDouble(3)));
+              outputList.add(new TypeGuessSummary(FSAnalyzer.this, stmt.columnLong(0), stmt.columnLong(1), stmt.columnLong(2)));
             }
           } finally {
             stmt.dispose();
@@ -883,6 +988,7 @@ public class FSAnalyzer {
       createTables();
     }
     this.formatAnalyzer = new FormatAnalyzer(schemaDir);
+    FSAnalyzer.fsaInstance = this;
   }
 
   public void close() throws IOException, SQLiteException, InterruptedException {

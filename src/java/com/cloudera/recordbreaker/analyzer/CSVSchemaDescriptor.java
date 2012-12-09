@@ -14,8 +14,6 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -23,37 +21,32 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.ArrayList;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 
 import au.com.bytecode.opencsv.CSVParser;
 
-/**
+/***************************************************************
  * <code>CSVSchemaDescriptor</code> captures the schema that we extract from a CSV file.
  *
  * @author "Michael Cafarella"
- * @version 1.0
- * @since 1.0
- * @see SchemaDescriptor
- */
-public class CSVSchemaDescriptor implements SchemaDescriptor {
+ ****************************************************************/
+public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
+  static String SCHEMA_ID = "csv";
   static int MAX_LINES = 1000;
 
-  FileSystem fs;
-  Path p;
   boolean hasHeaderRow;
-  Schema schema;
-  String schemaIdentifier;
-  String schemaSrcDesc;
   
-  public CSVSchemaDescriptor(FileSystem fs, Path p) throws IOException {
-    this.fs = fs;
-    this.p = p;
-    computeTypes();
+  public CSVSchemaDescriptor(DataDescriptor dd) throws IOException {
+    super(dd);
+  }
+  public CSVSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) {
+    super(dd, schemaRepr);
+    this.hasHeaderRow = "true".equals(new String(miscPayload));
+  }
+
+  byte[] getPayload() {
+    return ("" + this.hasHeaderRow).getBytes();
   }
 
   /**
@@ -103,10 +96,10 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
   }
 
   /**
-   * <code>computeTypes</code> examines the CSV file and tries to figure out the
+   * <code>computeSchema</code> examines the CSV file and tries to figure out the
    * columnar data types.  It also tests if there's a CSV header that it can extract.
    */
-  void computeTypes() throws IOException {   
+  void computeSchema() throws IOException {   
     //
     // 1.  Go through all columns in the CSV and identify cell data types
     //
@@ -114,7 +107,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
     List<String> firstRow = new ArrayList<String>();
     List<List<Schema.Type>> allEltTypes = new ArrayList<List<Schema.Type>>();
     CSVParser parser = new CSVParser();    
-    BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(p)));
+    BufferedReader in = new BufferedReader(new InputStreamReader(dd.getRawBytes()));
     try {
       int lineno = 0;
       String s = null;
@@ -224,19 +217,6 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
       schemaFields.add(new Schema.Field(fieldName, Schema.create(fieldType), fieldDoc, null));
     }
     this.schema = Schema.createRecord(schemaFields);
-
-    //
-    // 5.  Figure out the schemaIdentifier and 'description' fields.
-    //
-    this.schemaIdentifier = (schema == null ? "" : schema.toString());
-    this.schemaSrcDesc = "csv-" + (hasHeaderRow ? "header" : "noheader");
-  }
-
-  /**
-   * Return the CSV-derived schema
-   */
-  public Schema getSchema() {
-    return schema;
   }
 
   /**
@@ -253,7 +233,7 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
         rowNum = 0;
         try {
           this.parser = new CSVParser();
-          in = new BufferedReader(new InputStreamReader(fs.open(p)));
+          in = new BufferedReader(new InputStreamReader(dd.getRawBytes()));
           nextElt = lookahead();          
         } catch (IOException iex) {
           this.nextElt = null;
@@ -337,19 +317,11 @@ public class CSVSchemaDescriptor implements SchemaDescriptor {
       }
     };
   }
-  
-  /**
-   * A string that uniquely identifies the file's schema.  Not necessarily
-   * human-readable.
-   */
-  public String getSchemaIdentifier() {
-    return schemaIdentifier;
-  }
 
   /**
-   * Human-readable string that summarizes the file's structure
+   * @return a <code>String</code> that annotates the schema
    */
   public String getSchemaSourceDescription() {
-    return schemaSrcDesc;
+    return SCHEMA_ID;
   }
 }

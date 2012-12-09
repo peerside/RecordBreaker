@@ -38,15 +38,14 @@ import org.apache.avro.generic.GenericData;
  * @since 1.0
  **********************************************************************************/
 public class FormatAnalyzer {
+  final static int MAX_ANALYSIS_LINES = 400;
   File schemaDbDir;
-  KnownTextFormatLibrary formatLibrary;
   
   /**
    * Creates a new <code>FormatAnalyzer</code> instance.
    */
   public FormatAnalyzer(File schemaDbDir) {
     this.schemaDbDir = schemaDbDir;
-    this.formatLibrary = new KnownTextFormatLibrary();
   }
 
   /**
@@ -58,43 +57,56 @@ public class FormatAnalyzer {
    * @param f a <code>File</code> value
    * @return a <code>DataDescriptor</code> value
    */
-  public DataDescriptor describeData(FileSystem fs, Path p, int maxLines) throws IOException {
+  public DataDescriptor describeData(FileSystem fs, Path p) throws IOException {
     FileStatus fstatus = fs.getFileStatus(p);
     String fname = p.getName();
 
     // Test to see if the file is one of a handful of known structured formats.
-    if (CSVDataDescriptor.isCSV(fs, p)) {
-      return new CSVDataDescriptor(fs, p);
+    if (GenericDataDescriptor.isCSV(fs, p)) {
+      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.CSV_TYPE);
     } else if (fname.endsWith(".xml")) {
-      return new XMLDataDescriptor(fs, p);
+      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.XML_TYPE);
     } else if (fname.endsWith(".avro")) {
-      return new AvroDataDescriptor(fs, p);
-    } else if (AvroSequenceFileDataDescriptor.isAvroSequenceFile(fs, p)) {
-      return new AvroSequenceFileDataDescriptor(fs, p);
-    } else if (SequenceFileDataDescriptor.isSequenceFile(fs, p)) {
-      return new SequenceFileDataDescriptor(fs, p);
+      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.AVRO_TYPE);      
+    } else if (GenericDataDescriptor.isAvroSequenceFile(fs, p)) {
+      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.AVROSEQFILE_TYPE);
+    } else if (GenericDataDescriptor.isSequenceFile(fs, p)) {
+      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.SEQFILE_TYPE);
+    } else if (ApacheDataDescriptor.isApacheLogFile(fs, p)) {
+      return new ApacheDataDescriptor(p, fs);
+    } else if (SyslogDataDescriptor.isSyslogFile(fs, p)) {
+      return new SyslogDataDescriptor(p, fs);      
     } else {
-      // Even if it's text, it could have a regular and expected structure
-      // (e.g., Apache access logs).  The formatLibrary object keeps a list
-      // of these cases.  Ask the formatLibrary to test the input data and
-      // see if it corresponds to one of the known formats.
-      //
-      DataDescriptor retval = formatLibrary.createDescriptorForKnownFormat(fs, p);
-      if (retval != null) {
-        return retval;
-      } else {
-        // It's not one of the known formats, so apply LearnStructure (and
-        // SchemaDictionary), then emit the resulting Avro data.
+      // It's not one of the known formats, so apply LearnStructure 
+      // to obtain the structure.
+      if (UnknownTextDataDescriptor.isTextData(fs, p)) {
         try {
-          boolean isTextData = UnknownTextDataDescriptor.isTextData(fs, p);
-          if (isTextData) {
-            return new UnknownTextDataDescriptor(fs, p, schemaDbDir, maxLines);
-          }
+          return new UnknownTextDataDescriptor(fs, p, schemaDbDir);
         } catch (Exception iex) {
+          iex.printStackTrace();
         }
-        // If that doesn't work, then give up and call it unstructured        
-        return new UnstructuredFileDescriptor(fs, p);
       }
+      // If that doesn't work, then give up and call it unstructured.  You
+      // can't run queries on data in this format.
+      return new UnstructuredFileDescriptor(fs, p);
+    }
+  }
+
+  public DataDescriptor loadDataDescriptor(FileSystem fs, Path p, String identifier, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
+    if (GenericDataDescriptor.CSV_TYPE.equals(identifier) ||
+        GenericDataDescriptor.XML_TYPE.equals(identifier) ||
+        GenericDataDescriptor.AVRO_TYPE.equals(identifier) ||
+        GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier) ||
+        GenericDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
+      return new GenericDataDescriptor(p, fs, identifier, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (ApacheDataDescriptor.APACHE_TYPE.equals(identifier)) {
+      return new ApacheDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (SyslogDataDescriptor.SYSLOG_TYPE.equals(identifier)) {
+      return new SyslogDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (UnknownTextDataDescriptor.TEXTDATA_TYPE.equals(identifier)) {
+      return new UnknownTextDataDescriptor(fs, p, schemaReprs, schemaDescs, schemaBlobs);
+    } else {
+      return new UnstructuredFileDescriptor(fs, p);
     }
   }
 
@@ -115,7 +127,7 @@ public class FormatAnalyzer {
     File schemaDbDir = new File(argv[1]).getCanonicalFile();
     FormatAnalyzer fa = new FormatAnalyzer(schemaDbDir);
 
-    DataDescriptor descriptor = fa.describeData(fs, inputFile, -1);
+    DataDescriptor descriptor = fa.describeData(fs, inputFile);
     System.err.println("Filename: " + descriptor.getFilename());
     System.err.println("Filetype identifier: " + descriptor.getFileTypeIdentifier());
     List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();

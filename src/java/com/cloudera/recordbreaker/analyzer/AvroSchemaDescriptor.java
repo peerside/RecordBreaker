@@ -14,19 +14,12 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import java.io.File;
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.io.IOException;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericDatumReader;
-
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 
 /************************************************************************
  * <code>AvroSchemaDescriptor</code> returns Avro-specific Schema data.
@@ -36,20 +29,22 @@ import org.apache.hadoop.fs.FileStatus;
  * @since 1.0
  * @see SchemaDescriptor
  *************************************************************************/
-public class AvroSchemaDescriptor implements SchemaDescriptor {
-  FileSystem fs;
-  Path p;
-  Schema schema;
+public class AvroSchemaDescriptor extends GenericSchemaDescriptor {
+  static String SCHEMA_ID = "avro";
   
   /**
    * Creates a new <code>AvroSchemaDescriptor</code> instance.
    * In particular, it loads the Avro file and grabs the Schema object.
    */
-  public AvroSchemaDescriptor(FileSystem fs, Path p) throws IOException {
-    this.fs = fs;
-    this.p = p;
-    //DataFileReader<Void> reader = new DataFileReader<Void>(fs, new GenericDatumReader<Void>());
-    DataFileStream<Void> reader = new DataFileStream<Void>(fs.open(p), new GenericDatumReader<Void>());    
+  public AvroSchemaDescriptor(DataDescriptor dd) throws IOException {
+    super(dd);
+  }
+  public AvroSchemaDescriptor(DataDescriptor dd, String schemaRepr) throws IOException {
+    super(dd, schemaRepr);
+  }
+
+  void computeSchema() throws IOException {
+    DataFileStream<Void> reader = new DataFileStream<Void>(dd.getRawBytes(), new GenericDatumReader<Void>());    
     try {
       this.schema = reader.getSchema();
     } finally {
@@ -58,23 +53,14 @@ public class AvroSchemaDescriptor implements SchemaDescriptor {
   }
 
   /**
-   * @return the <code>Schema</code> value
-   */
-  public Schema getSchema() {
-    return schema;
-  }
-  
-  /**
    */
   public Iterator getIterator() {
     return new Iterator() {
       Object nextElt = null;
-      //DataFileReader<Void> reader = null;
       DataFileStream<Void> reader = null;      
       {
         try {
-          //reader = new DataFileReader<Void>(f, new GenericDatumReader<Void>());
-          reader = new DataFileStream<Void>(fs.open(p), new GenericDatumReader<Void>());          
+          reader = new DataFileStream<Void>(dd.getRawBytes(), new GenericDatumReader<Void>());          
           nextElt = lookahead();
         } catch (IOException iex) {
           this.nextElt = null;
@@ -106,16 +92,9 @@ public class AvroSchemaDescriptor implements SchemaDescriptor {
   }
   
   /**
-   * @return a <code>String</code> that uniquely identifies the schema
-   */
-  public String getSchemaIdentifier() {
-    return schema.toString();
-  }
-
-  /**
    * @return a <code>String</code> that annotates the schema
    */
   public String getSchemaSourceDescription() {
-    return "avro";
+    return SCHEMA_ID;
   }
 }

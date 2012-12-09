@@ -43,6 +43,14 @@ public class FileSummary {
     this.hasData = true;
   }
 
+  public DataDescriptor getDataDescriptor() throws IOException {
+    // Can an implementation of DataDescriptor replace the file summary data?
+    if (!hasData) {
+      getData();
+    }
+    return fsd.dd;
+  }
+
   public InputStream getRawBytes() throws IOException {
     if (!hasData) {
       getData();

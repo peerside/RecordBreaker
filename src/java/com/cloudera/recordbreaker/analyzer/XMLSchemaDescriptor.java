@@ -41,6 +41,10 @@ import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
+
 /*****************************************************************
  * <code>XMLSchemaDescriptor</code> builds an Avro-style schema out of the XML info.
  *
@@ -49,8 +53,8 @@ import javax.xml.parsers.ParserConfigurationException;
  * @since 1.0
  * @see SchemaDescriptor
  ******************************************************************/
-public class XMLSchemaDescriptor implements SchemaDescriptor {
-  Schema rootSchema = null;
+public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
+  public static String SCHEMA_ID = "xml";
   TagEnvironment rootTag = null;
   
   /**
@@ -58,7 +62,27 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
    * Processes the input XML data and creates an Avro-compatible
    * Schema representation.
    */
-  public XMLSchemaDescriptor(FileSystem fs, Path p) throws IOException {
+  public XMLSchemaDescriptor(DataDescriptor dd) throws IOException {
+    super(dd);
+  }
+
+  public XMLSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) throws IOException {
+    super(dd, schemaRepr);
+
+    // Deserialize the root tag from the payload info
+    try {
+      this.rootTag = new TagEnvironment(new JSONObject(new String(miscPayload)));
+      this.rootTag.setParent(null);
+    } catch (JSONException jne) {
+      throw new IOException("JSONException: " + jne.toString());
+    }
+  }
+
+  public byte[] getSerializedPayload() {
+    return rootTag.serialize().toString().getBytes();
+  }
+
+  void computeSchema() throws IOException {
     SAXParserFactory factory = SAXParserFactory.newInstance();
     SAXParser parser = null;
     // Unfortunately, validation is often not possible
@@ -68,7 +92,7 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
       // The XMLProcessor builds up a tree of tags
       XMLProcessor xp = new XMLProcessor();
       parser = factory.newSAXParser();
-      parser.parse(fs.open(p), xp);
+      parser.parse(dd.getRawBytes(), xp);
 
       // Grab the root tag
       this.rootTag = xp.getRoot();
@@ -154,6 +178,46 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
     List<Schema.Field> fieldSchemas = new ArrayList<Schema.Field>();
     
     /**
+     * Deserialize the tagenvironment object from the provided JSON object.
+     */
+    public TagEnvironment(JSONObject jsonPayload) throws JSONException {
+      // label, data, repetition
+      this.label = (String) jsonPayload.get("label");
+      this.data = (String) jsonPayload.get("data");
+      this.repetitionNode = jsonPayload.getBoolean("isRepetitionNode");
+
+      // typedFields and fieldSchemas
+      JSONArray jsonFieldSchemas = jsonPayload.getJSONArray("fieldSchemas");
+      this.fieldSchemas = new ArrayList<Schema.Field>();
+      this.typedFields = new ArrayList<Object>();
+      for (int i = 0; i < jsonFieldSchemas.length(); i++) {
+        JSONObject jsonFieldSchema = jsonFieldSchemas.getJSONObject(i);
+        String name = (String) jsonFieldSchema.get("name");
+        Schema s = Schema.parse((String) jsonFieldSchema.get("schema"));
+        this.fieldSchemas.add(new Schema.Field(name, s, "", null));
+
+        if (s.getType() == Schema.Type.INT) {
+          this.typedFields.add(jsonFieldSchema.getInt("value"));
+        } else if (s.getType() == Schema.Type.DOUBLE) {
+          this.typedFields.add(jsonFieldSchema.getDouble("value"));          
+        } else if (s.getType() == Schema.Type.LONG) {
+          this.typedFields.add(jsonFieldSchema.getLong("value"));          
+        } else {
+          this.typedFields.add((String) jsonFieldSchema.get("value"));
+        }
+      }
+
+      // children
+      JSONArray jsonChildren = jsonPayload.getJSONArray("children");
+      this.children = new ArrayList<TagEnvironment>();
+      for (int i = 0; i < jsonChildren.length(); i++) {
+        TagEnvironment child = new TagEnvironment(jsonChildren.getJSONObject(i));
+        child.setParent(this);
+        children.add(child);
+      }
+    }
+
+    /**
      * Simply create a node in the tag tree.
      */
     public TagEnvironment(TagEnvironment parent, String label) {
@@ -170,6 +234,53 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
     public void setData(String data) {
       this.data = data;
     }
+
+    ////////////////////////////////////////////////
+    // Serialize the tag (and its descendents) into a JSON object
+    ////////////////////////////////////////////////
+    public JSONObject serialize() {
+      try {
+        // label, data, repetition
+        JSONObject jobj = new JSONObject();
+        jobj.put("label", label);
+        jobj.put("data", data);
+        jobj.put("isRepetitionNode", repetitionNode);
+
+        // typedFields and fieldSchemas
+        JSONArray jsonFieldSchemas = new JSONArray();
+        for (int i = 0; i < fieldSchemas.size(); i++) {
+          Schema.Field sf = fieldSchemas.get(i);
+          JSONObject jsonFieldSchema = new JSONObject();
+          jsonFieldSchema.put("name", sf.name());
+          jsonFieldSchema.put("schema", sf.schema().toString());
+
+          if (sf.schema().getType() == Schema.Type.INT) {
+            jsonFieldSchema.put("value", ((Integer) typedFields.get(i)).intValue());
+          } else if (sf.schema().getType() == Schema.Type.DOUBLE) {
+            jsonFieldSchema.put("value", ((Double) typedFields.get(i)).doubleValue());
+          } else if (sf.schema().getType() == Schema.Type.LONG) {
+            jsonFieldSchema.put("value", ((Long) typedFields.get(i)).longValue());
+          } else {
+            jsonFieldSchema.put("value", (String) typedFields.get(i));
+          }
+          jsonFieldSchemas.put(jsonFieldSchema);
+        }
+        jobj.put("fieldSchemas", jsonFieldSchemas);
+
+        // children
+        JSONArray jsonChildren = new JSONArray();
+        jobj.put("children", jsonChildren);
+        for (TagEnvironment child: children) {
+          jsonChildren.put(child.serialize());
+        }
+        return jobj;
+      } catch (JSONException jne) {
+        return null;
+      }
+    }
+    public void setParent(TagEnvironment parent) {
+      this.parent = parent;
+    }
     
     ////////////////////////////////////////////////
     // Called after the initial XML parse is done.
@@ -184,7 +295,7 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
     public void completeTree() {
       this.completeTree(false);
       this.hoistData();
-      rootSchema = this.getUnifiedSchema();
+      schema = this.getUnifiedSchema();
     }
     private void completeTree(boolean repetitionNodeFound) {
       Map<String, Integer> nameCounts = new TreeMap<String, Integer>();
@@ -348,7 +459,7 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
     }
     /**
      * Used by the Iterator to collect data objects that obey the
-     * whole-tree rootSchema.
+     * whole-tree schema.
      */
     public void accumulateObjects(List<Object> accumulator) {
       if (! this.repetitionNode) {
@@ -357,7 +468,7 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
         }
       } else {
         for (TagEnvironment child: children) {
-          accumulator.add(child.buildRecord(rootSchema));
+          accumulator.add(child.buildRecord(schema));
         }
       }
     }
@@ -427,13 +538,6 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
   }
 
   /**
-   * @return the root <code>Schema</code> 
-   */
-  public Schema getSchema() {
-      return rootSchema;
-  }
-
-  /**
    * Return an object that steps through all the data items in the file.
    * It's a bit unclear how this should work, as an XML file is really a tree,
    * but we usually assume an Iterator is giving back tuples.  So what's a "row"
@@ -491,16 +595,9 @@ public class XMLSchemaDescriptor implements SchemaDescriptor {
   }
 
   /**
-   * Schema ID
-   */
-  public String getSchemaIdentifier() {
-    return rootSchema.toString(true);
-  }
-
-  /**
    * It's an XML file
    */
   public String getSchemaSourceDescription() {
-    return "xml";
+    return SCHEMA_ID;
   }
 }

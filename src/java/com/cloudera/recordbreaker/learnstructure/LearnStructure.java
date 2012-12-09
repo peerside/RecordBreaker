@@ -140,7 +140,6 @@ public class LearnStructure {
       try {
         in = new BufferedReader(new InputStreamReader(fs.open(p)));
         try {
-          //System.err.println("Type tree root is " + typeTree);
           String str = in.readLine();
           while (str != null) {
             GenericContainer gct = typeTree.parse(str);

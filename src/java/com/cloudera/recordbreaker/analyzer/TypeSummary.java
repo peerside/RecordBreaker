@@ -47,12 +47,6 @@ public class TypeSummary {
     }
     return tsd.typeLabel;
   }
-  public String getDesc() {
-    if (!hasData) {
-      getData();
-    }
-    return tsd.typeDesc;
-  }
   public List<TypeGuessSummary> getTypeGuesses() {
     return analyzer.getTypeGuessesForType(this.typeid);
   }

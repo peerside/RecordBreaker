@@ -28,12 +28,11 @@ public class TypeGuessSummary {
   long schemaid;
   double score;
   
-  public TypeGuessSummary(FSAnalyzer analyzer, long fid, long typeid, long schemaid, double score) {
+  public TypeGuessSummary(FSAnalyzer analyzer, long fid, long typeid, long schemaid) {
     this.analyzer = analyzer;
     this.fid = fid;
     this.typeid = typeid;
     this.schemaid = schemaid;
-    this.score = score;
   }
   public FileSummary getFileSummary() {
     return new FileSummary(analyzer, fid);
@@ -43,8 +42,5 @@ public class TypeGuessSummary {
   }
   public SchemaSummary getSchemaSummary() {
     return new SchemaSummary(analyzer, schemaid);
-  }
-  public double getScore() {
-    return score;
   }
 }

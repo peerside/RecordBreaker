@@ -18,6 +18,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 /*********************************************************************
  * <code>TextRegexpSchemaDescriptor</code> captures any log file that is:
  * a) Line-oriented
@@ -29,14 +32,10 @@ import org.apache.avro.generic.GenericData;
  * @since 1.0
  * @see SchemaDescriptor
  **********************************************************************/
-public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
-  FileSystem fs;
-  Path p;
-  String schemaLabel;
+public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
+  String schemaId;
   List<Schema> schemaOptions;
   List<Pattern> patterns;
-
-  Schema schema;
   
   /**
    * Creates a new <code>TextRegexpSchemaDescriptor</code> instance.
@@ -47,20 +46,61 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
    * @param schemaOptions a <code>List<Schema></code> value
    * @exception Exception if an error occurs
    */
-  public TextRegexpSchemaDescriptor(FileSystem fs, Path p, String schemaLabel, List<Pattern> patterns, List<Schema> schemaOptions) throws Exception {
-    this.fs = fs;
-    this.p = p;
-    this.schemaLabel = schemaLabel;
+  public TextRegexpSchemaDescriptor(DataDescriptor dd, String schemaId, List<Pattern> patterns, List<Schema> schemaOptions) throws IOException {
+    super(dd);
+    this.schemaId = schemaId;
     this.schemaOptions = schemaOptions;
     this.patterns = patterns;
-
+  }
+  void computeSchema() {
     List<Schema.Field> topFields = new ArrayList<Schema.Field>();
     topFields.add(new Schema.Field("row", Schema.createUnion(schemaOptions), "One of several row formats", null));
     this.schema = Schema.createRecord(topFields);
   }
+  
+  public TextRegexpSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) throws Exception {
+    super(dd, schemaRepr);
 
-  public Schema getSchema() {
-    return schema;
+    /**
+    // Deserialize Patterns and Schema options
+    JSONObject jobj = new JSONObject(new String(miscPayload));
+
+    this.patterns = new ArrayList<Pattern>();
+    JSONArray patternArray = jobj.getJSONArray("patterns");
+    for (int i = 0; i < patternArray.length(); i++) {
+      String patternStr = patternArray.getString(i);
+      this.patterns.add(Pattern.compile(patternStr));
+    }
+           
+    this.schemaOptions = new ArrayList<Schema>();
+    JSONArray schemaOptionArray = jobj.getJSONArray("schemaoptions");
+    for (int i = 0; i < schemaOptionArray.length(); i++) {
+      String schemaStr = schemaOptionArray.getString(i);
+      this.schemaOptions.add(Schema.parse(schemaStr));
+    }
+    **/
+  }
+
+  byte[] getPayload() {
+    /**
+    JSONArray patternArray = new JSONArray();
+    for (int i = 0; i < this.patterns.size(); i++) {
+      Pattern p = patterns.get(i);
+      patternArray.put(p.toString());
+    }
+
+    JSONArray schemaOptionArray = new JSONArray();
+    for (int i = 0; i < this.schemaOptions.size(); i++) {
+      Schema s = schemaOptions.get(i);
+      schemaOptionArray.put(s.toString());
+    }
+
+    JSONObject jobj = new JSONObject();
+    jobj.put("patterns", patternArray);
+    jobj.put("schemaoptions", schemaOptionArray);
+    return jobj.toString().getBytes();
+    **/
+    return null;
   }
 
   /**
@@ -73,7 +113,7 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
       BufferedReader in;
       {
         try {
-          this.in = new BufferedReader(new InputStreamReader(fs.open(p)));
+          this.in = new BufferedReader(new InputStreamReader(dd.getRawBytes()));
           this.nextElt = lookahead();          
         } catch (IOException iex) {
           this.nextElt = null;
@@ -140,11 +180,7 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
     };
   }
   
-  
-  public String getSchemaIdentifier() {
-    return schema.toString();
-  }
   public String getSchemaSourceDescription() {
-    return schemaLabel;
+    return schemaId;
   }
 }

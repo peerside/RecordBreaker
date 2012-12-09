@@ -40,7 +40,6 @@ import com.almworks.sqlite4java.SQLiteException;
  * @author "Michael Cafarella" <mjc@cloudera.com>
  ***********************************************************/
 public class FSCrawler {
-  final static int MAX_ANALYSIS_LINES = 400;
   final static int INFINITE_CRAWL_DEPTH = -1;
   
   static SimpleDateFormat fileDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -58,42 +57,6 @@ public class FSCrawler {
     this.fs = null;
   }
 
-  /**
-   * <code>addFile</code> will insert a single file into the database.
-   * This isn't the most efficient thing in the world; it would be better
-   * to add a batch at a time.
-   */
-  protected synchronized void addSingleFile(FileSystem fs, Path p, long crawlid) throws IOException {
-    FileStatus fstatus = fs.getFileStatus(p);
-    boolean isDir = fstatus.isDir();    
-    List<TypeGuess> tgs = new ArrayList<TypeGuess>();
-
-    if (! isDir) {
-      DataDescriptor descriptor = analyzer.describeData(fs, p, MAX_ANALYSIS_LINES);
-      try {
-        List<SchemaDescriptor> schemas = descriptor.getSchemaDescriptor();
-
-        if (schemas == null || schemas.size() == 0) {
-          tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
-                                "", "no schema", 1.0));
-        } else {
-          for (SchemaDescriptor sd: schemas) {
-            tgs.add(new TypeGuess(descriptor.getFileTypeIdentifier(), descriptor.getFileTypeIdentifier(),
-                                  sd.getSchemaIdentifier(), sd.getSchemaSourceDescription(), 1.0));
-          }
-        }
-      } catch (Exception ex) {
-        ex.printStackTrace();
-      }
-    }
-    try {
-      analyzer.insertIntoFiles(fs, p, crawlid, tgs);
-    } catch (SQLiteException sle) {
-      sle.printStackTrace();
-      throw new IOException(sle.getMessage());
-    }
-  }
-  
   /**
    * Traverse an entire region of the filesystem, analyzing files.
    * This code should:
@@ -185,7 +148,7 @@ public class FSCrawler {
                 int numDone = 0;
                 for (Path p: todoDirList) {
                   try {
-                    addSingleFile(fs, p, crawlid);
+                    analyzer.addSingleFile(fs, p, crawlid);
                   } catch (IOException iex) {
                     iex.printStackTrace();
                   }
@@ -196,8 +159,8 @@ public class FSCrawler {
                     cstatus.setMessage("Processing file " + p.toString());
                   }
                   try {
-                    addSingleFile(fs, p, crawlid);
-                  } catch (IOException iex) {
+                    analyzer.addSingleFile(fs, p, crawlid);
+                  } catch (Exception iex) {
                     iex.printStackTrace();
                   }
                   numDone++;

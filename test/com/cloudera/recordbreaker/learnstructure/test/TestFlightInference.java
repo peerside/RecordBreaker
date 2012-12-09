@@ -51,7 +51,6 @@ public class TestFlightInference extends InferenceTest {
   @Test(timeout=10000)
   public void testFlightInference() {
     boolean testResult = runSingletonTest(workingDir, new File(sampleDir, "flights.txt"));
-    System.err.println("TestFlight reuslt: " + testResult);
     Assert.assertTrue(testResult);
   }
 

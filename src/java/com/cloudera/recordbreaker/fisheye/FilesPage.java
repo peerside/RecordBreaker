@@ -69,7 +69,6 @@ public class FilesPage extends WebPage {
         //
         List<DirLabelPair> parentDirPairList = new ArrayList<DirLabelPair>();
         List<FileSummary> parentDirList = fe.getDirParents(targetDir);
-        //System.err.println("Parent dir list has " + parentDirList.size() + " elements.");
         
         FileSummary lastDir = null;
         if (parentDirList != null) {
