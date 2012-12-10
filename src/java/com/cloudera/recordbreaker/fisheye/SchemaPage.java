@@ -45,7 +45,7 @@ import java.util.Iterator;
 public class SchemaPage extends WebPage {
   static JsonFactory factory = new JsonFactory(new ObjectMapper());
 
-  static List<List<JsonNode>> getSchemaDigest(String s) throws IOException {
+  public static List<List<JsonNode>> getSchemaDigest(String s) throws IOException {
     List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
     JsonParser parser = factory.createJsonParser(s);
     try {

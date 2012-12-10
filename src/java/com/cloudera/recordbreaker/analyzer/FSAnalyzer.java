@@ -602,6 +602,7 @@ public class FSAnalyzer {
    * Grab details on a specific file.
    */
   public FileSummaryData getFileSummaryData(final long fid) {
+    final FileSystem fs = getFS();    
     return dbQueue.execute(new SQLiteJob<FileSummaryData>() {
         protected FileSummaryData job(SQLiteConnection db) throws SQLiteException {
           FileSummaryData fsd = null;
@@ -634,11 +635,12 @@ public class FSAnalyzer {
             stmt.dispose();
           }
 
-          if (isDir) {
+          if (! isDir) {
             stmt = db.prepare("SELECT typelabel FROM Types, TypeGuesses WHERE TypeGuesses.fid = ? AND Types.typeid = TypeGuesses.typeid");
             try {
+              stmt.bind(1, fid);
               if (stmt.step()) {
-                identifier = stmt.columnString(1);
+                identifier = stmt.columnString(0);
               }
             } finally {
               stmt.dispose();
@@ -658,8 +660,8 @@ public class FSAnalyzer {
               }
 
               try {
-                DataDescriptor dd = formatAnalyzer.loadDataDescriptor(null, new Path(path + fname), identifier, schemaReprs, schemaDescs, schemaBlobs);
-                fsd = new FileSummaryData(fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, dd);
+                DataDescriptor dd = formatAnalyzer.loadDataDescriptor(fs, new Path(path + fname), identifier, schemaReprs, schemaDescs, schemaBlobs);
+                fsd = new FileSummaryData(true, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, dd);
               } catch (IOException iex) {
                 iex.printStackTrace();
                 return null;
@@ -668,7 +670,7 @@ public class FSAnalyzer {
               stmt.dispose();
             }
           } else {
-            fsd = new FileSummaryData(fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, null);            
+            fsd = new FileSummaryData(false, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, null);            
           }
           return fsd;
         }

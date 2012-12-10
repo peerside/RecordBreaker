@@ -21,18 +21,20 @@ import org.apache.hadoop.fs.permission.FsPermission;
  *
  */
 public class FileSummaryData {
-  long fid;
-  long crawlid;
-  String fname;
-  String owner;
-  String group;
-  FsPermission permissions;
-  long size;
-  String lastModified;
-  String path;
-  DataDescriptor dd;
+  public boolean isDir;
+  public long fid;
+  public long crawlid;
+  public String fname;
+  public String owner;
+  public String group;
+  public FsPermission permissions;
+  public long size;
+  public String lastModified;
+  public String path;
+  public DataDescriptor dd;
   
-  public FileSummaryData(long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path, DataDescriptor dd) {
+  public FileSummaryData(boolean isDir, long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path, DataDescriptor dd) {
+    this.isDir = isDir;
     this.fid = fid;
     this.crawlid = crawlid;
     this.fname = fname;

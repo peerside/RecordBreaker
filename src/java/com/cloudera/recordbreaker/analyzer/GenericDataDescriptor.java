@@ -163,8 +163,10 @@ public class GenericDataDescriptor implements DataDescriptor {
   }
   
   public GenericDataDescriptor(Path p, FileSystem fs, String filetype, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
+    this.fs = fs;
     this.p = p;
     this.filetype = filetype;
+    this.schemas = new ArrayList<SchemaDescriptor>();
 
     for (int i = 0; i < schemaReprs.size(); i++) {
       this.schemas.add(loadSchemaDescriptor(schemaReprs.get(i), schemaDescs.get(i), schemaBlobs.get(i)));

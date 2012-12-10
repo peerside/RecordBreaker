@@ -17,6 +17,8 @@
       body {
         padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
       }
+      table.th.td.centered { vertical-align:middle; text-align:center; }
+      table.tr.td.centered { vertical-align:middle; text-align:center; }
     </style>
     <link href="css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -129,7 +131,21 @@
             </div>
 
             <div wicket:id="filecontentstable">
-              <h5>Oh HERE IS THE DATA YOU DUDES</h5>
+              <h4>Data</h4>
+              <table class="table table-striped table-bordered table-condensed">
+                <thead>
+                  <tr wicket:id="attributelabels">
+                    <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr wicket:id="schemalistview">
+                    <td wicket:id="tupleview">
+                    <span wicket:id="celltext"></span>
+                    </td>
+                  </tr>
+                </tbody>                
+              </table>
             </div>
 
           </div> <!-- /container -->

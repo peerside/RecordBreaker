@@ -61,7 +61,12 @@ public class FileSummary {
   public long getFid() {
     return fid;
   }    
-  
+  public boolean isDir() {
+    if (!hasData) {
+      getData();
+    }
+    return fsd.isDir;
+  }
   public String getFname() {
     if (!hasData) {
       getData();
