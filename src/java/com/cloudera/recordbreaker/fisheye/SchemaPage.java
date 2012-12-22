@@ -45,7 +45,7 @@ import java.util.Iterator;
 public class SchemaPage extends WebPage {
   static JsonFactory factory = new JsonFactory(new ObjectMapper());
 
-  public static List<List<JsonNode>> getSchemaDigest(String s) throws IOException {
+  static List<List<JsonNode>> getSchemaDigest(String s) throws IOException {
     List<List<JsonNode>> listOfSchemaElts = new ArrayList<List<JsonNode>>();
     JsonParser parser = factory.createJsonParser(s);
     try {
@@ -127,7 +127,13 @@ public class SchemaPage extends WebPage {
           });
 
         add(new Label("schemaDesc", schemaDescription));
-        add(new Label("numSchemaElements", "" + listOfSchemaElts.size()));
+        int numElts = 0;
+        for (List<JsonNode> sublist: listOfSchemaElts) {
+          for (JsonNode jn: sublist) {
+            numElts++;
+          }
+        }
+        add(new Label("numSchemaElements", "" + numElts));
         add(new Label("numFilesWithSchema", "" + numFilesWithSchema));
       }
       
