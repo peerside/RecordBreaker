@@ -55,7 +55,7 @@ import org.json.JSONException;
  ******************************************************************/
 public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
   public static String SCHEMA_ID = "xml";
-  TagEnvironment rootTag = null;
+  TagEnvironment rootTag;
   
   /**
    * Creates a new <code>XMLSchemaDescriptor</code> instance.
@@ -74,12 +74,15 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
       this.rootTag = new TagEnvironment(new JSONObject(new String(miscPayload)));
       this.rootTag.setParent(null);
     } catch (JSONException jne) {
+      jne.printStackTrace();
       throw new IOException("JSONException: " + jne.toString());
     }
   }
 
-  public byte[] getSerializedPayload() {
-    return rootTag.serialize().toString().getBytes();
+  public byte[] getPayload() {
+    JSONObject rootJobj = rootTag.serialize();
+    byte results[] = rootJobj.toString().getBytes();
+    return results;
   }
 
   void computeSchema() throws IOException {
@@ -104,7 +107,6 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
       // c) Build an overall schema object that can summarize every expected
       //    object, even if the objects' individual schemas differ somewhat
       this.rootTag.completeTree();
-
     } catch (SAXException saxe) {
       throw new IOException(saxe.toString());
     } catch (ParserConfigurationException pcee) {
@@ -243,7 +245,7 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
         // label, data, repetition
         JSONObject jobj = new JSONObject();
         jobj.put("label", label);
-        jobj.put("data", data);
+        jobj.put("data", (data == null) ? "" : data);
         jobj.put("isRepetitionNode", repetitionNode);
 
         // typedFields and fieldSchemas
@@ -275,6 +277,7 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
         }
         return jobj;
       } catch (JSONException jne) {
+        jne.printStackTrace();
         return null;
       }
     }
@@ -295,7 +298,9 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
     public void completeTree() {
       this.completeTree(false);
       this.hoistData();
-      schema = this.getUnifiedSchema();
+      //addField("XMLExtractedSchema", new Schema.Field("name", Schema.create(Schema.Type.STRING), "", null));
+      schema = this.getUnifiedSchema(true);
+      Schema.Field sf = schema.getField("name");
     }
     private void completeTree(boolean repetitionNodeFound) {
       Map<String, Integer> nameCounts = new TreeMap<String, Integer>();
@@ -421,15 +426,21 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
      * This is to handle cases when fields only appear in a subset of nodes.
      * The unified Schema will be the union of all observed fields.
      */
-    Schema getUnifiedSchema() {
+    Schema getUnifiedSchema(boolean initial) {
       if (typedFields.size() > 0) {
         // Build and return schema.
-        return Schema.createRecord(fieldSchemas);
+        if (initial) {
+          Schema s = Schema.createRecord("name", "", "XMLExtractedSchema", false);
+          s.setFields(fieldSchemas);
+          return s;
+        } else {
+          return Schema.createRecord(fieldSchemas);
+        }
       } else {
         // Grab all child schemas, and unify.
         Map<String, Schema.Field> observedFields = new TreeMap<String, Schema.Field>();
         for (TagEnvironment child: children) {
-          Schema s = child.getUnifiedSchema();
+          Schema s = child.getUnifiedSchema(false);
           if (s != null) {
             for (Schema.Field childField: s.getFields()) {
               if (observedFields.get(childField.name()) == null) {
@@ -446,7 +457,13 @@ public class XMLSchemaDescriptor extends GenericSchemaDescriptor {
             Schema.Field sf = cur.getValue();
             singleList.add(new Schema.Field(sf.name(), Schema.create(sf.schema().getType()), "", null));
           }
-          return Schema.createRecord(singleList);
+          if (initial) {
+            Schema s = Schema.createRecord("XMLSchema", "", "XMLExtractedSchema", false);
+            s.setFields(singleList);
+            return s;
+          } else {
+            return Schema.createRecord(singleList);            
+          }
         }
       }
     }

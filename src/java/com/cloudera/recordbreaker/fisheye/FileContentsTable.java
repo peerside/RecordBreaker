@@ -49,21 +49,82 @@ public class FileContentsTable extends WebMarkupContainer {
   long fid = -1L;
   final static int MAX_ROWS = 9;
 
-  static List<String> flattenNames(Schema schema) {
-    List<String> schemaLabels = new ArrayList<String>();
-    for (Schema.Field field: schema.getFields()) {
-      Schema fieldSchema = field.schema();
-      Schema.Type fieldSchemaType = fieldSchema.getType();
-      if (fieldSchemaType == Schema.Type.RECORD) {
-        List<String> subnames = FileContentsTable.flattenNames(fieldSchema);
-        for (String s: subnames) {
-          schemaLabels.add(field.name() + "." + s);
-        }
-      } else {
-        schemaLabels.add(field.name());
+  /**
+   * Takes a schema that potentially contains unions and converts it into
+   * a list of all possible union-free schemas.
+   */
+  static List<Schema> unrollUnions(Schema schema) {
+    if (schema.getType() == Schema.Type.RECORD) {
+      List<List<Schema>> fieldSchemaLists = new ArrayList<List<Schema>>();
+      int targetTotal = 1;
+      for (Schema.Field sf: schema.getFields()) {
+        List<Schema> fieldSchemaList = unrollUnions(sf.schema());
+        fieldSchemaLists.add(fieldSchemaList);
+        targetTotal *= fieldSchemaList.size();
       }
+
+      List<Schema> outputSchemas = new ArrayList<Schema>();
+      for (int i = 0; i < targetTotal; i++) {
+        List<Schema.Field> newFields = new ArrayList<Schema.Field>();
+
+        int j = 0;
+        for (Schema.Field oldField: schema.getFields()) {
+          List<Schema> curFieldSchemaList = fieldSchemaLists.get(j);
+          newFields.add(new Schema.Field(oldField.name(), curFieldSchemaList.get(i % curFieldSchemaList.size()), oldField.doc(), null));
+          j++;
+        }
+        outputSchemas.add(Schema.createRecord(newFields));
+      }
+      return outputSchemas;
+    } else if (schema.getType() == Schema.Type.UNION) {
+      List<Schema> unrolledSchemas = new ArrayList<Schema>();
+      for (Schema s: schema.getTypes()) {
+        unrolledSchemas.addAll(unrollUnions(s));
+      }
+      return unrolledSchemas;
+    } else if (schema.getType() == Schema.Type.ARRAY) {
+      List<Schema> subschemas = unrollUnions(schema.getElementType());
+      List<Schema> newSchemas = new ArrayList<Schema>();
+      for (Schema s: subschemas) {
+        newSchemas.add(Schema.createArray(s));
+      }
+      return newSchemas;
+    } else {
+      // Base type
+      List<Schema> retList = new ArrayList<Schema>();
+      retList.add(schema);
+      return retList;
     }
-    return schemaLabels;
+  }
+  
+  /**
+   * Takes an Avro record Schema and creates dot-separated names for each
+   * leaf-level field.  The input Schema should *not* have any unions.
+   */
+  static List<String> flattenNames(Schema schema) {
+    if (schema.getType() == Schema.Type.RECORD) {
+      List<String> schemaLabels = new ArrayList<String>();
+      for (Schema.Field field: schema.getFields()) {
+        Schema fieldSchema = field.schema();
+        Schema.Type fieldSchemaType = fieldSchema.getType();
+        List<String> subnames = FileContentsTable.flattenNames(fieldSchema);
+        if (subnames == null) {
+          schemaLabels.add(field.name());
+        } else {
+          for (String s: subnames) {
+            schemaLabels.add(field.name() + "." + s);
+          }
+        }
+      }
+      return schemaLabels;
+    } else if (schema.getType() == Schema.Type.UNION) {
+      List<Schema> unionTypes = schema.getTypes();
+      throw new UnsupportedOperationException("Cannot process UNION");
+    } else if (schema.getType() == Schema.Type.ARRAY) {
+      return flattenNames(schema.getElementType());
+    } else {
+      return null;
+    }
   }
 
   static String getNestedValues(Object oobj, String fieldname) {
@@ -120,8 +181,24 @@ public class FileContentsTable extends WebMarkupContainer {
     DataDescriptor dd = fsd.dd;
     List<SchemaDescriptor> sds = dd.getSchemaDescriptor();
 
+    class SchemaPair implements Comparable {
+      int schemaId;
+      int count;
+      public SchemaPair(int schemaId, int count) {
+        this.schemaId = schemaId;
+        this.count = count;
+      }
+      public int compareTo(Object o) {
+        SchemaPair sp = (SchemaPair) o;
+        int result = count - sp.count;
+        if (result == 0) {
+          result = schemaId - sp.schemaId;
+        }
+        return result;
+      }
+    }
+
     if (sds.size() > 0) {
-      List<List<String>> tuplelist = new ArrayList<List<String>>();
       SchemaDescriptor sd = sds.get(0);
       Schema schema = sd.getSchema();
 
@@ -129,22 +206,75 @@ public class FileContentsTable extends WebMarkupContainer {
       // Step 1.  Figure out the hierarchical labels from the Schema.
       // These are the fields we'll grab from each tuple.
       //
-      List<String> schemaLabels = FileContentsTable.flattenNames(schema);
+      List<List<List<String>>> perSchemaTupleLists = new ArrayList<List<List<String>>>();
+      List<List<List<String>>> dataOrderTupleLists = new ArrayList<List<List<String>>>();
+      List<Integer> schemaOrder = new ArrayList<Integer>();
+      List<SchemaPair> schemaFrequency = new ArrayList<SchemaPair>();
+
+      List<Schema> allSchemas = FileContentsTable.unrollUnions(schema);
+      List<List<String>> schemaLabelLists = new ArrayList<List<String>>();
+
+      for (int i = 0; i < allSchemas.size(); i++) {
+        Schema s1 = allSchemas.get(i);
+        schemaLabelLists.add(FileContentsTable.flattenNames(s1));
+        perSchemaTupleLists.add(new ArrayList<List<String>>());
+        schemaFrequency.add(new SchemaPair(i, 0));
+      }
 
       //
       // Step 2.  Build the set of rows for display.  One row per tuple.
       //
       int numRows = 0;
+      int lastBestIdx = -1;
+      boolean hasMoreRows = false;
       for (Iterator it = sd.getIterator(); it.hasNext(); ) {
         GenericData.Record gr = (GenericData.Record) it.next();
-        List<String> tupleElts = new ArrayList<String>();
 
-        for (String schemaHeader: schemaLabels) {
+        if (numRows >= MAX_ROWS) {
+          hasMoreRows = true;
+          break;
+        }
+
+        // OK, now the question is: which schema does the row observe?
+        int maxGood = 0;
+        int bestIdx = -1;
+        int i = 0;
+        List<String> bestSchemaLabels = null;
+        for (List<String> schemaLabels: schemaLabelLists) {
+          int numGood = 0;
+          for (String schemaHeader: schemaLabels) {
+            String result = FileContentsTable.getNestedValues(gr, schemaHeader);
+            if (result.length() > 0) {
+              numGood++;
+            }
+          }
+          if (numGood >= maxGood) {
+            maxGood = numGood;
+            bestSchemaLabels = schemaLabels;
+            bestIdx = i;
+          }
+          i++;
+        }
+
+        List<String> tupleElts = new ArrayList<String>();
+        for (String schemaHeader: bestSchemaLabels) {
           tupleElts.add(FileContentsTable.getNestedValues(gr, schemaHeader));
         }
-        tuplelist.add(tupleElts);
+        perSchemaTupleLists.get(bestIdx).add(tupleElts);
 
+        if (bestIdx != lastBestIdx) {
+          dataOrderTupleLists.add(new ArrayList<List<String>>());
+        }
+        dataOrderTupleLists.get(dataOrderTupleLists.size()-1).add(tupleElts);
+        schemaOrder.add(bestIdx);
+        schemaFrequency.get(bestIdx).count += 1;
+
+        lastBestIdx = bestIdx;
+        
         numRows++;
+      }
+
+      /**
         if (numRows >= MAX_ROWS) {
           tupleElts = new ArrayList<String>();          
           for (String schemaHeader: schemaLabels) {
@@ -153,58 +283,57 @@ public class FileContentsTable extends WebMarkupContainer {
           tuplelist.add(tupleElts);
           break;
         }
-      }
+      **/
 
       //
       // Step 3.  Build the hierarchical set of header rows for display.
+      // 
+      // schemaLabelLists holds N lists of schema labels, one for each schema.
+      // tupleLists holds N lists of tuples, one for each schema.
+      // schemaOrder holds a list of M indexes, one for each tuple in the data
+      //   to be displayed.
       //
-      int maxDepth = 1;
-      for (String s: schemaLabels) {
-        int curDepth = s.split("\\.").length;
-        maxDepth = Math.max(maxDepth, curDepth);
-      }
-
-      List<List<HeaderPair>> headerSet = new ArrayList<List<HeaderPair>>();
-      for (int i = 0; i < maxDepth; i++) {
-        headerSet.add(new ArrayList<HeaderPair>());
-      }
-
-      for (String s : schemaLabels) {
-        String parts[] = s.split("\\.");
-        for (int i = 0; i < parts.length; i++) {
-          headerSet.get(maxDepth-i-1).add(new HeaderPair(parts[parts.length-i-1], 1));
-        }
-        for (int i = parts.length; i < maxDepth; i++) {
-          headerSet.get(maxDepth-i-1).add(new HeaderPair("", 1));
-        }
-      }
-
-      List<List<HeaderPair>> newHeaderSet = new ArrayList<List<HeaderPair>>();
-      for (List<HeaderPair> singleRow: headerSet) {
-        List<HeaderPair> newHeaderRow = new ArrayList<HeaderPair>();
-
-        HeaderPair lastHp = singleRow.get(0);
-        for (int i = 1; i < singleRow.size(); i++) {
-          HeaderPair hp = singleRow.get(i);
-          if (hp.getString().equals(lastHp.getString())) {
-            lastHp.bumpCount();
-          } else {
-            newHeaderRow.add(lastHp);
-            lastHp = hp;
+      List<List<List<HeaderPair>>> outputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
+      List<List<List<String>>> outputTupleLists = null;
+      boolean dataOrder = true;
+      if (dataOrder) {
+        // Show data in order of how it appears in the file
+        for (int i = 1; i < schemaOrder.size(); i++) {
+          if (schemaOrder.get(i) != schemaOrder.get(i-1)) {
+            createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(i-1)), outputHeaderSets);
           }
         }
-        newHeaderRow.add(lastHp);
-        newHeaderSet.add(newHeaderRow);
-      }
-      List<HeaderPair> bottomLine = newHeaderSet.get(newHeaderSet.size()-1);
-      for (HeaderPair hp: bottomLine) {
-        hp.setBottom(true);
-      }
+        if (schemaOrder.size() > 0) {
+          createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(schemaOrder.size()-1)), outputHeaderSets);
+        }
+        outputTupleLists = dataOrderTupleLists;
+      } else {
+        // Show data in order of schema popularity
+        outputTupleLists = new ArrayList<List<List<String>>>();
 
+        // Sort schemas by descending frequency
+        SchemaPair sortedByFreq[] = schemaFrequency.toArray(new SchemaPair[schemaFrequency.size()]);
+        Arrays.sort(sortedByFreq);
+
+        // Iterate through, populate lists
+        for (int i = 0; i < sortedByFreq.length; i++) {
+          if (sortedByFreq[i].count > 0) {
+            createOutputHeaderSet(schemaLabelLists.get(sortedByFreq[i].schemaId), outputHeaderSets);
+            outputTupleLists.add(perSchemaTupleLists.get(sortedByFreq[i].schemaId));
+          }
+        }
+      }
+      
       //
       // Step 4.  Add the info to the display.
+      // Inputs: outputHeaderSets and pageOrderTupleLists
       //
-      add(new ListView<List<HeaderPair>>("attributelabels", newHeaderSet) {
+      System.err.println();      
+      System.err.println("Number of schemas: " + outputHeaderSets.size());
+      System.err.println("Number of tuple sets: " + outputTupleLists.size());
+      System.err.println();
+      
+      add(new ListView<List<HeaderPair>>("attributelabels", outputHeaderSets.get(0)) {
           protected void populateItem(ListItem<List<HeaderPair>> item) {
             List<HeaderPair> myListOfFieldLabels = item.getModelObject();
             ListView<HeaderPair> listOfFields = new ListView<HeaderPair>("fieldlist", myListOfFieldLabels) {
@@ -221,7 +350,7 @@ public class FileContentsTable extends WebMarkupContainer {
           }
         });
 
-      add(new ListView<List<String>>("schemalistview", tuplelist) {
+      add(new ListView<List<String>>("schemalistview", outputTupleLists.get(0)) {
           protected void populateItem(ListItem<List<String>> item) {
             List<String> myListOfSchemaElts = item.getModelObject();
         
@@ -235,8 +364,62 @@ public class FileContentsTable extends WebMarkupContainer {
           }
         });
     }
+
     setOutputMarkupPlaceholderTag(true);
     setVisibilityAllowed(false);
+  }
+
+  /**
+   * Create a single schema-specific set of tuple information, which includes schema info.
+   * Depending on how the user wants to view the page and the internal order of rows in
+   * a table, a single file could have a large number of different ranges.
+   *
+   */
+  void createOutputHeaderSet(List<String> schemaLabels, List<List<List<HeaderPair>>>outputHeaderSets) {
+    int maxDepth = 1;
+    for (String s: schemaLabels) {
+      int curDepth = s.split("\\.").length;
+      maxDepth = Math.max(maxDepth, curDepth);
+    }
+
+    List<List<HeaderPair>> headerSet = new ArrayList<List<HeaderPair>>();
+    for (int i = 0; i < maxDepth; i++) {
+      headerSet.add(new ArrayList<HeaderPair>());
+    }
+
+    for (String s : schemaLabels) {
+      String parts[] = s.split("\\.");
+      for (int i = 0; i < parts.length; i++) {
+        headerSet.get(maxDepth-i-1).add(new HeaderPair(parts[parts.length-i-1], 1));
+      }
+      for (int i = parts.length; i < maxDepth; i++) {
+        headerSet.get(maxDepth-i-1).add(new HeaderPair("", 1));
+      }
+    }
+
+    List<List<HeaderPair>> newHeaderSet = new ArrayList<List<HeaderPair>>();
+    for (List<HeaderPair> singleRow: headerSet) {
+      List<HeaderPair> newHeaderRow = new ArrayList<HeaderPair>();
+
+      HeaderPair lastHp = singleRow.get(0);
+      for (int i = 1; i < singleRow.size(); i++) {
+        HeaderPair hp = singleRow.get(i);
+        if (hp.getString().equals(lastHp.getString())) {
+          lastHp.bumpCount();
+        } else {
+          newHeaderRow.add(lastHp);
+          lastHp = hp;
+        }
+      }
+      newHeaderRow.add(lastHp);
+      newHeaderSet.add(newHeaderRow);
+    }
+    List<HeaderPair> bottomLine = newHeaderSet.get(newHeaderSet.size()-1);
+    for (HeaderPair hp: bottomLine) {
+      hp.setBottom(true);
+    }
+
+    outputHeaderSets.add(newHeaderSet);
   }
 
   public void onConfigure() {

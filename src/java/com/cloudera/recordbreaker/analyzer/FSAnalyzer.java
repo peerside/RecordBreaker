@@ -287,7 +287,7 @@ public class FSAnalyzer {
   long getCreateSchema(SchemaDescriptor sd) throws SQLiteException {
     final String schemaIdentifier = (sd == null) ? "" : sd.getSchemaIdentifier();
     final String schemaDesc = (sd == null) ? "no schema" : sd.getSchemaSourceDescription();
-    final byte[] payload = (sd == null) ? new byte[0] : ((GenericSchemaDescriptor) sd).getPayload();
+    final byte[] payload = (sd == null) ? new byte[0] : sd.getPayload();
     long schemaid = dbQueue.execute(new SQLiteJob<Long>() {
         protected Long job(SQLiteConnection db) throws SQLiteException {
           final SQLiteStatement stmt = db.prepare("SELECT schemaid FROM Schemas WHERE schemarepr = ? AND schemasrcdescription = ?");

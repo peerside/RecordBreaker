@@ -39,7 +39,7 @@ public abstract class GenericSchemaDescriptor implements SchemaDescriptor {
   }
 
   abstract void computeSchema() throws IOException;
-  byte[] getPayload() {
+  public byte[] getPayload() {
     return null;
   }
   abstract public Iterator getIterator();

@@ -45,7 +45,7 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
     this.hasHeaderRow = "true".equals(new String(miscPayload));
   }
 
-  byte[] getPayload() {
+  public byte[] getPayload() {
     return ("" + this.hasHeaderRow).getBytes();
   }
 
@@ -216,7 +216,8 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
       }
       schemaFields.add(new Schema.Field(fieldName, Schema.create(fieldType), fieldDoc, null));
     }
-    this.schema = Schema.createRecord(schemaFields);
+    this.schema = Schema.createRecord("csv", "CSV data format", "", false);
+    this.schema.setFields(schemaFields);
   }
 
   /**

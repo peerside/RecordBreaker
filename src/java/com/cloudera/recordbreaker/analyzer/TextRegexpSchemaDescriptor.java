@@ -20,6 +20,7 @@ import org.apache.avro.generic.GenericData;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONException;
 
 /*********************************************************************
  * <code>TextRegexpSchemaDescriptor</code> captures any log file that is:
@@ -32,7 +33,10 @@ import org.json.JSONObject;
  * @since 1.0
  * @see SchemaDescriptor
  **********************************************************************/
-public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
+public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
+  DataDescriptor dd;
+  Schema schema;  
+
   String schemaId;
   List<Schema> schemaOptions;
   List<Pattern> patterns;
@@ -47,10 +51,11 @@ public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
    * @exception Exception if an error occurs
    */
   public TextRegexpSchemaDescriptor(DataDescriptor dd, String schemaId, List<Pattern> patterns, List<Schema> schemaOptions) throws IOException {
-    super(dd);
+    this.dd = dd;
     this.schemaId = schemaId;
     this.schemaOptions = schemaOptions;
     this.patterns = patterns;
+    computeSchema();
   }
   void computeSchema() {
     List<Schema.Field> topFields = new ArrayList<Schema.Field>();
@@ -59,9 +64,9 @@ public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
   }
   
   public TextRegexpSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) throws Exception {
-    super(dd, schemaRepr);
+    this.dd = dd;
+    this.schema = Schema.parse(schemaRepr);
 
-    /**
     // Deserialize Patterns and Schema options
     JSONObject jobj = new JSONObject(new String(miscPayload));
 
@@ -78,11 +83,9 @@ public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
       String schemaStr = schemaOptionArray.getString(i);
       this.schemaOptions.add(Schema.parse(schemaStr));
     }
-    **/
   }
 
-  byte[] getPayload() {
-    /**
+  public byte[] getPayload() {
     JSONArray patternArray = new JSONArray();
     for (int i = 0; i < this.patterns.size(); i++) {
       Pattern p = patterns.get(i);
@@ -95,12 +98,15 @@ public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
       schemaOptionArray.put(s.toString());
     }
 
-    JSONObject jobj = new JSONObject();
-    jobj.put("patterns", patternArray);
-    jobj.put("schemaoptions", schemaOptionArray);
-    return jobj.toString().getBytes();
-    **/
-    return null;
+    try {
+      JSONObject jobj = new JSONObject();
+      jobj.put("patterns", patternArray);
+      jobj.put("schemaoptions", schemaOptionArray);
+      return jobj.toString().getBytes();
+    } catch (JSONException je) {
+      je.printStackTrace();
+      return null;
+    }
   }
 
   /**
@@ -179,8 +185,16 @@ public class TextRegexpSchemaDescriptor extends GenericSchemaDescriptor {
       }
     };
   }
+
+  public Schema getSchema() {
+    return schema;
+  }
   
   public String getSchemaSourceDescription() {
     return schemaId;
+  }
+
+  public String getSchemaIdentifier() {
+    return schema.toString();
   }
 }

@@ -44,6 +44,11 @@ public interface SchemaDescriptor {
   public Iterator getIterator();
 
   /**
+   * Used for serialization of ancillary data structures.
+   */
+  public byte[] getPayload();
+
+  /**
    * A String that uniquely identifies the topic-specific metadata.  Really, it's a String representation
    * of what's returned by <code>getSchema()</code>
    *

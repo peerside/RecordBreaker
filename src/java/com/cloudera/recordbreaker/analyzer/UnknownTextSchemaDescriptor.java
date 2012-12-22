@@ -98,7 +98,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
     }
   }
 
-  byte[] getPayload() {
+  public byte[] getPayload() {
     // Serialize the parser, return the resulting string
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream out = new DataOutputStream(baos);

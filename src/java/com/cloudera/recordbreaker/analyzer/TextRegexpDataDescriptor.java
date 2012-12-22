@@ -89,7 +89,6 @@ public abstract class TextRegexpDataDescriptor extends GenericDataDescriptor {
     super(p, fs, fileType);
     this.regexps = regexps;
     this.localschemas = schemaList;
-
     schemas.add(new TextRegexpSchemaDescriptor(this, fileType, regexps, localschemas));
   }
 
