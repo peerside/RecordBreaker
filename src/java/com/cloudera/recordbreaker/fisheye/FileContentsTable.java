@@ -26,6 +26,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.list.ListItem;
+import org.apache.wicket.markup.repeater.RepeatingView;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.io.IOException;
 import java.io.Serializable;
 
@@ -47,7 +49,7 @@ import java.io.Serializable;
  ****************************************************/
 public class FileContentsTable extends WebMarkupContainer {
   long fid = -1L;
-  final static int MAX_ROWS = 9;
+  final static int MAX_ROWS = 100;
 
   /**
    * Takes a schema that potentially contains unions and converts it into
@@ -134,7 +136,7 @@ public class FileContentsTable extends WebMarkupContainer {
       String firstComponent = fieldname.substring(0, dotIndex);
       String remainder = fieldname.substring(dotIndex+1);
       Object oobj2 = gr.get(firstComponent);
-      return getNestedValues(oobj2, remainder);
+      return (oobj2 == null) ? "" : getNestedValues(oobj2, remainder);
     } else {
       Object result = gr.get(fieldname);
       return (result == null ? "" : result.toString());
@@ -172,6 +174,63 @@ public class FileContentsTable extends WebMarkupContainer {
       this.isBottom = isBottom;
     }
   }
+  class DataTablePair implements Serializable {
+    List<List<HeaderPair>> headerPairs;
+    List<List<String>> outputTupleList;
+    
+    public DataTablePair(List<List<HeaderPair>> headerPairs, List<List<String>> outputTupleList) {
+      this.headerPairs = headerPairs;
+      this.outputTupleList = outputTupleList;
+    }
+    List<List<HeaderPair>> getHeaderPairs() {
+      return headerPairs;
+    }
+    List<List<String>> getTupleList() {
+      return outputTupleList;
+    }
+  }
+
+  void renderToPage(String label, List<DataTablePair> tablePairs) {
+    add(new ListView<DataTablePair>(label, tablePairs) {
+        protected void populateItem(ListItem<DataTablePair> outerItem) {
+          DataTablePair outerModelObj = outerItem.getModelObject();
+          List<List<HeaderPair>> outputHeaderList = outerModelObj.getHeaderPairs();
+          List<List<String>> outputTupleList = outerModelObj.getTupleList();
+            
+          outerItem.add(new ListView<List<HeaderPair>>("attributelabels", outputHeaderList) {
+              protected void populateItem(ListItem<List<HeaderPair>> item) {
+                List<HeaderPair> myListOfFieldLabels = item.getModelObject();
+                ListView<HeaderPair> listOfFields = new ListView<HeaderPair>("fieldlist", myListOfFieldLabels) {
+                  protected void populateItem(ListItem<HeaderPair> item2) {
+                    HeaderPair displayPair = item2.getModelObject();
+                    item2.add(new Label("alabel", "" + displayPair.getString()));
+                    item2.add(new AttributeModifier("colspan", true, new Model("" + displayPair.getColSpan())));
+                    if (! displayPair.isBottom()) {
+                      item2.add(new AttributeModifier("style", true, new Model("text-align:center")));
+                    }
+                  }
+                };
+                item.add(listOfFields);
+              }
+            });
+
+          outerItem.add(new ListView<List<String>>("schemalistview", outputTupleList) {
+              protected void populateItem(ListItem<List<String>> item) {
+                List<String> myListOfSchemaElts = item.getModelObject();
+        
+                ListView<String> listofTupleFields = new ListView<String>("tupleview", myListOfSchemaElts) {
+                  protected void populateItem(ListItem<String> item2) {
+                    String displayStr = item2.getModelObject();
+                    item2.add(new Label("celltext", "" + displayStr));
+                  }
+                };
+                item.add(listofTupleFields);
+              }
+            });
+        }
+      });
+  }
+  
   public FileContentsTable(long fid) {
     super("filecontentstable");
     this.fid = fid;
@@ -234,7 +293,7 @@ public class FileContentsTable extends WebMarkupContainer {
           hasMoreRows = true;
           break;
         }
-
+        
         // OK, now the question is: which schema does the row observe?
         int maxGood = 0;
         int bestIdx = -1;
@@ -248,14 +307,19 @@ public class FileContentsTable extends WebMarkupContainer {
               numGood++;
             }
           }
-          if (numGood >= maxGood) {
+          if (numGood > maxGood) {
             maxGood = numGood;
             bestSchemaLabels = schemaLabels;
             bestIdx = i;
           }
           i++;
         }
-
+        if (maxGood == 0) {
+          // Some files, especially those recovered through automatic means, may have
+          // lines that do not match any part of the schema; in that case, just skip
+          // to the next line.
+          continue;
+        }
         List<String> tupleElts = new ArrayList<String>();
         for (String schemaHeader: bestSchemaLabels) {
           tupleElts.add(FileContentsTable.getNestedValues(gr, schemaHeader));
@@ -270,20 +334,8 @@ public class FileContentsTable extends WebMarkupContainer {
         schemaFrequency.get(bestIdx).count += 1;
 
         lastBestIdx = bestIdx;
-        
         numRows++;
       }
-
-      /**
-        if (numRows >= MAX_ROWS) {
-          tupleElts = new ArrayList<String>();          
-          for (String schemaHeader: schemaLabels) {
-            tupleElts.add("...");
-          }
-          tuplelist.add(tupleElts);
-          break;
-        }
-      **/
 
       //
       // Step 3.  Build the hierarchical set of header rows for display.
@@ -295,76 +347,89 @@ public class FileContentsTable extends WebMarkupContainer {
       //
       List<List<List<HeaderPair>>> outputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
       List<List<List<String>>> outputTupleLists = null;
-      boolean dataOrder = true;
-      if (dataOrder) {
-        // Show data in order of how it appears in the file
-        for (int i = 1; i < schemaOrder.size(); i++) {
-          if (schemaOrder.get(i) != schemaOrder.get(i-1)) {
-            createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(i-1)), outputHeaderSets);
-          }
-        }
-        if (schemaOrder.size() > 0) {
-          createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(schemaOrder.size()-1)), outputHeaderSets);
-        }
-        outputTupleLists = dataOrderTupleLists;
-      } else {
-        // Show data in order of schema popularity
-        outputTupleLists = new ArrayList<List<List<String>>>();
 
-        // Sort schemas by descending frequency
-        SchemaPair sortedByFreq[] = schemaFrequency.toArray(new SchemaPair[schemaFrequency.size()]);
-        Arrays.sort(sortedByFreq);
 
-        // Iterate through, populate lists
-        for (int i = 0; i < sortedByFreq.length; i++) {
-          if (sortedByFreq[i].count > 0) {
-            createOutputHeaderSet(schemaLabelLists.get(sortedByFreq[i].schemaId), outputHeaderSets);
-            outputTupleLists.add(perSchemaTupleLists.get(sortedByFreq[i].schemaId));
+      //
+      // DISPLAY MODE IS RAW
+      //
+      List<List<List<HeaderPair>>> rawOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
+      List<List<List<String>>> rawOutputTupleLists = new ArrayList<List<List<String>>>();
+
+      List<List<HeaderPair>> headerSet = new ArrayList<List<HeaderPair>>();
+      rawOutputHeaderSets.add(headerSet);
+      List<HeaderPair> header = new ArrayList<HeaderPair>();
+      header.add(new HeaderPair("", 1));
+      headerSet.add(header);
+      List<List<String>> singleTable = new ArrayList<List<String>>();
+      rawOutputTupleLists.add(singleTable);
+
+      for (List<List<String>> tupleList: dataOrderTupleLists) {
+        for (List<String> tuple: tupleList) {
+          List<String> singleTuple = new ArrayList<String>();
+          StringBuffer sbuf = new StringBuffer();
+          for (String s: tuple) {
+            sbuf.append(s);
+            sbuf.append(" ");
           }
+          singleTuple.add(sbuf.toString().trim());
+          singleTable.add(singleTuple);
+        }
+      }
+
+      //
+      // DISPLAY MODE IS DATAORDER
+      //
+      List<List<List<HeaderPair>>> dataOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
+      List<List<List<String>>> dataOutputTupleLists = dataOrderTupleLists;      
+      // Show data in order of how it appears in the file
+      for (int i = 1; i < schemaOrder.size(); i++) {
+        if (schemaOrder.get(i) != schemaOrder.get(i-1)) {
+          createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(i-1)), dataOutputHeaderSets);
+        }
+      }
+      if (schemaOrder.size() > 0) {
+        createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(schemaOrder.size()-1)), dataOutputHeaderSets);
+      }
+
+      //
+      // DISPLAY MODE IS SCHEMAORDER
+      //
+      List<List<List<HeaderPair>>> schemaOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
+      List<List<List<String>>> schemaOutputTupleLists = new ArrayList<List<List<String>>>();
+
+      // Show data in order of schema popularity by descending frequency
+      SchemaPair sortedByFreq[] = schemaFrequency.toArray(new SchemaPair[schemaFrequency.size()]);
+      Arrays.sort(sortedByFreq, Collections.reverseOrder());
+
+      // Iterate through, populate lists
+      for (int i = 0; i < sortedByFreq.length; i++) {
+        if (sortedByFreq[i].count > 0) {
+          createOutputHeaderSet(schemaLabelLists.get(sortedByFreq[i].schemaId), schemaOutputHeaderSets);
+          schemaOutputTupleLists.add(perSchemaTupleLists.get(sortedByFreq[i].schemaId));
         }
       }
       
       //
       // Step 4.  Add the info to the display.
-      // Inputs: outputHeaderSets and pageOrderTupleLists
       //
-      System.err.println();      
-      System.err.println("Number of schemas: " + outputHeaderSets.size());
-      System.err.println("Number of tuple sets: " + outputTupleLists.size());
-      System.err.println();
+      List<DataTablePair> rawTablePairs = new ArrayList<DataTablePair>();
+      for (int i = 0; i < rawOutputHeaderSets.size(); i++) {
+        rawTablePairs.add(new DataTablePair(rawOutputHeaderSets.get(i), rawOutputTupleLists.get(i)));
+      }
+      renderToPage("rawtables", rawTablePairs);
       
-      add(new ListView<List<HeaderPair>>("attributelabels", outputHeaderSets.get(0)) {
-          protected void populateItem(ListItem<List<HeaderPair>> item) {
-            List<HeaderPair> myListOfFieldLabels = item.getModelObject();
-            ListView<HeaderPair> listOfFields = new ListView<HeaderPair>("fieldlist", myListOfFieldLabels) {
-              protected void populateItem(ListItem<HeaderPair> item2) {
-                HeaderPair displayPair = item2.getModelObject();
-                item2.add(new Label("alabel", "" + displayPair.getString()));
-                item2.add(new AttributeModifier("colspan", true, new Model("" + displayPair.getColSpan())));
-                if (! displayPair.isBottom()) {
-                  item2.add(new AttributeModifier("style", true, new Model("text-align:center")));
-                }
-              }
-            };
-            item.add(listOfFields);
-          }
-        });
-
-      add(new ListView<List<String>>("schemalistview", outputTupleLists.get(0)) {
-          protected void populateItem(ListItem<List<String>> item) {
-            List<String> myListOfSchemaElts = item.getModelObject();
-        
-            ListView<String> listofTupleFields = new ListView<String>("tupleview", myListOfSchemaElts) {
-              protected void populateItem(ListItem<String> item2) {
-                String displayStr = item2.getModelObject();
-                item2.add(new Label("celltext", "" + displayStr));
-              }
-            };
-            item.add(listofTupleFields);
-          }
-        });
+      List<DataTablePair> dataTablePairs = new ArrayList<DataTablePair>();
+      for (int i = 0; i < dataOutputHeaderSets.size(); i++) {
+        dataTablePairs.add(new DataTablePair(dataOutputHeaderSets.get(i), dataOutputTupleLists.get(i)));
+      }
+      renderToPage("datatables", dataTablePairs);
+      
+      List<DataTablePair> schemaTablePairs = new ArrayList<DataTablePair>();            
+      for (int i = 0; i < schemaOutputHeaderSets.size(); i++) {
+        schemaTablePairs.add(new DataTablePair(schemaOutputHeaderSets.get(i), schemaOutputTupleLists.get(i)));
+      }
+      renderToPage("schematables", schemaTablePairs);
     }
-
     setOutputMarkupPlaceholderTag(true);
     setVisibilityAllowed(false);
   }

@@ -43,7 +43,10 @@ public abstract class InferredType implements Writable {
    * Super constructor
    */
   public InferredType() {
-    name = createName();
+    this.name = createName();
+  }
+  public InferredType(String name) {
+    this.name = name;
   }
   abstract String createName();
 
@@ -53,14 +56,15 @@ public abstract class InferredType implements Writable {
   public static InferredType readType(DataInput in) throws IOException {
     InferredType it = null;
     byte b = in.readByte();
+    String name = in.readUTF();
     if (b == BASE_TYPE) {
-      it = new BaseType();
+      it = new BaseType(name);
     } else if (b == STRUCT_TYPE) {
-      it = new StructType();
+      it = new StructType(name);
     } else if (b == ARRAY_TYPE) {
-      it = new ArrayType();
+      it = new ArrayType(name);
     } else if (b == UNION_TYPE) {
-      it = new UnionType();
+      it = new UnionType(name);
     } else {
       throw new IOException("No type found: " + b);
     }
@@ -189,6 +193,9 @@ class BaseType extends InferredType {
   static int fieldCounter = 0;
   public BaseType() {
   }
+  public BaseType(String name) {
+    super(name);
+  }
   public BaseType(Token.AbstractToken token, List<String> sampleStrs) {
     this.sampleStrs = sampleStrs;
     this.tokenClassIdentifier = token.getClassId();
@@ -275,6 +282,7 @@ class BaseType extends InferredType {
   }
   public void write(DataOutput out) throws IOException {
     out.write(BASE_TYPE);
+    out.writeUTF(name);
     out.writeInt(sampleStrs.size());
     for (int i = 0; i < sampleStrs.size(); i++) {
       UTF8.writeString(out, sampleStrs.get(i));
@@ -299,6 +307,9 @@ class StructType extends InferredType {
   Schema schema;
 
   public StructType() {
+  }
+  public StructType(String name) {
+    super(name);
   }
   public StructType(List<InferredType> structTypes) {
     this.structTypes = structTypes;
@@ -398,6 +409,7 @@ class StructType extends InferredType {
   }
   public void write(DataOutput out) throws IOException {
     out.write(STRUCT_TYPE);
+    out.writeUTF(name);    
     out.writeInt(structTypes.size());
     for (InferredType it: structTypes) {
       it.write(out);
@@ -453,6 +465,9 @@ class ArrayType extends InferredType {
   Schema schema = null;
 
   public ArrayType() {
+  }
+  public ArrayType(String name) {
+    super(name);
   }
   public ArrayType(InferredType bodyType) {
     this.bodyType = bodyType;
@@ -524,6 +539,7 @@ class ArrayType extends InferredType {
   }
   public void write(DataOutput out) throws IOException {
     out.write(ARRAY_TYPE);
+    out.writeUTF(name);    
     bodyType.write(out);
   }
 }
@@ -534,6 +550,9 @@ class UnionType extends InferredType {
   Schema schema = null;
 
   public UnionType() {
+  }
+  public UnionType(String name) {
+    super(name);
   }
   public UnionType(List<InferredType> unionTypes) {
     this.unionTypes = unionTypes;
@@ -688,6 +707,7 @@ class UnionType extends InferredType {
   }
   public void write(DataOutput out) throws IOException {
     out.write(UNION_TYPE);
+    out.writeUTF(name);    
     out.writeInt(unionTypes.size());
     for (InferredType it: unionTypes) {
       it.write(out);

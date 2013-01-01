@@ -130,9 +130,22 @@
               <p/>
             </div>
 
+            <hr/>
+              
             <div wicket:id="filecontentstable">
-              <h4>Data</h4>
-              <table class="table table-striped table-bordered table-condensed">
+              <h3>Data</h3>
+              <h2 id="rawheader" style='display: block'>Raw Header</h2>
+              <h2 id="dataheader" style='display: none'>Data Header</h2>
+              <h2 id="schemaheader" style='display: none'>Schema Header</h2>
+              <div class="btn-group">
+                <button class="btn btn-small btn-primary" id='rawbutton' onClick="changeHighlight('raw')">Raw data</button>
+                <button class="btn btn-small" id='databutton' onClick="changeHighlight('data')">Data order</button>
+                <button class="btn btn-small" id='schemabutton' onClick="changeHighlight('schema')">Schema order</button>
+              </div>
+              <p/>
+
+              <div id='rawdisplay' style='display: block'>
+              <table wicket:id="rawtables" class="table table-striped table-bordered table-condensed">
                 <thead>
                   <tr wicket:id="attributelabels">
                     <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
@@ -146,6 +159,42 @@
                   </tr>
                 </tbody>                
               </table>
+              </div>
+
+              <div id='datadisplay' style='display: none'>
+              <table wicket:id="datatables" class="table table-striped table-bordered table-condensed">
+                <thead>
+                  <tr wicket:id="attributelabels">
+                    <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr wicket:id="schemalistview">
+                    <td wicket:id="tupleview">
+                    <span wicket:id="celltext"></span>
+                    </td>
+                  </tr>
+                </tbody>                
+              </table>
+              </div>
+
+              <div id='schemadisplay' style='display: none'>
+              <table wicket:id="schematables" class="table table-striped table-bordered table-condensed">
+                <thead>
+                  <tr wicket:id="attributelabels">
+                    <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr wicket:id="schemalistview">
+                    <td wicket:id="tupleview">
+                    <span wicket:id="celltext"></span>
+                    </td>
+                  </tr>
+                </tbody>                
+              </table>
+              </div>
+              
             </div>
 
           </div> <!-- /container -->
@@ -171,6 +220,18 @@
     <script src="js/bootstrap-collapse.js"></script>
     <script src="js/bootstrap-carousel.js"></script>
     <script src="js/bootstrap-typeahead.js"></script>
+    <script>
+      function changeHighlight(buttonLabel) {
+        document.getElementById('rawbutton').setAttribute('class', 'btn btn-small');
+        document.getElementById('databutton').setAttribute('class', 'btn btn-small');
+        document.getElementById('schemabutton').setAttribute('class', 'btn btn-small');
+        document.getElementById('rawdisplay').style.display = 'none';
+        document.getElementById('datadisplay').style.display = 'none';
+        document.getElementById('schemadisplay').style.display = 'none';
 
+        document.getElementById(buttonLabel + 'button').setAttribute('class', 'btn btn-small btn-primary');
+        document.getElementById(buttonLabel + 'display').style.display = 'block';
+      }
+    </script>
   </body>
 </html>
