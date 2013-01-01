@@ -129,14 +129,13 @@ public class FileContentsTable extends WebMarkupContainer {
     }
   }
 
-  static String getNestedValues(Object oobj, String fieldname) {
-    GenericRecord gr = (GenericRecord) oobj;
+  static String getNestedValues(GenericRecord gr, String fieldname) {
     int dotIndex = fieldname.indexOf(".");
     if (dotIndex >= 0) {
       String firstComponent = fieldname.substring(0, dotIndex);
       String remainder = fieldname.substring(dotIndex+1);
       Object oobj2 = gr.get(firstComponent);
-      return (oobj2 == null) ? "" : getNestedValues(oobj2, remainder);
+      return (oobj2 == null || (! (oobj2 instanceof GenericRecord))) ? "" : getNestedValues((GenericRecord) oobj2, remainder);
     } else {
       Object result = gr.get(fieldname);
       return (result == null ? "" : result.toString());
