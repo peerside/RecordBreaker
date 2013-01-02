@@ -83,7 +83,7 @@ public class FormatAnalyzer {
         try {
           return new UnknownTextDataDescriptor(fs, p, schemaDbDir);
         } catch (Exception iex) {
-          iex.printStackTrace();
+          //iex.printStackTrace();
         }
       }
       // If that doesn't work, then give up and call it unstructured.  You

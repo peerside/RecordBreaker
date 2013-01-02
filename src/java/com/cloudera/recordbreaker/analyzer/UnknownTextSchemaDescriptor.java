@@ -53,7 +53,7 @@ import org.apache.hadoop.conf.Configuration;
  *************************************************************************/
 public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
   public static String SCHEMA_ID = "recordbreaker-recovered";
-  static int MAX_LINES = 1000;
+  public static int MAX_LINES = 1000;
   InferredType typeTree;
 
   public UnknownTextSchemaDescriptor(DataDescriptor dd) throws IOException {
@@ -117,6 +117,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
    */
   public Iterator getIterator() {
     return new Iterator() {
+      int lineno = 0;
       BufferedReader in = null;
       Object nextElt = null;
       {
@@ -143,6 +144,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
           String str = null;
           while ((str = in.readLine()) != null) {
             GenericContainer resultObj = typeTree.parse(str);
+            lineno++;
             if (resultObj != null) {
               return resultObj;
             }
@@ -152,6 +154,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
             in = null;
           }
         } catch (IOException iex) {
+          iex.printStackTrace();
         }
         return null;
       }

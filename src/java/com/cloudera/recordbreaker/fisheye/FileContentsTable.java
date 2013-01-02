@@ -30,10 +30,12 @@ import org.apache.wicket.markup.repeater.RepeatingView;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericArray;
 import org.apache.avro.generic.GenericRecord;
 
 import java.util.List;
 import java.util.Arrays;
+import java.util.TreeMap;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,14 +55,24 @@ public class FileContentsTable extends WebMarkupContainer {
 
   /**
    * Takes a schema that potentially contains unions and converts it into
-   * a list of all possible union-free schemas.
+   * a list of union-free schemas observed with the given data object.
    */
-  static List<Schema> unrollUnions(Schema schema) {
+  static List<Schema> unrollUnionsWithData(Schema schema, Object grObj) {
     if (schema.getType() == Schema.Type.RECORD) {
+      if (! (grObj instanceof GenericRecord)) {
+        return null;
+      }
+      GenericRecord gr = (GenericRecord) grObj;
       List<List<Schema>> fieldSchemaLists = new ArrayList<List<Schema>>();
       int targetTotal = 1;
       for (Schema.Field sf: schema.getFields()) {
-        List<Schema> fieldSchemaList = unrollUnions(sf.schema());
+        if (gr.get(sf.name()) == null) {
+          return null;
+        }
+        List<Schema> fieldSchemaList = unrollUnionsWithData(sf.schema(), gr.get(sf.name()));
+        if (fieldSchemaList == null) {
+          return null;
+        }
         fieldSchemaLists.add(fieldSchemaList);
         targetTotal *= fieldSchemaList.size();
       }
@@ -81,18 +93,40 @@ public class FileContentsTable extends WebMarkupContainer {
     } else if (schema.getType() == Schema.Type.UNION) {
       List<Schema> unrolledSchemas = new ArrayList<Schema>();
       for (Schema s: schema.getTypes()) {
-        unrolledSchemas.addAll(unrollUnions(s));
+        List<Schema> subschemas = FileContentsTable.unrollUnionsWithData(s, grObj);
+        if (subschemas != null) {
+          unrolledSchemas.addAll(subschemas);
+        }
       }
       return unrolledSchemas;
     } else if (schema.getType() == Schema.Type.ARRAY) {
-      List<Schema> subschemas = unrollUnions(schema.getElementType());
+      // Iterate through all elements of array; call unrollUnionsWithData() on each one.
+      // Then deduplicate the resulting schemas
+      TreeMap<String, Schema> seenSchemas = new TreeMap<String, Schema>();
+      GenericArray gra = (GenericArray) grObj;
+      for (int i = 0; i < gra.size(); i++) {
+        List<Schema> result = unrollUnionsWithData(schema.getElementType(), gra.get(i));
+        if (result != null) {
+          for (Schema subS: result) {
+            if (seenSchemas.get(subS.toString()) == null) {
+              seenSchemas.put(subS.toString(), subS);
+            }
+          }
+        }
+      }
+      
+      // Xform the tree into a list, and return.
       List<Schema> newSchemas = new ArrayList<Schema>();
-      for (Schema s: subschemas) {
+      for (Schema s: seenSchemas.values()) {
         newSchemas.add(Schema.createArray(s));
       }
       return newSchemas;
     } else {
       // Base type
+      if (grObj instanceof GenericData.Record
+          || grObj instanceof GenericData.Array) {
+        return null;
+      }
       List<Schema> retList = new ArrayList<Schema>();
       retList.add(schema);
       return retList;
@@ -229,6 +263,9 @@ public class FileContentsTable extends WebMarkupContainer {
         }
       });
   }
+
+  void getSchemaFromData(GenericRecord gr) {
+  }
   
   public FileContentsTable(long fid) {
     super("filecontentstable");
@@ -264,12 +301,32 @@ public class FileContentsTable extends WebMarkupContainer {
       // Step 1.  Figure out the hierarchical labels from the Schema.
       // These are the fields we'll grab from each tuple.
       //
+      // Doing so entails "unrolling" the schemas that contain unions.
+      // That is, translating such schemas into a set of union-free schemas.
+      //
       List<List<List<String>>> perSchemaTupleLists = new ArrayList<List<List<String>>>();
       List<List<List<String>>> dataOrderTupleLists = new ArrayList<List<List<String>>>();
       List<Integer> schemaOrder = new ArrayList<Integer>();
       List<SchemaPair> schemaFrequency = new ArrayList<SchemaPair>();
 
-      List<Schema> allSchemas = FileContentsTable.unrollUnions(schema);
+      int numRows = 0;
+      TreeMap<String, Schema> uniqueUnrolledSchemas = new TreeMap<String, Schema>();
+      for (Iterator it = sd.getIterator(); it.hasNext(); ) {
+        GenericData.Record gr = (GenericData.Record) it.next();
+        List<Schema> grSchemas = FileContentsTable.unrollUnionsWithData(schema, gr);
+        if (grSchemas != null) {
+          for (Schema grs: grSchemas) {
+            if (uniqueUnrolledSchemas.get(grs.toString()) == null) {
+              uniqueUnrolledSchemas.put(grs.toString(), grs);
+            }
+          }
+        }
+        if (numRows >= MAX_ROWS) {
+          break;
+        }
+        numRows++;
+      }
+      List<Schema> allSchemas = new ArrayList(uniqueUnrolledSchemas.values());
       List<List<String>> schemaLabelLists = new ArrayList<List<String>>();
 
       for (int i = 0; i < allSchemas.size(); i++) {
@@ -282,17 +339,15 @@ public class FileContentsTable extends WebMarkupContainer {
       //
       // Step 2.  Build the set of rows for display.  One row per tuple.
       //
-      int numRows = 0;
+      numRows = 0;
       int lastBestIdx = -1;
       boolean hasMoreRows = false;
       for (Iterator it = sd.getIterator(); it.hasNext(); ) {
         GenericData.Record gr = (GenericData.Record) it.next();
-
         if (numRows >= MAX_ROWS) {
           hasMoreRows = true;
           break;
         }
-        
         // OK, now the question is: which schema does the row observe?
         int maxGood = 0;
         int bestIdx = -1;
@@ -347,10 +402,21 @@ public class FileContentsTable extends WebMarkupContainer {
       List<List<List<HeaderPair>>> outputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
       List<List<List<String>>> outputTupleLists = null;
 
+      //
+      // Step 4.  Build 3 different display modes.
+      // There are 3 ways to view the data.  All 3 get sent to the browser, and the user
+      // can toggle among them.
+      //
+      // "RAW" mode is just the text of the data, as closely as we can formulate it
+      //
+      // "DATAORDER" mode means show the structured data in tables, ordered by the
+      // tuples' appearance in the datafile.
+      //
+      // "SCHEMAORDER" mode means show the structured data in tables, ordered by
+      // most-popular tables first.
+      //
 
-      //
-      // DISPLAY MODE IS RAW
-      //
+      // 4a. raw mode
       List<List<List<HeaderPair>>> rawOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
       List<List<List<String>>> rawOutputTupleLists = new ArrayList<List<List<String>>>();
 
@@ -375,9 +441,7 @@ public class FileContentsTable extends WebMarkupContainer {
         }
       }
 
-      //
-      // DISPLAY MODE IS DATAORDER
-      //
+      // 4b. dataorder mode
       List<List<List<HeaderPair>>> dataOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
       List<List<List<String>>> dataOutputTupleLists = dataOrderTupleLists;      
       // Show data in order of how it appears in the file
@@ -390,9 +454,7 @@ public class FileContentsTable extends WebMarkupContainer {
         createOutputHeaderSet(schemaLabelLists.get(schemaOrder.get(schemaOrder.size()-1)), dataOutputHeaderSets);
       }
 
-      //
-      // DISPLAY MODE IS SCHEMAORDER
-      //
+      // 4c. schemaorder mode      
       List<List<List<HeaderPair>>> schemaOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
       List<List<List<String>>> schemaOutputTupleLists = new ArrayList<List<List<String>>>();
 
@@ -409,7 +471,7 @@ public class FileContentsTable extends WebMarkupContainer {
       }
       
       //
-      // Step 4.  Add the info to the display.
+      // Step 5.  Add the info to the display.
       //
       List<DataTablePair> rawTablePairs = new ArrayList<DataTablePair>();
       for (int i = 0; i < rawOutputHeaderSets.size(); i++) {

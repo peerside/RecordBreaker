@@ -26,6 +26,7 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.conf.Configuration;
 
 /*********************************************************
  * LearnStructure is the main file for figuring out pattern-extractors and schemas for a text file.
@@ -46,7 +47,7 @@ public class LearnStructure {
   
   /**
    */
-  public void inferRecordFormat(FileSystem fs, Path p, FileSystem fs2, Path schemaFile, Path parseTreeFile, Path jsonDataFile, Path avroDataFile, boolean verbose, int maxLines) throws IOException {    
+  public void inferRecordFormat(FileSystem fs, Path p, FileSystem fs2, Path schemaFile, Path parseTreeFile, Path jsonDataFile, Path avroDataFile, boolean verbose, int maxLines) throws IOException {
     // Store parse errors and results
     List<Integer> unparseableLineNos = new ArrayList<Integer>();
     List<String> unparseableStrs = new ArrayList<String>();
@@ -206,7 +207,7 @@ public class LearnStructure {
       System.err.println("Usage: LearnStructure <input-datafile> <outdir> (-emitAvro (true)|false)");
       return;
     }
-    FileSystem localFS = FileSystem.getLocal(null);
+    FileSystem localFS = FileSystem.getLocal(new Configuration());
     boolean emitAvro = true;
     int i = 0;
     Path f = new Path(new File(argv[i++]).getCanonicalPath());
@@ -232,6 +233,7 @@ public class LearnStructure {
       jsonDataFile = new Path(outdir.getCanonicalPath(), JSONDATA_FILENAME);    
       avroDataFile = new Path(outdir.getCanonicalPath(), DATA_FILENAME);
     }
+
     LearnStructure ls = new LearnStructure();
     ls.inferRecordFormat(localFS, f, localFS, schemaFile, parseTreeFile, jsonDataFile, avroDataFile, true, -1);
   }

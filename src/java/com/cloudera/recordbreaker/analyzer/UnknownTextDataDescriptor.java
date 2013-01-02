@@ -17,10 +17,13 @@ package com.cloudera.recordbreaker.analyzer;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.io.BufferedInputStream;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import org.apache.avro.Schema;
 
@@ -79,15 +82,35 @@ public class UnknownTextDataDescriptor extends GenericDataDescriptor {
   /**
    * Creates a new <code>UnknownTextDataDescriptor</code>.
    */
+  final static double TUPLE_PCT = 0.75;
   public UnknownTextDataDescriptor(FileSystem fs, Path p, File schemaDictDir) throws IOException {
     super(p, fs, TEXTDATA_TYPE);
     
-    FileSystem localFS = FileSystem.getLocal(new Configuration());
     this.schemaDictDir = schemaDictDir;
     UnknownTextSchemaDescriptor tsd = new UnknownTextSchemaDescriptor(this);
-    this.schemas.add(tsd);
+
+    // Test if this schema descriptor can parse the file
+    boolean hasLatentStructure = false;
+    int numTuples = 0;
+    for (Iterator it = tsd.getIterator(); it.hasNext(); ) {
+      numTuples++;
+      it.next();
+    }
+    int numLines = 0;
+    BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(p)));
+    while (in.readLine() != null) {
+      numLines++;
+    }
+
+    numTuples = Math.min(numTuples, UnknownTextSchemaDescriptor.MAX_LINES);
+    numLines = Math.min(numLines, UnknownTextSchemaDescriptor.MAX_LINES);
+    if ((numTuples / (1.0 * numLines)) < TUPLE_PCT) {
+      throw new IOException("Cannot parse structured text data");
+    }
+    this.schemas.add(new UnknownTextSchemaDescriptor(this));
     
     // The most basic schema descriptor is the raw one that captures the anonymous avro file
+    // FileSystem localFS = FileSystem.getLocal(new Configuration());
     // schemaDescriptors.add(new UnknownTextSchemaDescriptor(localFS, new Path(workingAvroFile.getCanonicalPath())));
     // Remove schema dictionary suggestion until we're more confident it's actually useful.
     /**
