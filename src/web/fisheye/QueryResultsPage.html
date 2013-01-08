@@ -80,7 +80,7 @@
               </div>
             </div>
             
-            <h1>File</h1>
+            <h1>Query Results</h1>
             <div class="errorbox" wicket:id="crawlWarningMsgContainer">
               <div class="alert alert-info">
                 <strong>Note: </strong><span wicket:id="crawlErrorLabel"></span>
@@ -93,123 +93,20 @@
               </div>
             </div>
 
-            <div wicket:id="currentFileDisplay">
-              <h5><span wicket:id="filetitle"/> in <a href="#" wicket:id="filesubtitlelink"></a></h5>
+            <div wicket:id="queryresultspanel">
+              <h5><span wicket:id="filename"/></h5>              
               <table class="table table-striped table-bordered table-condensed">
                 <thead>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>owner</td>
-                    <td><span wicket:id="owner" /></td>
-                  </tr>
-                  <tr>
-                    <td>size</td>
-                    <td><span wicket:id="size" /></td>
-                  </tr>
-                  <tr>
-                    <td>last modified</td>
-                    <td><span wicket:id="lastmodified" /></td>
-                  </tr>
-                  <tr>
-                    <td>crawled on</td>
-                    <td><span wicket:id="crawledon" /></td>
-                  </tr>
-                  <tr>
-                    <td>type</td>
-                    <td><span wicket:id="typelink" /></td>
-                  </tr>
-                  <tr>
-                    <td>schema</td>
-                    <td><span wicket:id="schemalink" /></td>
+                  <tr wicket:id="resultTable">
+                    <td wicket:id="resultTuple">
+                      <span wicket:id="field"></span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
-              <p/>
-              <a href="#" wicket:id="downloadlink" class="btn btn-primary">Download</a>
-              <p/>
-              <div wicket:id="querySupported">
-                <hr>
-                  <h3>Queries</h3>
-                  <form method="get" wicket:id="queryform">
-                    <b>SELECT <input type="text" placeholder="*" wicket:id="projectionclause"> FROM <em>DATA</em> WHERE <input type="text" placeholder="True" wicket:id="selectionclause"></b>
-                    <p/>
-                    <button type="submit" class="btn btn-primary" wicket:id="submitquery">Submit query</button>
-                  </form>
-              </div>
-              <div wicket:id="queryUnsupported">
-              </div>
             </div>
-
-            <hr/>
-            <div wicket:id="filecontentstable">
-              <h3>Data Summary</h3>
-              <div wicket:id="completeScanMessage">
-                Here are all <span wicket:id="numberofcompletelines"></span> lines of the file.
-              </div>
-              <div wicket:id="incompleteScanMessage">
-                Here are the first <span wicket:id="numberofincompletelines"></span> lines of the file (file has <span wicket:id="numberOfTotalBytes"></span> bytes in total).
-              </div>
-              <div class="btn-group">
-                <button class="btn btn-small btn-primary" id='rawbutton' onClick="changeHighlight('raw')">Raw data</button>
-                <button class="btn btn-small" id='databutton' onClick="changeHighlight('data')">Data order</button>
-                <button class="btn btn-small" id='schemabutton' onClick="changeHighlight('schema')">Schema order</button>
-              </div>
-              <p/>
-
-              <div id='rawdisplay' style='display: block'>
-              <table wicket:id="rawtables" class="table table-striped table-bordered table-condensed">
-                <thead>
-                  <tr wicket:id="attributelabels">
-                    <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr wicket:id="schemalistview">
-                    <td wicket:id="tupleview">
-                    <span wicket:id="celltext"></span>
-                    </td>
-                  </tr>
-                </tbody>                
-              </table>
-              </div>
-
-              <div id='datadisplay' style='display: none'>
-              <table wicket:id="datatables" class="table table-striped table-bordered table-condensed">
-                <thead>
-                  <tr wicket:id="attributelabels">
-                    <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr wicket:id="schemalistview">
-                    <td wicket:id="tupleview">
-                    <span wicket:id="celltext"></span>
-                    </td>
-                  </tr>
-                </tbody>                
-              </table>
-              </div>
-
-              <div id='schemadisplay' style='display: none'>
-              <table wicket:id="schematables" class="table table-striped table-bordered table-condensed">
-                <thead>
-                  <tr wicket:id="attributelabels">
-                    <th wicket:id="fieldlist"><b><span wicket:id="alabel"/></b></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr wicket:id="schemalistview">
-                    <td wicket:id="tupleview">
-                    <span wicket:id="celltext"></span>
-                    </td>
-                  </tr>
-                </tbody>                
-              </table>
-              </div>
-              
-            </div>
-
           </div> <!-- /container -->
         </div>
       </div>

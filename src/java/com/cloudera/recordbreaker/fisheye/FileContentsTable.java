@@ -15,6 +15,7 @@
 package com.cloudera.recordbreaker.fisheye;
 
 import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
+import com.cloudera.recordbreaker.analyzer.SchemaUtils;
 import com.cloudera.recordbreaker.analyzer.FileSummary;
 import com.cloudera.recordbreaker.analyzer.DataDescriptor;
 import com.cloudera.recordbreaker.analyzer.FileSummaryData;
@@ -22,11 +23,11 @@ import com.cloudera.recordbreaker.analyzer.SchemaDescriptor;
 
 import org.apache.wicket.model.Model;
 import org.apache.wicket.AttributeModifier;
-import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.repeater.RepeatingView;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
@@ -53,129 +54,6 @@ public class FileContentsTable extends WebMarkupContainer {
   long fid = -1L;
   final static int MAX_ROWS = 100;
 
-  /**
-   * Takes a schema that potentially contains unions and converts it into
-   * a list of union-free schemas observed with the given data object.
-   */
-  static List<Schema> unrollUnionsWithData(Schema schema, Object grObj) {
-    if (schema.getType() == Schema.Type.RECORD) {
-      if (! (grObj instanceof GenericRecord)) {
-        return null;
-      }
-      GenericRecord gr = (GenericRecord) grObj;
-      List<List<Schema>> fieldSchemaLists = new ArrayList<List<Schema>>();
-      int targetTotal = 1;
-      for (Schema.Field sf: schema.getFields()) {
-        if (gr.get(sf.name()) == null) {
-          return null;
-        }
-        List<Schema> fieldSchemaList = unrollUnionsWithData(sf.schema(), gr.get(sf.name()));
-        if (fieldSchemaList == null) {
-          return null;
-        }
-        fieldSchemaLists.add(fieldSchemaList);
-        targetTotal *= fieldSchemaList.size();
-      }
-
-      List<Schema> outputSchemas = new ArrayList<Schema>();
-      for (int i = 0; i < targetTotal; i++) {
-        List<Schema.Field> newFields = new ArrayList<Schema.Field>();
-
-        int j = 0;
-        for (Schema.Field oldField: schema.getFields()) {
-          List<Schema> curFieldSchemaList = fieldSchemaLists.get(j);
-          newFields.add(new Schema.Field(oldField.name(), curFieldSchemaList.get(i % curFieldSchemaList.size()), oldField.doc(), null));
-          j++;
-        }
-        outputSchemas.add(Schema.createRecord(newFields));
-      }
-      return outputSchemas;
-    } else if (schema.getType() == Schema.Type.UNION) {
-      List<Schema> unrolledSchemas = new ArrayList<Schema>();
-      for (Schema s: schema.getTypes()) {
-        List<Schema> subschemas = FileContentsTable.unrollUnionsWithData(s, grObj);
-        if (subschemas != null) {
-          unrolledSchemas.addAll(subschemas);
-        }
-      }
-      return unrolledSchemas;
-    } else if (schema.getType() == Schema.Type.ARRAY) {
-      // Iterate through all elements of array; call unrollUnionsWithData() on each one.
-      // Then deduplicate the resulting schemas
-      TreeMap<String, Schema> seenSchemas = new TreeMap<String, Schema>();
-      GenericArray gra = (GenericArray) grObj;
-      for (int i = 0; i < gra.size(); i++) {
-        List<Schema> result = unrollUnionsWithData(schema.getElementType(), gra.get(i));
-        if (result != null) {
-          for (Schema subS: result) {
-            if (seenSchemas.get(subS.toString()) == null) {
-              seenSchemas.put(subS.toString(), subS);
-            }
-          }
-        }
-      }
-      
-      // Xform the tree into a list, and return.
-      List<Schema> newSchemas = new ArrayList<Schema>();
-      for (Schema s: seenSchemas.values()) {
-        newSchemas.add(Schema.createArray(s));
-      }
-      return newSchemas;
-    } else {
-      // Base type
-      if (grObj instanceof GenericData.Record
-          || grObj instanceof GenericData.Array) {
-        return null;
-      }
-      List<Schema> retList = new ArrayList<Schema>();
-      retList.add(schema);
-      return retList;
-    }
-  }
-  
-  /**
-   * Takes an Avro record Schema and creates dot-separated names for each
-   * leaf-level field.  The input Schema should *not* have any unions.
-   */
-  static List<String> flattenNames(Schema schema) {
-    if (schema.getType() == Schema.Type.RECORD) {
-      List<String> schemaLabels = new ArrayList<String>();
-      for (Schema.Field field: schema.getFields()) {
-        Schema fieldSchema = field.schema();
-        Schema.Type fieldSchemaType = fieldSchema.getType();
-        List<String> subnames = FileContentsTable.flattenNames(fieldSchema);
-        if (subnames == null) {
-          schemaLabels.add(field.name());
-        } else {
-          for (String s: subnames) {
-            schemaLabels.add(field.name() + "." + s);
-          }
-        }
-      }
-      return schemaLabels;
-    } else if (schema.getType() == Schema.Type.UNION) {
-      List<Schema> unionTypes = schema.getTypes();
-      throw new UnsupportedOperationException("Cannot process UNION");
-    } else if (schema.getType() == Schema.Type.ARRAY) {
-      return flattenNames(schema.getElementType());
-    } else {
-      return null;
-    }
-  }
-
-  static String getNestedValues(GenericRecord gr, String fieldname) {
-    int dotIndex = fieldname.indexOf(".");
-    if (dotIndex >= 0) {
-      String firstComponent = fieldname.substring(0, dotIndex);
-      String remainder = fieldname.substring(dotIndex+1);
-      Object oobj2 = gr.get(firstComponent);
-      return (oobj2 == null || (! (oobj2 instanceof GenericRecord))) ? "" : getNestedValues((GenericRecord) oobj2, remainder);
-    } else {
-      Object result = gr.get(fieldname);
-      return (result == null ? "" : result.toString());
-    }
-  }
-  
   public FileContentsTable() {
     super("filecontentstable");
     setOutputMarkupPlaceholderTag(true);
@@ -313,7 +191,7 @@ public class FileContentsTable extends WebMarkupContainer {
       TreeMap<String, Schema> uniqueUnrolledSchemas = new TreeMap<String, Schema>();
       for (Iterator it = sd.getIterator(); it.hasNext(); ) {
         GenericData.Record gr = (GenericData.Record) it.next();
-        List<Schema> grSchemas = FileContentsTable.unrollUnionsWithData(schema, gr);
+        List<Schema> grSchemas = SchemaUtils.unrollUnionsWithData(schema, gr, false);
         if (grSchemas != null) {
           for (Schema grs: grSchemas) {
             if (uniqueUnrolledSchemas.get(grs.toString()) == null) {
@@ -331,7 +209,7 @@ public class FileContentsTable extends WebMarkupContainer {
 
       for (int i = 0; i < allSchemas.size(); i++) {
         Schema s1 = allSchemas.get(i);
-        schemaLabelLists.add(FileContentsTable.flattenNames(s1));
+        schemaLabelLists.add(SchemaUtils.flattenNames(s1));
         perSchemaTupleLists.add(new ArrayList<List<String>>());
         schemaFrequency.add(new SchemaPair(i, 0));
       }
@@ -340,12 +218,14 @@ public class FileContentsTable extends WebMarkupContainer {
       // Step 2.  Build the set of rows for display.  One row per tuple.
       //
       numRows = 0;
+      boolean incompleteFileScan = false;
       int lastBestIdx = -1;
       boolean hasMoreRows = false;
       for (Iterator it = sd.getIterator(); it.hasNext(); ) {
         GenericData.Record gr = (GenericData.Record) it.next();
         if (numRows >= MAX_ROWS) {
           hasMoreRows = true;
+          incompleteFileScan = true;
           break;
         }
         // OK, now the question is: which schema does the row observe?
@@ -356,7 +236,7 @@ public class FileContentsTable extends WebMarkupContainer {
         for (List<String> schemaLabels: schemaLabelLists) {
           int numGood = 0;
           for (String schemaHeader: schemaLabels) {
-            String result = FileContentsTable.getNestedValues(gr, schemaHeader);
+            String result = SchemaUtils.getNestedValues(gr, schemaHeader);
             if (result.length() > 0) {
               numGood++;
             }
@@ -376,7 +256,7 @@ public class FileContentsTable extends WebMarkupContainer {
         }
         List<String> tupleElts = new ArrayList<String>();
         for (String schemaHeader: bestSchemaLabels) {
-          tupleElts.add(FileContentsTable.getNestedValues(gr, schemaHeader));
+          tupleElts.add(SchemaUtils.getNestedValues(gr, schemaHeader));
         }
         perSchemaTupleLists.get(bestIdx).add(tupleElts);
 
@@ -473,6 +353,25 @@ public class FileContentsTable extends WebMarkupContainer {
       //
       // Step 5.  Add the info to the display.
       //
+      final boolean hasCompletedFileScan = ! incompleteFileScan;
+      final int scannedRows = numRows;
+      final long fsdSize = fsd.size;
+      add(new WebMarkupContainer("completeScanMessage") {
+          {
+            setOutputMarkupPlaceholderTag(true);
+            setVisibilityAllowed(hasCompletedFileScan);
+            add(new Label("numberofcompletelines", "" + scannedRows));
+          }
+        });
+      add(new WebMarkupContainer("incompleteScanMessage") {
+          {
+            setOutputMarkupPlaceholderTag(true);
+            setVisibilityAllowed(! hasCompletedFileScan);
+            add(new Label("numberofincompletelines", "" + scannedRows));
+            add(new Label("numberOfTotalBytes", "" + fsdSize));
+          }
+        });
+      
       List<DataTablePair> rawTablePairs = new ArrayList<DataTablePair>();
       for (int i = 0; i < rawOutputHeaderSets.size(); i++) {
         rawTablePairs.add(new DataTablePair(rawOutputHeaderSets.get(i), rawOutputTupleLists.get(i)));

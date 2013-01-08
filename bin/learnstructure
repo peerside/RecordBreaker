@@ -70,6 +70,7 @@ if [ "$cygwin" == false ] ; then
   fi
 
   JOPTS+="-Djava.library.path=$CMDPATH/build/test:$CMDPATH/build"
+  UOPTS="-Dtestname=foo"
 
   append_jars_onto_classpath "$CMDPATH/build/ivy/lib/recordbreaker/default"
   append_jars_onto_classpath "$CMDPATH/build"
@@ -77,6 +78,7 @@ if [ "$cygwin" == false ] ; then
   CLASSPATH+=":$JAVA_HOME/lib/tools.jar"
   CLASSPATH+=":$CMDPATH/build/test"
   CLASSPATH+=":$CMDPATH/build"
+  CLASSPATH+=":$CMDPATH/conf"  
 
   append_jars_onto_classpath "${CMDPATH/build}"
   append_jars_onto_classpath "${CMDPATH/build/test}"

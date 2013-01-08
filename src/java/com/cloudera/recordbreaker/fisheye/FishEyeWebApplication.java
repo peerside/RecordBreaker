@@ -37,6 +37,7 @@ public class FishEyeWebApplication extends WebApplication {
     mountPage("/About", AboutPage.class);
 
     mountPage("/Files", FilesPage.class);
+    mountPage("/QueryResults", QueryResultsPage.class);
     mountPage("/Filetypes", FiletypesPage.class);
     mountPage("/Schemas", SchemasPage.class);    
 

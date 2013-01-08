@@ -28,6 +28,8 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.net.URISyntaxException;
 
+import org.apache.hadoop.hive.cli.*;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -149,7 +151,7 @@ public class FSAnalyzer {
       return null;
     }
   }
-  
+
   /**
    * Helper fn <code>getNewOrPendingCrawl</code> returns the id of a Crawl for the specified filesystem.
    * If a crawl is pending, that one is returned.

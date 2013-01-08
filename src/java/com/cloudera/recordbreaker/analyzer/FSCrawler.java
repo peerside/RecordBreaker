@@ -15,6 +15,7 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Date;
@@ -75,7 +76,11 @@ public class FSCrawler {
         paths[0] = p;
         for (FileStatus subfilestatus: fs.listStatus(p)) {
           Path subfile = subfilestatus.getPath();
-          recursiveCrawlBuildList(fs, subfile, subdirDepth-1, crawlId, todoFileList, todoDirList);
+          try {
+            recursiveCrawlBuildList(fs, subfile, subdirDepth-1, crawlId, todoFileList, todoDirList);
+          } catch (IOException iex) {
+            iex.printStackTrace();
+          }
         }
       }
     }

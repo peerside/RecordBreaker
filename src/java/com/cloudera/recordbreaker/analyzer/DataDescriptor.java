@@ -18,7 +18,7 @@ import java.util.List;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.avro.Schema;
 
 /***************************************************************************************
  * <code>DataDescriptor</code> is a generic interface for providing data about a given
@@ -66,4 +66,27 @@ public interface DataDescriptor {
    * @return an <code>InputStream</code>
    */
   public InputStream getRawBytes() throws IOException;
+
+  public Schema getHiveTargetSchema();
+  
+  /**
+   * Calling <code>getHiveImportStatement</code> will
+   * return a string that can be used to create a Hive table
+   * that reflects this crawled data.
+   *
+   * @param tablename a <code>String</code> value
+   * @return a <code>String</code> value
+   */
+  public String getHiveCreateTableStatement(String tablename);
+
+  /**
+   * Calling <code>getHiveImportDataStatement</code> will
+   * return a string that causes a running Hive instance to
+   * import this data into a table previously created using
+   * getHiveCreateTableStatement().
+   *
+   * @param tablename a <code>String</code> value
+   * @return a <code>String</code> value
+   */
+  public String getHiveImportDataStatement(String tablename);
 }

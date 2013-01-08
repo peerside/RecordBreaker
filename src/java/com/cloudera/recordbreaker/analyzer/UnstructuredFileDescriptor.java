@@ -55,4 +55,10 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
   public InputStream getRawBytes() throws IOException {
     return fs.open(p);
   }
+  public String getHiveCreateTableStatement(String tablename) {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
+  }
+  public String getHiveImportDataStatement(String tablename) {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());    
+  }
 }

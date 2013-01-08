@@ -14,7 +14,12 @@
  */
 package com.cloudera.recordbreaker.fisheye;
 
+import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
 import com.cloudera.recordbreaker.analyzer.FileSummary;
+import com.cloudera.recordbreaker.analyzer.FileSummaryData;
+import com.cloudera.recordbreaker.analyzer.DataDescriptor;
+import com.cloudera.recordbreaker.analyzer.SchemaDescriptor;
+import com.cloudera.recordbreaker.analyzer.DataQuery;
 import com.cloudera.recordbreaker.analyzer.TypeSummary;
 import com.cloudera.recordbreaker.analyzer.SchemaSummary;
 import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
@@ -41,22 +46,40 @@ import org.apache.wicket.util.file.Files;
 import org.apache.wicket.util.lang.Bytes;
 import org.apache.wicket.util.time.Duration;
 import org.apache.wicket.model.AbstractReadOnlyModel;
+import org.apache.wicket.util.value.ValueMap;
+import org.apache.wicket.model.CompoundPropertyModel;
+import org.apache.wicket.markup.html.form.RequiredTextField;
+import org.apache.wicket.markup.html.form.TextField;
+import org.apache.wicket.markup.html.form.Form;
+import org.apache.wicket.ajax.AjaxRequestTarget;
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.ArrayList;
 
 /*******************************************************
- * Wicket Page class that describes a specific File
+ * Wicket Page class that describes a specific File.
+ * It shows metadata, shows structured file contents, and
+ * allows the user to query the data.
+ *
+ * @author "Michael Cafarella"
+ * @version 1.0
+ * @since 1.0
+ * @see WebPage
  *******************************************************/
 public class FilePage extends WebPage {
-
   final class FilePageDisplay extends WebMarkupContainer {
     long fid = -1L;
     
+    /**
+     * Sets up the FilePageDisplay frame.  This is only shown
+     * when there is a valid FID and a valid filesystem
+     */
     public FilePageDisplay(String name, String fidStr) {
       super(name);
       FishEye fe = FishEye.getInstance();
@@ -66,11 +89,14 @@ public class FilePage extends WebPage {
           try {
             this.fid = Long.parseLong(fidStr);
             FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
+            FSAnalyzer fsa = fe.getAnalyzer();
+            FileSummaryData fsd = fsa.getFileSummaryData(fid);
+            DataDescriptor dd = fsd.dd;
             List<TypeGuessSummary> tgses = fs.getTypeGuesses();
-            
+
             add(new Label("filetitle", fs.getFname()));
             add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath().getParent().toString())).toString(), fs.getPath().getParent().toString()));
-
+            // Set up the download file link
             IResourceStream hadoopfsStream = new AbstractResourceStreamWriter() {
                 public void write(Response output) {
                   WebResponse weboutput = (WebResponse) output;
@@ -100,12 +126,38 @@ public class FilePage extends WebPage {
             resourceStream.setContentDisposition(ContentDisposition.ATTACHMENT);
             resourceStream.setFileName(fs.getFname());
             add(new ResourceLink<File>("downloadlink", resourceStream));
+
+            // querySupported container holds queryform
+            // queryUnsupported container holds an error message
+            boolean isQuerySupported = false;
+            try {
+              isQuerySupported = (dd.getHiveCreateTableStatement("tabname") != null);
+            } catch (UnsupportedOperationException uoe) {
+              uoe.printStackTrace();
+            }
             
+            final boolean querySupported = isQuerySupported;
+            add(new WebMarkupContainer("querySupported") {
+                {
+                  setOutputMarkupPlaceholderTag(true);
+                  setVisibilityAllowed(querySupported);
+                  add(new QueryForm("queryform", new ValueMap(), fid));
+                }
+              });
+            add(new WebMarkupContainer("queryUnsupported") {
+                {
+                  setOutputMarkupPlaceholderTag(true);
+                  setVisibilityAllowed(! querySupported);
+                }
+              });
+            
+            // File metadata
             add(new Label("owner", fs.getOwner()));
             add(new Label("size", "" + fs.getSize()));
             add(new Label("lastmodified", fs.getLastModified()));
             add(new Label("crawledon", fs.getCrawl().getStartedDate()));
 
+            // Schema data
             if (tgses.size() > 0) {
               TypeGuessSummary tgs = tgses.get(0);
               TypeSummary ts = tgs.getTypeSummary();          
@@ -130,6 +182,7 @@ public class FilePage extends WebPage {
         add(new Label("size", ""));
         add(new Label("lastmodified", ""));
         add(new Label("crawledon", ""));
+        add(new QueryForm("queryform", new ValueMap(), 0L));
       }
 
       setOutputMarkupPlaceholderTag(true);
@@ -142,7 +195,60 @@ public class FilePage extends WebPage {
       setVisibilityAllowed(fe.hasFSAndCrawl() && (fs != null && accessCtrl.hasReadAccess(fs)));
     }
   }
-  
+
+  ////////////////////////////////////////////////////////
+  // User queries on the data
+  ////////////////////////////////////////////////////////
+  public final class QueryForm extends Form<ValueMap> {
+    long fid;
+    public QueryForm(final String id, ValueMap vm, long fid) {
+      super(id, new CompoundPropertyModel<ValueMap>(vm));
+      this.fid = fid;
+      final long finalFid = fid;
+
+      add(new TextField<String>("selectionclause").setType(String.class));
+      add(new TextField<String>("projectionclause").setType(String.class));            
+      add(new AjaxButton("submitquery") {
+          protected void onSubmit(final AjaxRequestTarget target, final Form form) {
+            //loginErrorMsgDisplay.setVisibilityAllowed(false);            
+            //target.add(loginErrorMsgDisplay);
+            FishEye fe = FishEye.getInstance();
+            DataQuery dq = DataQuery.getInstance();
+            ValueMap vals = (ValueMap) form.getModelObject();
+            FSAnalyzer fsa = fe.getAnalyzer();
+            FileSummaryData fsd = fsa.getFileSummaryData(finalFid);
+            String path = fsd.path + "/" + fsd.fname;
+            DataDescriptor dd = fsd.dd;
+            List<List<String>> results = null;
+            if (dq != null) {
+              // Open a new window for the query results
+              String projClause = (String) vals.get("projectionclause");
+              if (projClause == null) {
+                projClause = "*";
+              }
+              String selClause = (String) vals.get("selectionclause");
+              if (selClause == null) {
+                selClause = "";
+              }
+
+              PageParameters pp = new PageParameters();
+              pp.add("fid", "" + finalFid);
+              pp.add("projectionclause", projClause);
+              pp.add("selectionclause", selClause);
+              pp.add("filename", path);
+              //add(new ExternalLink("queryResultsLink", urlFor(QueryResultsPage.class, pp).toString(), "queryResults"));
+              System.err.println("Got results: " + urlFor(QueryResultsPage.class, pp).toString());
+              target.appendJavaScript("window.open(\"" + urlFor(QueryResultsPage.class, pp).toString() + "\")");
+            }
+          }
+          protected void onError(final AjaxRequestTarget target, final Form form) {
+            //loginErrorMsgDisplay.setVisibilityAllowed(true);            
+            //target.add(loginErrorMsgDisplay);
+          }
+        });
+    }
+  }
+
   public FilePage() {
     add(new CrawlWarningBox());
     add(new SettingsWarningBox());    

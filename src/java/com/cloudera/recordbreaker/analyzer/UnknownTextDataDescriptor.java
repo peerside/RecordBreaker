@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.BufferedInputStream;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.Iterator;
 
 import org.apache.avro.Schema;
 
+import com.cloudera.recordbreaker.hive.RecordBreakerSerDe;
 import com.cloudera.recordbreaker.schemadict.SchemaSuggest;
 import com.cloudera.recordbreaker.schemadict.DictionaryMapping;
 import com.cloudera.recordbreaker.learnstructure.LearnStructure;
@@ -35,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.commons.codec.binary.Base64;
 
 /**
  * <code>UnknownTextDataDescriptor</code> encapsulates log files with which we are unfamiliar.
@@ -108,23 +111,6 @@ public class UnknownTextDataDescriptor extends GenericDataDescriptor {
       throw new IOException("Cannot parse structured text data");
     }
     this.schemas.add(new UnknownTextSchemaDescriptor(this));
-    
-    // The most basic schema descriptor is the raw one that captures the anonymous avro file
-    // FileSystem localFS = FileSystem.getLocal(new Configuration());
-    // schemaDescriptors.add(new UnknownTextSchemaDescriptor(localFS, new Path(workingAvroFile.getCanonicalPath())));
-    // Remove schema dictionary suggestion until we're more confident it's actually useful.
-    /**
-     // We might be able to find more interesting descriptors by using the SchemaDictionary     
-     SchemaSuggest ss = new SchemaSuggest(schemaDictDir);
-     List<DictionaryMapping> schemaMappings = ss.inferSchemaMapping(workingAvroFile, 10);
-     int count = 0;
-     for (DictionaryMapping dm: schemaMappings) {
-       // Obtaining a dictionarymapping via 'inferSchemaMapping' is like acquiring a transformation function that hasn't been applied yet.
-       // We apply the function to obtain a novel Avro file, then return a schema descriptor for this transformed data file.
-       schemaDescriptors.add(new UnknownTextSchemaDescriptor(dm.applyAvroTransform(workingAvroFile, File.createTempFile("textdesc-" + count, "avro", null))));
-       count++;
-     }
-    **/
   }
 
   public UnknownTextDataDescriptor(FileSystem fs, Path p, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
@@ -133,5 +119,47 @@ public class UnknownTextDataDescriptor extends GenericDataDescriptor {
 
   SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
     return new UnknownTextSchemaDescriptor(this, schemaRepr, blob);
+  }
+
+  public Schema getHiveTargetSchema() {
+    UnknownTextSchemaDescriptor sd = (UnknownTextSchemaDescriptor) this.getSchemaDescriptor().get(0);
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    return unionFreeSchemas.get(0);
+  }
+  
+  public String getHiveCreateTableStatement(String tablename) {
+    UnknownTextSchemaDescriptor sd = (UnknownTextSchemaDescriptor) this.getSchemaDescriptor().get(0);
+    File workingParserPath = null;
+    try {
+      workingParserPath = File.createTempFile("recordbreaker", "parser", null);
+      FileOutputStream out = new FileOutputStream(workingParserPath);
+      try {
+        out.write(sd.getPayload());
+      } finally {
+        out.close();
+      }
+    } catch (IOException iex) {
+      iex.printStackTrace();
+      return null;
+    }
+    Schema parentS = sd.getSchema();
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    String escapedSchemaString = unionFreeSchemas.get(0).toString();
+    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE 'com.cloudera.recordbreaker.hive.RecordBreakerSerDe' WITH SERDEPROPERTIES('" +
+      RecordBreakerSerDe.DESERIALIZER + "'='" + workingParserPath.toString() + "', '" +
+      RecordBreakerSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
+      "STORED AS TEXTFILE";
+    return creatTxt;
+  }
+
+  public String getHiveImportDataStatement(String tablename) {
+    String fname = getFilename().toString();
+    String localMarker = "";
+    if (fname.startsWith("file")) {
+      localMarker = " local ";
+    }
+    String loadTxt = "load data" + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
+    return loadTxt;
   }
 }
