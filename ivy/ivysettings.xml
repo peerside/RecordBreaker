@@ -24,19 +24,26 @@
       pattern="${maven2.pattern.ext}"
       m2compatible="true"
       />
+    <url name="datanucleus-repo" m2compatible="true">
+      <artifact pattern="${datanucleus.repo}/[organisation]/[module]/[revision]/[module]-[revision](-[classifier]).[ext]"/>
+    </url>
     <chain name="default" dual="true">
       <resolver ref="local"/>
       <resolver ref="maven2"/>
+      <resolver ref="datanucleus-repo"/>
     </chain>
     <chain name="internal">
       <resolver ref="local"/>
+      <resolver ref="datanucleus-repo"/>
     </chain>
     <chain name="external">
       <resolver ref="maven2"/>
+      <resolver ref="datanucleus-repo"/>
     </chain>
     <chain name="external-and-snapshots">
       <resolver ref="maven2"/>
       <resolver ref="apache-snapshot"/>
+      <resolver ref="datanucleus-repo"/>
     </chain>
   </resolvers>
   <modules>
