@@ -217,7 +217,7 @@ public class FilePage extends WebPage {
             ValueMap vals = (ValueMap) form.getModelObject();
             FSAnalyzer fsa = fe.getAnalyzer();
             FileSummaryData fsd = fsa.getFileSummaryData(finalFid);
-            String path = fsd.path + "/" + fsd.fname;
+            String path = fsd.path + fsd.fname;
             DataDescriptor dd = fsd.dd;
             List<List<String>> results = null;
             if (dq != null) {
