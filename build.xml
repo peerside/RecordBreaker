@@ -270,7 +270,7 @@
     <mkdir dir="${dist}/lib"/>
 
     <!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
-    <jar jarfile="${dist}/lib/recordbreaker-${DSTAMP}.jar" basedir="${build}"/>
+    <jar jarfile="${dist}/lib/recordbreaker.jar" basedir="${build}"/>
   </target>
 
   <target name="clean"
