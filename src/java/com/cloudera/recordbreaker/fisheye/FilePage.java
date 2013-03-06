@@ -131,7 +131,7 @@ public class FilePage extends WebPage {
             // queryUnsupported container holds an error message
             boolean isQuerySupported = false;
             try {
-              isQuerySupported = (dd.getHiveCreateTableStatement("tabname") != null);
+              isQuerySupported = (dd.getHiveCreateTableStatement("tabname") != null) && fe.isQueryServerAvailable(false);
             } catch (UnsupportedOperationException uoe) {
               uoe.printStackTrace();
             }

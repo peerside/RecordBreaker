@@ -35,6 +35,7 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 import java.net.URISyntaxException;
 
+import com.cloudera.recordbreaker.analyzer.DataQuery;
 import com.cloudera.recordbreaker.analyzer.FSCrawler;
 import com.cloudera.recordbreaker.analyzer.FSAnalyzer;
 import com.cloudera.recordbreaker.analyzer.FileSummary;
@@ -59,6 +60,8 @@ public class FishEye {
   Date startTime;
   int fisheyePort;
   File fisheyeDir;
+  boolean hasTestedQueryServer = false;
+  boolean isQueryServerAvailable = false;
 
   public static FishEye getInstance() {
     return fisheyeInstance;
@@ -81,6 +84,17 @@ public class FishEye {
     this.accessCtrl = new AccessController();
     FishEye.fisheyeInstance = this;
     restartIncompleteCrawl();
+  }
+
+  /**
+   * Check if the Hive query server is available
+   */
+  public boolean isQueryServerAvailable(boolean force) {
+    if (force || (! hasTestedQueryServer)) {
+      hasTestedQueryServer = true;
+      isQueryServerAvailable = DataQuery.getInstance(force).testQueryServer();
+    }
+    return isQueryServerAvailable;
   }
 
   public boolean restartIncompleteCrawl() {

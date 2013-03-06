@@ -34,6 +34,7 @@ import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.model.CompoundPropertyModel;
 import org.apache.wicket.util.value.ValueMap;
 
+import com.cloudera.recordbreaker.analyzer.DataQuery;
 import com.cloudera.recordbreaker.analyzer.CrawlSummary;
 import com.cloudera.recordbreaker.analyzer.CrawlRuntimeStatus;
 
@@ -295,6 +296,36 @@ public class SettingsPage extends WebPage {
     }
   }
 
+  ///////////////////////////////////////////////////
+  // Hive query server form
+  //////////////////////////////////////////////////
+  public final class QueryServerInfoForm extends Form<ValueMap> {
+    public QueryServerInfoForm(final String id, ValueMap vm) {
+      super(id, new CompoundPropertyModel<ValueMap>(vm));
+
+      //
+      // Info about the query server status
+      //
+      add(new Label("queryserverloc", new Model<String>() {
+            public String getObject() {
+              return DataQuery.getInstance().getHiveConnectionString();
+            }
+      }));
+      add(new Label("queryserverstatus", new Model<String>() {
+            public String getObject() {
+              return FishEye.getInstance().isQueryServerAvailable(false) ? "available" : "not available";
+            }
+      }));
+    }
+    public void onSubmit() {
+      FishEye.getInstance().isQueryServerAvailable(true);
+      setResponsePage(new SettingsPage());      
+    }
+    public void onConfigure() {
+      setVisibilityAllowed(true);
+    }
+  }
+
   final WebMarkupContainer loginErrorMsgDisplay = new WebMarkupContainer("loginErrorMsgContainer");
   final WebMarkupContainer fsErrorMsgDisplay = new WebMarkupContainer("fsErrorMsgContainer");
   public SettingsPage() {
@@ -328,6 +359,10 @@ public class SettingsPage extends WebPage {
     add(fsErrorMsgDisplay);
     fsErrorMsgDisplay.setVisibilityAllowed(false);
 
+    //
+    // Hive query server info
+    //
+    add(new QueryServerInfoForm("queryserverinfo", new ValueMap()));
 
     //
     // If the filesystem is there, we need to have info about its crawls

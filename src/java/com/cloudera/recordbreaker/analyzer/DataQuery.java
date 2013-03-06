@@ -46,17 +46,28 @@ import org.apache.avro.Schema;
  * @since 1.0
  ********************************************************/
 public class DataQuery implements Serializable {
-  private static boolean inited;
+  private static boolean inited = false;
   private static DataQuery dataQuery;
   private static String driverName = "org.apache.hadoop.hive.jdbc.HiveDriver";
+  private static String connectString = "jdbc:hive://localhost:10000/default";
 
   Connection con;
   Random r = new Random();
   Map<Path, String> tables;
   Set<Path> isLoaded;
 
-  public static DataQuery getInstance() {
-    if (! inited) {
+  public synchronized static DataQuery getInstance() {
+    return DataQuery.getInstance(false);
+  }
+  public synchronized static DataQuery getInstance(boolean force) {
+    if (force && dataQuery != null) {
+      try {
+        dataQuery.close();
+      } catch (SQLException sqe) {
+      }
+      dataQuery = null;
+    }
+    if (force || (!inited)) {
       try {
         dataQuery = new DataQuery();
       } catch (SQLException se) {
@@ -65,23 +76,69 @@ public class DataQuery implements Serializable {
         inited = true;
       }
     }
-    return dataQuery;
+    return dataQuery;    
   }
-  
+
   public DataQuery() throws SQLException {
     try {
       Class.forName(driverName);
+      this.con = DriverManager.getConnection(connectString, "", "");
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
+    } catch (Exception ex) {
+      ex.printStackTrace();
     }
-    this.con = DriverManager.getConnection("jdbc:hive://localhost:10000/default", "", "");
     this.tables = new HashMap<Path, String>();
     this.isLoaded = new HashSet<Path>();
   }
 
   public void close() throws SQLException {
-    this.con.close();
+    if (con != null) {
+      this.con.close();
+    }
     this.con = null;
+  }
+
+  /**
+   * Connection string for Hive
+   */
+  public String getHiveConnectionString() {
+    return connectString;
+  }
+  
+  /**
+   * Run a sample set of Hive test queries to check whether the Hive server is up and active
+   */
+  public boolean testQueryServer() {
+    if (con == null) {
+      return false;
+    }
+    try {
+      //
+      // Create table
+      //
+      String tablename = "test_datatable" + Math.abs(r.nextInt());
+      Statement stmt = con.createStatement();
+      try {
+        ResultSet rs = stmt.executeQuery("CREATE TABLE " + tablename + "(a int, b int, c int)");
+      } finally {
+        stmt.close();
+      }
+
+      //
+      // Drop table
+      //
+      stmt = con.createStatement();
+      try {
+        ResultSet rs = stmt.executeQuery("DROP TABLE " + tablename);
+      } finally {
+        stmt.close();
+      }
+      return true;
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      return false;
+    }
   }
 
   public List<List<String>> query(DataDescriptor desc, String projectionClause, String selectionClause) throws SQLException {
@@ -95,7 +152,8 @@ public class DataQuery implements Serializable {
       tablename = "datatable" + Math.abs(r.nextInt());
       Statement stmt = con.createStatement();
       try {
-        ResultSet res = stmt.executeQuery(desc.getHiveCreateTableStatement(tablename));
+        String creatTxt = desc.getHiveCreateTableStatement(tablename);
+        ResultSet res = stmt.executeQuery(creatTxt);
         tables.put(p, tablename);
       } finally {
         stmt.close();
@@ -130,7 +188,6 @@ public class DataQuery implements Serializable {
     List<List<String>> result = new ArrayList<List<String>>();
     Statement stmt = con.createStatement();
     try {
-      System.err.println("NOW RUNNING '" + query + "'");
       ResultSet res = stmt.executeQuery(query);
       ResultSetMetaData rsmd = res.getMetaData();
       
@@ -145,55 +202,5 @@ public class DataQuery implements Serializable {
     } finally {
       stmt.close();
     }
-  }
-
-  public void standaloneQuery() throws SQLException {
-    Connection con = DriverManager.getConnection("jdbc:hive://localhost:10000/default", "", "");    
-    Statement stmt = con.createStatement();
-    stmt.executeQuery("drop table foobar");
-    // 1. Add the SERDE jar
-
-    // 2. Create the table, with SERDE configured
-    ResultSet res = stmt.executeQuery("create table foobar row format serde 'org.apache.hadoop.hive.serde2.avro.AvroSerDe' stored as inputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' outputformat 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' tblproperties ('avro.schema.url' = 'file:///Users/mjc/cloudera/repos/recordbreaker/src/samples/schemas/hr-schema.json')");
-
-    // 3. Insert data from file
-    res = stmt.executeQuery("load data local inpath '/Users/mjc/cloudera/repos/recordbreaker/src/samples/schemas/hr.avro' into table foobar");
-
-    res = stmt.executeQuery("select * from foobar");
-    ResultSetMetaData rsmd = res.getMetaData();
-
-    List<List<String>> result = new ArrayList<List<String>>();    
-    while (res.next()) {
-      List<String> tuple = new ArrayList<String>();
-      for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-        tuple.add("" + res.getObject(i));
-      }
-      result.add(tuple);
-    }
-
-    System.err.println("Got " + result.size() + " elements back!");
-    for (List<String> tup: result) {
-      for (String col: tup) {
-        System.err.print(col + "\t");
-      }
-      System.err.println();
-    }
-    
-    /**
-    HiveConf hc = new HiveConf();
-    for (Map.Entry<String, String> pair: hc) {
-      System.err.println(pair.getKey() + "=" + pair.getValue());
-    }
-    **/
-  }
-
-  public static void main(String argv[]) throws Exception {
-    try {
-      Class.forName(DataQuery.driverName);
-    } catch (ClassNotFoundException e) {
-      e.printStackTrace();
-    }
-    DataQuery dq = new DataQuery();
-    dq.standaloneQuery();
   }
 }

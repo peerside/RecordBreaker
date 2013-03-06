@@ -153,6 +153,18 @@
               <button type="submit" class="btn btn-danger">Change filesystem</button>
             </form>
 
+            <!-- How is the Hive query server doing?  -->
+            <h4> Hive</h4>            
+            <form class="well form-inline" method="get" wicket:id="queryserverinfo">
+              <label>
+                Fisheye uses an external Hive query server to process some large queries.<p/>
+
+                The Hive query server connection string is: <strong><span wicket:id="queryserverloc"></span></strong>.<p/>
+                The Hive server is currently <strong><span wicket:id="queryserverstatus"></span></strong>.<p/>
+              </label><br/>
+              <button type="submit" class="btn btn-primary">Recheck Hive availability</button>              
+            </form>
+
 
             <!-- If there is a filesystem, display crawl info and offer recrawl capacity. -->
 
