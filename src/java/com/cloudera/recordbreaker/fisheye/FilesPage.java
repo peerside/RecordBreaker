@@ -62,7 +62,7 @@ public class FilesPage extends WebPage {
       this.targetDir = targetDir;
       FishEye fe = FishEye.getInstance();
       final AccessController accessCtrl = fe.getAccessController();
-      
+
       if (fe.hasFSAndCrawl()) {
         //
         // I. Generate list of parent dirs for this directory
@@ -136,10 +136,11 @@ public class FilesPage extends WebPage {
         //
         // III. Generate list of files in the directory
         //
-        List<FileSummary> filelist = FishEye.getInstance().getAnalyzer().getFileSummariesInDir(false, targetDir);
+        List<FileSummary> filelist = FishEye.getInstance().getAnalyzer().getPrecachedFileSummariesInDir(false, targetDir);
         add(new Label("numFisheyeFiles", "" + filelist.size()));
         add(new ListView<FileSummary>("filelisting", filelist) {
             protected void populateItem(ListItem<FileSummary> item) {
+              long start = System.currentTimeMillis();
               FileSummary fs = item.getModelObject();
 
               // 1.  Filename.  Link is conditional on having read access

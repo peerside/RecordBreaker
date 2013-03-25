@@ -30,20 +30,23 @@ public class FileSummary {
   FSAnalyzer analyzer;
   long fid;
   FileSummaryData fsd = null;
+  List<TypeGuessSummary> typeGuesses = null;
 
   public FileSummary(FSAnalyzer analyzer, long fid) {
     this.analyzer = analyzer;
     this.fid = fid;
     this.fsd = null;
+    this.typeGuesses = null;
   }
   public void addCachedData(FileSummaryData fsd) {
     this.fsd = fsd;
   }
-
+  public void addCachedData(List<TypeGuessSummary> typeGuesses) {
+    this.typeGuesses = typeGuesses;
+  }
   void getData() {
     this.fsd = analyzer.getFileSummaryData(this.fid);
   }
-
   public DataDescriptor getDataDescriptor() throws IOException {
     // Can an implementation of DataDescriptor replace the file summary data?
     if (fsd == null) {
@@ -117,6 +120,9 @@ public class FileSummary {
     return new CrawlSummary(this.analyzer, fsd.crawlid);
   }
   public List<TypeGuessSummary> getTypeGuesses() {
-    return analyzer.getTypeGuessesForFile(this.fid);
+    if (typeGuesses == null) {
+      typeGuesses = analyzer.getTypeGuessesForFile(this.fid);
+    }
+    return typeGuesses;
   }
 }

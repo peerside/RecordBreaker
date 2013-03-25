@@ -615,6 +615,76 @@ public class FSAnalyzer {
         }}).complete();
   }
 
+  /**
+   * A version of 'getFileSummariesInDir()' where much of the information is cached ahead of time
+   */
+  static String precachedFileInfoQueryWithoutPrefix = "SELECT Files.fid, Files.crawlid, Files.fname, Files.owner, Files.groupowner, Files.permissions, Files.size, Files.modified, Files.path, SchemaGuesses.schemaid, TypeGuesses.typeid FROM Files, TypeGuesses, SchemaGuesses WHERE Files.isDir = ? AND TypeGuesses.fid = Files.fid AND SchemaGuesses.fid = Files.fid";
+  static String precachedFileInfoQueryWithPrefix = precachedFileInfoQueryWithoutPrefix + " AND Files.path = ?";
+  public List<FileSummary> getPrecachedFileSummariesInDir(final boolean isDir, final String prefix) {
+    return dbQueue.execute(new SQLiteJob<List<FileSummary>>() {
+        protected List<FileSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<FileSummary> output = new ArrayList<FileSummary>();
+          SQLiteStatement stmt;
+          if (prefix == null) {
+            stmt = db.prepare(precachedFileInfoQueryWithoutPrefix);
+            stmt.bind(1, isDir ? "True" : "False");            
+          } else {
+            stmt = db.prepare(precachedFileInfoQueryWithPrefix);
+            String prefixStr = prefix;
+            if (! prefixStr.endsWith("/")) {
+              prefixStr += "/";
+            }
+            stmt.bind(1, isDir ? "True" : "False").bind(2, prefixStr);            
+          }
+          try {
+            FileSummary fs = null;
+            FileSummaryData fsd = null;
+            long lastFid = -1L;
+            List<TypeGuessSummary> tgslist = null;
+            while (stmt.step()) {
+              long fid = stmt.columnLong(0);
+              long crawlid = stmt.columnLong(1);
+              String fname = stmt.columnString(2);
+              String owner = stmt.columnString(3);
+              String groupowner = stmt.columnString(4);
+              String permissions = stmt.columnString(5);
+              long size = stmt.columnLong(6);
+              String modified = stmt.columnString(7);
+              String path = stmt.columnString(8);
+              long schemaid = stmt.columnLong(9);
+              long typeid = stmt.columnLong(10);
+
+              // We get a tuple for every typeguess.
+              // There could be more than one typeguess for each unique file
+              TypeGuessSummary tgs = new TypeGuessSummary(FSAnalyzer.this, fid, typeid, schemaid);
+              tgs.addCachedData(fs);
+                
+              if (fid != lastFid) {
+                if (fs != null) {
+                  fs.addCachedData(tgslist);
+                  output.add(fs);
+                }
+                fs = new FileSummary(FSAnalyzer.this, fid);              
+                fsd = new FileSummaryData(FSAnalyzer.this, isDir, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path);
+                fs.addCachedData(fsd);
+                tgslist = new ArrayList<TypeGuessSummary>();
+              }
+              tgslist.add(tgs);
+              lastFid = fid;
+            }
+            if (fs != null) {
+              fs.addCachedData(tgslist);
+              output.add(fs);
+            }
+          } catch (SQLiteException sqe) {
+            sqe.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }}).complete();
+  }
+
   static String singletonFileInfoQuery = "SELECT fid FROM Files WHERE path||fname = ?";  
   public FileSummary getSingleFileSummary(final String fullName) {
     return dbQueue.execute(new SQLiteJob<FileSummary>() {

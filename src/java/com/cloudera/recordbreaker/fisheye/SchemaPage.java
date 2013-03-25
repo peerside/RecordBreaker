@@ -50,7 +50,6 @@ public class SchemaPage extends WebPage {
     JsonParser parser = factory.createJsonParser(s);
     try {
       JsonNode root = parser.readValueAsTree();
-      System.err.println("JSON ROOT: " + root);
       if (! root.isArray()) {
         // This handles default cases like CSV and XML
         // (and eventually the others when bugs are fixed)
