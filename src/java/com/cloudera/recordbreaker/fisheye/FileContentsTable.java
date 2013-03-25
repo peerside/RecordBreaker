@@ -151,7 +151,7 @@ public class FileContentsTable extends WebMarkupContainer {
     FishEye fe = FishEye.getInstance();
     FSAnalyzer fsa = fe.getAnalyzer();
     FileSummaryData fsd = fsa.getFileSummaryData(fid);
-    DataDescriptor dd = fsd.dd;
+    DataDescriptor dd = fsd.getDataDescriptor();
     List<SchemaDescriptor> sds = dd.getSchemaDescriptor();
 
     class SchemaPair implements Comparable {

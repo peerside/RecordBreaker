@@ -29,32 +29,30 @@ import org.apache.hadoop.fs.permission.FsPermission;
 public class FileSummary {
   FSAnalyzer analyzer;
   long fid;
-  boolean hasData = false;
   FileSummaryData fsd = null;
 
   public FileSummary(FSAnalyzer analyzer, long fid) {
     this.analyzer = analyzer;
     this.fid = fid;
-    this.hasData = false;
+    this.fsd = null;
+  }
+  public void addCachedData(FileSummaryData fsd) {
+    this.fsd = fsd;
   }
 
   void getData() {
     this.fsd = analyzer.getFileSummaryData(this.fid);
-    this.hasData = true;
   }
 
   public DataDescriptor getDataDescriptor() throws IOException {
     // Can an implementation of DataDescriptor replace the file summary data?
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
-    return fsd.dd;
+    return fsd.getDataDescriptor();
   }
 
   public InputStream getRawBytes() throws IOException {
-    if (!hasData) {
-      getData();
-    }
     return analyzer.getRawBytes(getPath());
   }
 
@@ -62,43 +60,43 @@ public class FileSummary {
     return fid;
   }    
   public boolean isDir() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.isDir;
   }
   public String getFname() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.fname;
   }
   public String getOwner() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.owner;
   }
   public String getGroup() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.group;
   }
   public FsPermission getPermissions() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.permissions;
   }
   public long getSize() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.size;
   }
   public String getLastModified() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.lastModified;
@@ -107,13 +105,13 @@ public class FileSummary {
     return new Path(getParentDir(), getFname());
   }
   public String getParentDir() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return fsd.path;
   }
   public CrawlSummary getCrawl() {
-    if (!hasData) {
+    if (fsd == null) {
       getData();
     }
     return new CrawlSummary(this.analyzer, fsd.crawlid);

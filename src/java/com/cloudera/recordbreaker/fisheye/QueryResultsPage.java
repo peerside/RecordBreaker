@@ -78,7 +78,8 @@ public class QueryResultsPage extends WebPage {
     
     public TableDisplayPanel(String name, String fidStr, String filename, String projClauseStr, String selClauseStr) {
       super(name);
-      
+
+      System.err.println("TABLE DISPLAY: filename=" + filename);
       FishEye fe = FishEye.getInstance();
       List<List<String>> queryResults = null;
       if (fe.hasFSAndCrawl()) {
@@ -89,7 +90,7 @@ public class QueryResultsPage extends WebPage {
             DataQuery dq = DataQuery.getInstance();
             FSAnalyzer fsa = fe.getAnalyzer();
             FileSummaryData fsd = fsa.getFileSummaryData(fid);
-            DataDescriptor dd = fsd.dd;
+            DataDescriptor dd = fsd.getDataDescriptor();
 
             if (dq != null) {
               queryResults = dq.query(dd, projClauseStr, selClauseStr);

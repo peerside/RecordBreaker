@@ -91,7 +91,7 @@ public class FilePage extends WebPage {
             FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
             FSAnalyzer fsa = fe.getAnalyzer();
             FileSummaryData fsd = fsa.getFileSummaryData(fid);
-            DataDescriptor dd = fsd.dd;
+            DataDescriptor dd = fsd.getDataDescriptor();
             List<TypeGuessSummary> tgses = fs.getTypeGuesses();
 
             add(new Label("filetitle", fs.getFname()));
@@ -218,7 +218,7 @@ public class FilePage extends WebPage {
             FSAnalyzer fsa = fe.getAnalyzer();
             FileSummaryData fsd = fsa.getFileSummaryData(finalFid);
             String path = fsd.path + fsd.fname;
-            DataDescriptor dd = fsd.dd;
+            DataDescriptor dd = fsd.getDataDescriptor();
             List<List<String>> results = null;
             if (dq != null) {
               // Open a new window for the query results

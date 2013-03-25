@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
  *
  */
 public class FileSummaryData {
+  FSAnalyzer fsAnalyzer;
   public boolean isDir;
   public long fid;
   public long crawlid;
@@ -31,9 +32,10 @@ public class FileSummaryData {
   public long size;
   public String lastModified;
   public String path;
-  public DataDescriptor dd;
+  DataDescriptor dd;
   
-  public FileSummaryData(boolean isDir, long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path, DataDescriptor dd) {
+  public FileSummaryData(FSAnalyzer fsAnalyzer, boolean isDir, long fid, long crawlid, String fname, String owner, String group, String permissions, long size, String lastModified, String path) {
+    this.fsAnalyzer = fsAnalyzer;
     this.isDir = isDir;
     this.fid = fid;
     this.crawlid = crawlid;
@@ -44,6 +46,15 @@ public class FileSummaryData {
     this.size = size;
     this.lastModified = lastModified;
     this.path = path;
+    this.dd = null;
+  }
+  public void addCachedData(DataDescriptor dd) {
     this.dd = dd;
+  }
+  public DataDescriptor getDataDescriptor() {
+    if (dd == null) {
+      dd = fsAnalyzer.getDataDescriptor(fid);
+    }
+    return dd;
   }
 }

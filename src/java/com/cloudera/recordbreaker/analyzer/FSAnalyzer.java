@@ -488,6 +488,70 @@ public class FSAnalyzer {
       }).complete();
   }
 
+  /**
+   * Get a list of SchemaSummary items, one for each schema in the database.
+   * Prefetch a lot of data for efficiency reasons (so we don't need to issue many small queries).
+   * Otherwise enumerating schemas can be very slow
+   */
+  static String precachedSchemaQuery = "SELECT Schemas.schemaid, Schemas.schemarepr, Schemas.schemasrcdescription, SchemaGuesses.fid, TypeGuesses.typeid, Files.crawlid, Files.fname, Files.owner, Files.groupowner, Files.permissions, Files.size, Files.modified, Files.path FROM Schemas, SchemaGuesses, TypeGuesses, Files WHERE SchemaGuesses.schemaid = Schemas.schemaid AND TypeGuesses.fid = SchemaGuesses.fid AND Files.fid = SchemaGuesses.fid ORDER BY Schemas.schemaid";  
+  public List<SchemaSummary> getPrecachedSchemaSummaries() {
+    return dbQueue.execute(new SQLiteJob<List<SchemaSummary>>() {
+        protected List<SchemaSummary> job(SQLiteConnection db) throws SQLiteException {
+          List<SchemaSummary> output = new ArrayList<SchemaSummary>();          
+          SQLiteStatement stmt = db.prepare(precachedSchemaQuery);
+          
+          try {
+            SchemaSummaryData ssd = null;
+            SchemaSummary ss = null;
+            long lastSchemaId = -1L;
+            List<TypeGuessSummary> tgslist = null;
+            while (stmt.step()) {
+              long schemaid = stmt.columnLong(0);
+              String schemarepr = stmt.columnString(1);
+              String schemasrcdescription = stmt.columnString(2);
+              long fid = stmt.columnLong(3);
+              long typeid = stmt.columnLong(4);
+              long crawlid = stmt.columnLong(5);
+              String fname = stmt.columnString(6);
+              String owner = stmt.columnString(7);
+              String groupowner = stmt.columnString(8);
+              String permissions = stmt.columnString(9);
+              long size = stmt.columnLong(10);
+              String modified = stmt.columnString(11);
+              String path = stmt.columnString(12);  
+
+              TypeGuessSummary tgs = new TypeGuessSummary(FSAnalyzer.this, fid, typeid, schemaid);
+              FileSummary fs = new FileSummary(FSAnalyzer.this, fid);
+              FileSummaryData fsd = new FileSummaryData(FSAnalyzer.this, true, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path);
+              fs.addCachedData(fsd);
+              tgs.addCachedData(fs);
+              
+              if (schemaid != lastSchemaId) {
+                if (ss != null) {
+                  ss.addCachedData(tgslist);
+                  output.add(ss);
+                }
+                ssd = new SchemaSummaryData(schemaid, schemarepr, schemasrcdescription);
+                ss = new SchemaSummary(FSAnalyzer.this, schemaid);
+                ss.addCachedData(ssd);
+                tgslist = new ArrayList<TypeGuessSummary>();
+              }
+              tgslist.add(tgs);
+              lastSchemaId = schemaid;
+            }
+            if (ss != null) {
+              ss.addCachedData(tgslist);
+              output.add(ss);
+            }
+          } catch (SQLiteException se) {
+            se.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return output;
+        }}).complete();
+  }
+  
   ///////////////////////////////////////////////////
   // ACCESSORS FOR FILES
   ///////////////////////////////////////////////////
@@ -603,6 +667,48 @@ public class FSAnalyzer {
   /**
    * Grab details on a specific file.
    */
+  public DataDescriptor getDataDescriptor(final long fid) {
+    final FileSystem fs = getFS();        
+    return dbQueue.execute(new SQLiteJob<DataDescriptor>() {
+        protected DataDescriptor job(SQLiteConnection db) throws SQLiteException {
+          String identifier = null;
+          String path = null;
+          String fname = null;
+          SQLiteStatement stmt = db.prepare("SELECT Types.typelabel, Files.path, Files.fname FROM Types, TypeGuesses, Files WHERE TypeGuesses.fid = ? AND Files.fid = TypeGuesses.fid AND Types.typeid = TypeGuesses.typeid");
+          try {
+            stmt.bind(1, fid);
+            if (stmt.step()) {
+              identifier = stmt.columnString(0);
+              path = stmt.columnString(1);
+              fname = stmt.columnString(2);
+            }
+          } finally {
+            stmt.dispose();
+          }
+          stmt = db.prepare("SELECT Schemas.schemaid, Schemas.schemarepr, Schemas.schemasrcdescription, Schemas.schemapayload FROM Schemas, SchemaGuesses WHERE SchemaGuesses.fid = ? AND SchemaGuesses.schemaid = Schemas.schemaid");
+          try {
+            List<String> schemaReprs = new ArrayList<String>();
+            List<String> schemaDescs = new ArrayList<String>();
+            List<byte[]> schemaBlobs = new ArrayList<byte[]>();
+              
+            stmt.bind(1, fid);
+            while (stmt.step()) {
+              schemaReprs.add(stmt.columnString(1));
+              schemaDescs.add(stmt.columnString(2));
+              schemaBlobs.add(stmt.columnBlob(3));
+            }
+
+            try {
+              return formatAnalyzer.loadDataDescriptor(fs, new Path(path + fname), identifier, schemaReprs, schemaDescs, schemaBlobs);
+            } catch (IOException ioex) {
+              return null;
+            }
+          } finally {
+            stmt.dispose();
+          }
+        }}).complete();
+  }
+  
   public FileSummaryData getFileSummaryData(final long fid) {
     final FileSystem fs = getFS();    
     return dbQueue.execute(new SQLiteJob<FileSummaryData>() {
@@ -663,7 +769,8 @@ public class FSAnalyzer {
 
               try {
                 DataDescriptor dd = formatAnalyzer.loadDataDescriptor(fs, new Path(path + fname), identifier, schemaReprs, schemaDescs, schemaBlobs);
-                fsd = new FileSummaryData(true, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, dd);
+                fsd = new FileSummaryData(FSAnalyzer.this, true, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path);
+                fsd.addCachedData(dd);
               } catch (IOException iex) {
                 iex.printStackTrace();
                 return null;
@@ -672,7 +779,7 @@ public class FSAnalyzer {
               stmt.dispose();
             }
           } else {
-            fsd = new FileSummaryData(false, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path, null);            
+            fsd = new FileSummaryData(FSAnalyzer.this, false, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path);            
           }
           return fsd;
         }

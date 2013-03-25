@@ -40,16 +40,26 @@ import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
  */
 public class SchemasPage extends WebPage {
   final class SchemaListing extends WebMarkupContainer {
+    long totalElapsed = 0;
+    long totalInvocations = 0;
     public SchemaListing(String name) {
       super(name);
+      System.err.println("STARTING....");
+      long start = System.currentTimeMillis();
+      
       FishEye fe = FishEye.getInstance();
       if (fe.hasFSAndCrawl()) {
-        List<SchemaSummary> list = fe.getAnalyzer().getSchemaSummaries();
+        //List<SchemaSummary> list = fe.getAnalyzer().getSchemaSummaries();
+        List<SchemaSummary> list = fe.getAnalyzer().getPrecachedSchemaSummaries();
         ListView<SchemaSummary> listview = new ListView<SchemaSummary>("listview", list) {
           protected void populateItem(ListItem<SchemaSummary> item) {
+            long localStart = System.currentTimeMillis();
+
             SchemaSummary ss = item.getModelObject();
             item.add(new Label("schemadesc", ss.getDesc()));
 
+
+            //item.add(new ExternalLink("schemalabellink", "schemaurl", "Short desc"));
             StringBuffer schemalabel = new StringBuffer();
             try {
               List<List<JsonNode>> listOfSchemaElts = SchemaPage.getSchemaDigest(ss.getIdentifier());
@@ -65,7 +75,8 @@ public class SchemasPage extends WebPage {
             String schemaUrl = urlFor(SchemaPage.class, new PageParameters("schemaid=" + ss.getSchemaId())).toString();
             item.add(new ExternalLink("schemalabellink", schemaUrl, schemalabel.toString()));
 
-        
+
+            //item.add(new ExternalLink("schemafilelink", "fidUrl", "fs"));
             List<TypeGuessSummary> typeGuesses = ss.getTypeGuesses();
             for (int i = 0; i < Math.min(1, typeGuesses.size()); i++) {
               TypeGuessSummary curTGS = typeGuesses.get(i);
@@ -75,6 +86,11 @@ public class SchemasPage extends WebPage {
               String fidUrl = urlFor(FilePage.class, new PageParameters("fid=" + fs.getFid())).toString();
               item.add(new ExternalLink("schemafilelink", fidUrl, fs.getFname()));
             }
+
+            long localEnd = System.currentTimeMillis();
+            totalElapsed += (localEnd - localStart);
+            totalInvocations++;
+            System.err.println("Total populateItem: " + (totalElapsed / 1000.0) + ", total invocations: " + totalInvocations);
           }
         };
         add(new Label("numFisheyeSchemas", "" + list.size()));        
@@ -83,6 +99,8 @@ public class SchemasPage extends WebPage {
 
       setOutputMarkupPlaceholderTag(true);
       setVisibilityAllowed(false);
+      long end = System.currentTimeMillis();
+      System.err.println("Elapsed secs: " + ((end - start) / 1000.0));
     }
     public void onConfigure() {
       FishEye fe = FishEye.getInstance();    

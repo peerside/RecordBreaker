@@ -28,36 +28,45 @@ import java.util.*;
 public class SchemaSummary {
   FSAnalyzer analyzer;
   long schemaId;
-  boolean hasData = false;
   SchemaSummaryData ssd = null;
+  List<TypeGuessSummary> typeGuesses = null;
 
   /**
    */
   public SchemaSummary(FSAnalyzer analyzer, long schemaId) {
     this.analyzer = analyzer;
     this.schemaId = schemaId;
-    this.hasData = false;
+    this.ssd = null;
+    this.typeGuesses = null;
+  }
+  public void addCachedData(SchemaSummaryData ssd) {
+    this.ssd = ssd;
+  }
+  public void addCachedData(List<TypeGuessSummary> typeGuesses) {
+    this.typeGuesses = typeGuesses;
   }
   public long getSchemaId() {
     return schemaId;
   }
   void getData() {
     this.ssd = analyzer.getSchemaSummaryData(this.schemaId);
-    this.hasData = true;
   }
   public String getIdentifier() {
-    if (!hasData) {
+    if (ssd == null) {
       getData();
     }
     return ssd.schemaIdentifier;
   }
   public String getDesc() {
-    if (!hasData) {
+    if (ssd == null) {
       getData();
     }
     return ssd.schemaDesc;
   }
   public List<TypeGuessSummary> getTypeGuesses() {
-    return analyzer.getTypeGuessesForSchema(this.schemaId);
+    if (typeGuesses == null) {
+      typeGuesses = analyzer.getTypeGuessesForSchema(this.schemaId);
+    }
+    return typeGuesses;
   }
 }

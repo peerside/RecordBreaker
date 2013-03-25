@@ -14,6 +14,8 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
+import org.apache.avro.Schema;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.io.IOException;
@@ -54,6 +56,9 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
 
   public InputStream getRawBytes() throws IOException {
     return fs.open(p);
+  }
+  public Schema getHiveTargetSchema() {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
   public String getHiveCreateTableStatement(String tablename) {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());

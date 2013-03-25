@@ -27,15 +27,23 @@ public class TypeGuessSummary {
   long typeid;
   long schemaid;
   double score;
+  FileSummary fs;
   
   public TypeGuessSummary(FSAnalyzer analyzer, long fid, long typeid, long schemaid) {
     this.analyzer = analyzer;
     this.fid = fid;
     this.typeid = typeid;
     this.schemaid = schemaid;
+    this.fs = null;
+  }
+  public void addCachedData(FileSummary fs) {
+    this.fs = fs;
   }
   public FileSummary getFileSummary() {
-    return new FileSummary(analyzer, fid);
+    if (fs == null) {
+      fs = new FileSummary(analyzer, fid);
+    }
+    return fs;
   }
   public TypeSummary getTypeSummary() {
     return new TypeSummary(analyzer, typeid);
