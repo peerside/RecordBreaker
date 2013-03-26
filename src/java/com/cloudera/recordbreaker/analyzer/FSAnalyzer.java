@@ -1146,6 +1146,52 @@ public class FSAnalyzer {
       }).complete();
   }
 
+  static String precachedTypeSummaryQuery = "SELECT TypeGuesses.fid, Types.typelabel, SchemaGuesses.schemaid, Files.crawlid, Files.fname, Files.owner, Files.groupowner, Files.permissions, Files.size, Files.modified, Files.path FROM SchemaGuesses, TypeGuesses, Files, Types WHERE TypeGuesses.fid = SchemaGuesses.fid AND TypeGuesses.fid = Files.fid AND TypeGuesses.typeid = Types.typeid AND TypeGuesses.typeId = ?";
+  public TypeSummary getPrecachedTypeSummary(final long typeid) {
+    return dbQueue.execute(new SQLiteJob<TypeSummary>() {
+        protected TypeSummary job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare(precachedTypeSummaryQuery);
+          stmt.bind(1, typeid);
+
+          TypeSummary ts = null;
+          try {
+            List<TypeGuessSummary> tgslist = null;            
+            while (stmt.step()) {
+              int i = 0;
+              long fid = stmt.columnLong(i++);
+              String typelabel = stmt.columnString(i++);
+              long schemaid = stmt.columnLong(i++);
+              long crawlid = stmt.columnLong(i++);
+              String fname = stmt.columnString(i++);
+              String owner = stmt.columnString(i++);
+              String groupowner = stmt.columnString(i++);
+              String permissions = stmt.columnString(i++);
+              long size = stmt.columnLong(i++);
+              String modified = stmt.columnString(i++);
+              String path = stmt.columnString(i++);
+
+              if (ts == null) {
+                ts = new TypeSummary(FSAnalyzer.this, typeid);
+                ts.addCachedData(new TypeSummaryData(typeid, typelabel));
+                tgslist = new ArrayList<TypeGuessSummary>();
+              }
+              TypeGuessSummary tg = new TypeGuessSummary(FSAnalyzer.this, fid, typeid, schemaid);
+              FileSummary fs = new FileSummary(FSAnalyzer.this, fid);
+              FileSummaryData fsd = new FileSummaryData(FSAnalyzer.this, true, fid, crawlid, fname, owner, groupowner, permissions, size, modified, path);
+              fs.addCachedData(fsd);
+              tg.addCachedData(fs);
+              tgslist.add(tg);
+            }
+            ts.addCachedData(tgslist);
+          } catch (SQLiteException sle) {
+            sle.printStackTrace();
+          } finally {
+            stmt.dispose();
+          }
+          return ts;
+        }}).complete();
+  }
+
   ////////////////////////////////////////
   // Initialize and close an instance of FSAnalyzer
   ////////////////////////////////////////

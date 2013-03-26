@@ -24,30 +24,36 @@ import java.util.*;
 public class TypeSummary {
   FSAnalyzer analyzer;
   long typeid;
-  boolean hasData = false;
   TypeSummaryData tsd = null;
+  List<TypeGuessSummary> tgs = null;
 
   /**
    */
   public TypeSummary(FSAnalyzer analyzer, long typeid) {
     this.analyzer = analyzer;
     this.typeid = typeid;
-    this.hasData = false;
+    this.tsd = null;
+    this.tgs = null;
+  }
+  public void addCachedData(TypeSummaryData tsd) {
+    this.tsd = tsd;
+  }
+  public void addCachedData(List<TypeGuessSummary> tgs) {
+    this.tgs = tgs;
   }
   public long getTypeId() {
     return typeid;
   }
-  void getData() {
-    this.tsd = analyzer.getTypeSummaryData(this.typeid);
-    this.hasData = true;
-  }
   public String getLabel() {
-    if (!hasData) {
-      getData();
+    if (tsd == null) {
+      this.tsd = analyzer.getTypeSummaryData(this.typeid);
     }
     return tsd.typeLabel;
   }
   public List<TypeGuessSummary> getTypeGuesses() {
-    return analyzer.getTypeGuessesForType(this.typeid);
+    if (this.tgs == null) {
+      this.tgs = analyzer.getTypeGuessesForType(this.typeid);
+    }
+    return tgs;
   }
 }

@@ -29,14 +29,14 @@ import org.apache.wicket.request.mapper.parameter.PageParameters;
 
 import java.util.List;
 
-/**
+/*********************************************************
  * Wicket Page class that describes a specific file type
  *
  * @author "Michael Cafarella"
  * @version 1.0
  * @since 1.0
  * @see WebPage
- */
+ **********************************************************/
 public class FiletypePage extends WebPage {
   final class FiletypeDisplay extends WebMarkupContainer {
     public FiletypeDisplay(String name, String filetypeStr) {
@@ -48,18 +48,12 @@ public class FiletypePage extends WebPage {
         } else {
           try {
             // Metadata for type
-            TypeSummary ts = new TypeSummary(FishEye.getInstance().getAnalyzer(), Long.parseLong(filetypeStr));
+            TypeSummary ts = FishEye.getInstance().getAnalyzer().getPrecachedTypeSummary(Long.parseLong(filetypeStr));
             
             add(new Label("typetitle", ts.getLabel()));
             List<TypeGuessSummary> tgses = ts.getTypeGuesses();
             add(new Label("typecount", "" + tgses.size()));
 
-            //
-            // REMIND -- mjc -- I think this file-listing display is more trouble than its worth, at least
-            // when examining filesystems of non-trivial size.  But I'm not 100% sure yet, so it will stick
-            // around a bit...
-            //
-            /**
             ListView<TypeGuessSummary> observationList = new ListView<TypeGuessSummary>("observations", tgses) {
               protected void populateItem(ListItem<TypeGuessSummary> item) {
                 TypeGuessSummary tgs = item.getModelObject();
@@ -74,7 +68,6 @@ public class FiletypePage extends WebPage {
               }
             };
             add(observationList);
-            **/
           } catch (NumberFormatException nfe) {
           }
         }
