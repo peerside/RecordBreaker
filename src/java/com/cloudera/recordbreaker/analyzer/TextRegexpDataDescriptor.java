@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.FileOutputStream;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -31,6 +32,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 
 import org.apache.avro.Schema;
+
+import com.cloudera.recordbreaker.hive.RegExpSerDe;
 
 /***********************************************************************
  * Describe class <code>TextRegexpDataDescriptor</code> here.
@@ -98,5 +101,46 @@ public abstract class TextRegexpDataDescriptor extends GenericDataDescriptor {
   SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
     // We can wholly ignore any params here.
     return new TextRegexpSchemaDescriptor(this, schemaId, regexps, localschemas);
+  }
+
+  public Schema getHiveTargetSchema() {
+    TextRegexpSchemaDescriptor sd = (TextRegexpSchemaDescriptor) this.getSchemaDescriptor().get(0);
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    return unionFreeSchemas.get(0);
+  }
+  public String getHiveCreateTableStatement(String tablename) {
+    TextRegexpSchemaDescriptor sd = (TextRegexpSchemaDescriptor) this.getSchemaDescriptor().get(0);
+    File workingParserPath = null;
+    try {
+      workingParserPath = File.createTempFile("regexp", "parser", null);
+      FileOutputStream out = new FileOutputStream(workingParserPath);
+      try {
+        out.write(sd.getPayload());
+      } finally {
+        out.close();
+      }
+    } catch (IOException iex) {
+      iex.printStackTrace();
+      return null;
+    }
+    Schema parentS = sd.getSchema();
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    String escapedSchemaString = unionFreeSchemas.get(0).toString();
+    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE 'com.cloudera.recordbreaker.hive.RegExpSerDe' WITH SERDEPROPERTIES('" +
+      RegExpSerDe.DESERIALIZER + "'='" + workingParserPath.toString() + "', '" +
+      RegExpSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
+      "STORED AS TEXTFILE";
+    return creatTxt;
+  }
+
+  public String getHiveImportDataStatement(String tablename) {
+    String fname = getFilename().toString();
+    String localMarker = "";
+    if (fname.startsWith("file")) {
+      localMarker = " local ";
+    }
+    String loadTxt = "load data" + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
+    return loadTxt;
   }
 }

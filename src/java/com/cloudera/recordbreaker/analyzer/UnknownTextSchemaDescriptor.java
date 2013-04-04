@@ -58,6 +58,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
 
   public UnknownTextSchemaDescriptor(DataDescriptor dd) throws IOException {
     super(dd);
+    // Superclass calls computeSchema()
   }
 
   public UnknownTextSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) throws IOException {
@@ -96,6 +97,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
     } finally {
       in.close();
     }
+    System.err.println("Recovered unknowntext schema: " + schema);
   }
 
   public byte[] getPayload() {

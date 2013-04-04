@@ -79,7 +79,7 @@ public class QueryResultsPage extends WebPage {
     public TableDisplayPanel(String name, String fidStr, String filename, String projClauseStr, String selClauseStr) {
       super(name);
 
-      System.err.println("TABLE DISPLAY: filename=" + filename);
+      //System.err.println("TABLE DISPLAY: filename=" + filename);
       FishEye fe = FishEye.getInstance();
       List<List<String>> queryResults = null;
       if (fe.hasFSAndCrawl()) {

@@ -58,31 +58,8 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
     computeSchema();
   }
   void computeSchema() {
-    List<Schema.Field> topFields = new ArrayList<Schema.Field>();
-    topFields.add(new Schema.Field("row", Schema.createUnion(schemaOptions), "One of several row formats", null));
-    this.schema = Schema.createRecord(topFields);
-  }
-  
-  public TextRegexpSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) throws Exception {
-    this.dd = dd;
-    this.schema = Schema.parse(schemaRepr);
-
-    // Deserialize Patterns and Schema options
-    JSONObject jobj = new JSONObject(new String(miscPayload));
-
-    this.patterns = new ArrayList<Pattern>();
-    JSONArray patternArray = jobj.getJSONArray("patterns");
-    for (int i = 0; i < patternArray.length(); i++) {
-      String patternStr = patternArray.getString(i);
-      this.patterns.add(Pattern.compile(patternStr));
-    }
-           
-    this.schemaOptions = new ArrayList<Schema>();
-    JSONArray schemaOptionArray = jobj.getJSONArray("schemaoptions");
-    for (int i = 0; i < schemaOptionArray.length(); i++) {
-      String schemaStr = schemaOptionArray.getString(i);
-      this.schemaOptions.add(Schema.parse(schemaStr));
-    }
+    // Create a Schema that is a union of all the schemaOptions.
+    this.schema = Schema.createUnion(schemaOptions);
   }
 
   public byte[] getPayload() {
@@ -169,9 +146,7 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
                   }
                   cur.put(fieldName, fieldValue);
                 }
-                GenericData.Record row = new GenericData.Record(schema);
-                row.put("row", cur);
-                return row;
+                return cur;
               }
             }
           }
@@ -198,3 +173,36 @@ public class TextRegexpSchemaDescriptor implements SchemaDescriptor {
     return schema.toString();
   }
 }
+
+
+
+
+
+  /**
+  public TextRegexpSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) throws Exception {
+    this.dd = dd;
+    this.schema = Schema.parse(schemaRepr);
+    System.err.println("Schema repr: " + schemaRepr);
+    System.err.println();
+    System.err.println();    
+    System.err.println("Schema: " + schema);
+
+    // Deserialize Patterns and Schema options
+    String mps = new String(miscPayload);
+    JSONObject jobj = new JSONObject(mps);
+
+    this.patterns = new ArrayList<Pattern>();
+    JSONArray patternArray = jobj.getJSONArray("patterns");
+    for (int i = 0; i < patternArray.length(); i++) {
+      String patternStr = patternArray.getString(i);
+      this.patterns.add(Pattern.compile(patternStr));
+    }
+           
+    this.schemaOptions = new ArrayList<Schema>();
+    JSONArray schemaOptionArray = jobj.getJSONArray("schemaoptions");
+    for (int i = 0; i < schemaOptionArray.length(); i++) {
+      String schemaStr = schemaOptionArray.getString(i);
+      this.schemaOptions.add(Schema.parse(schemaStr));
+    }
+  }
+  **/
