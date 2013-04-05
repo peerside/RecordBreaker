@@ -19,9 +19,11 @@ import org.apache.avro.Schema;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.TreeMap;
@@ -32,6 +34,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.avro.hadoop.io.AvroSequenceFile;
+
+import com.cloudera.recordbreaker.hive.HiveSerDe;
 
 import au.com.bytecode.opencsv.CSVParser;
 
@@ -204,13 +208,55 @@ public class GenericDataDescriptor implements DataDescriptor {
     return fs.open(p);
   }
 
+  //////////////////////////
+  // Hive Support
+  //////////////////////////
+  public boolean isHiveSupported() {
+    return false;
+  }
   public Schema getHiveTargetSchema() {
-    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    return unionFreeSchemas.get(0);
   }
   public String getHiveCreateTableStatement(String tablename) {
-    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    File workingParserPath = null;
+    try {
+      workingParserPath = File.createTempFile("parser", "parser", null);
+      FileOutputStream out = new FileOutputStream(workingParserPath);
+      try {
+        out.write(sd.getPayload());
+      } finally {
+        out.close();
+      }
+    } catch (IOException iex) {
+      iex.printStackTrace();
+      return null;
+    }
+    Schema parentS = sd.getSchema();
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    String escapedSchemaString = unionFreeSchemas.get(0).toString();
+    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
+
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' WITH SERDEPROPERTIES('" +
+      HiveSerDe.DESERIALIZER + "'='" + workingParserPath.toString() + "', '" +
+      HiveSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
+      "STORED AS TEXTFILE";
+    return creatTxt;
+
   }
   public String getHiveImportDataStatement(String tablename) {
-    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());    
+    String fname = getFilename().toString();
+    String localMarker = "";
+    if (fname.startsWith("file")) {
+      localMarker = " local ";
+    }
+    String loadTxt = "load data" + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
+    return loadTxt;
+    
+  }
+  public String getHiveSerDeClassName() {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
 }

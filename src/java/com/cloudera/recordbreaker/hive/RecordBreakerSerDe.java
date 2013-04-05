@@ -41,10 +41,11 @@ import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericContainer;
 
-import com.cloudera.recordbreaker.learnstructure.InferredType;
 import com.cloudera.recordbreaker.hive.borrowed.AvroDeserializer;
 import com.cloudera.recordbreaker.hive.borrowed.AvroGenericRecordWritable;
 import com.cloudera.recordbreaker.hive.borrowed.AvroObjectInspectorGenerator;
+
+import com.cloudera.recordbreaker.learnstructure.InferredType;
 
 /**********************************************************************
  * <code>RecordBreakerSerDe</code> parses a text file using a parser
@@ -52,31 +53,16 @@ import com.cloudera.recordbreaker.hive.borrowed.AvroObjectInspectorGenerator;
  *
  * @author "Michael Cafarella" 
  **********************************************************************/
-public class RecordBreakerSerDe implements SerDe {
-  final public static String DESERIALIZER = "recordbreaker.typetree";
-  final public static String TARGET_SCHEMA = "recordbreaker.schema";  
-
+public class RecordBreakerSerDe extends HiveSerDe {
   private static final Log LOG = LogFactory.getLog(RecordBreakerSerDe.class);
-  
   InferredType typeTree;
-  Schema schema;
-  List<String> columnNames;
-  List<TypeInfo> columnTypes;
-  ObjectInspector oi;
-  AvroDeserializer avroDeserializer;  
-  
-  /**
-   * <code>initialize</code> sets up the RecordBreaker SerDe.
-   * Importantly, it deserializes the text scanner, type signature, and
-   * column names.
-   *
-   * @param conf a <code>Configuration</code> value
-   * @param tbl a <code>Properties</code> value
-   */
-  public void initialize(Configuration conf, Properties tbl) {
-    String recordBreakerTypeTreePayload = tbl.getProperty(DESERIALIZER);
-    String targetAvroSchemaRepr = tbl.getProperty(TARGET_SCHEMA);
 
+  /**
+   * <code>initDeserializer</code> sets up the RecordBreaker-specific
+   * (that is, specific to UnknownText) parts of the SerDe.  In particular,
+   * it loads in the text scanner description.
+   */
+  void initDeserializer(String recordBreakerTypeTreePayload) {
     try {
       DataInputStream in = new DataInputStream(new FileInputStream(new File(recordBreakerTypeTreePayload)));
       this.typeTree = InferredType.readType(in);
@@ -85,57 +71,14 @@ public class RecordBreakerSerDe implements SerDe {
     } catch (IOException iex) {
       iex.printStackTrace();
     }
-    this.schema = Schema.parse(targetAvroSchemaRepr);
-    
-    try {
-      AvroObjectInspectorGenerator aoig = new AvroObjectInspectorGenerator(schema);
-      this.columnNames = aoig.getColumnNames();
-      this.columnTypes = aoig.getColumnTypes();
-      this.oi = aoig.getObjectInspector();
-    } catch (SerDeException sde) {
-      sde.printStackTrace();
-    }
-    LOG.error("LOG query on schema " + schema.toString());
-    this.avroDeserializer = new AvroDeserializer();
   }
 
-  public ObjectInspector getObjectInspector() throws SerDeException {
-    return oi;
-  }
-
-  public Class<? extends Writable> getSerializedClass() {
-    return AvroGenericRecordWritable.class;
-  }
-
-  public Object deserialize(Writable blob) throws SerDeException {
-    // Using the RecordBreaker InferredType parser, parse the text into an Avro object.
+  /**
+   * Deserialize a single line of text in the raw input.
+   * Transform into a GenericData.Record object for Hive.
+   */
+  GenericData.Record deserializeRowBlob(Writable blob) {
     String rowStr = ((Text) blob).toString();
-    GenericRecord resultObj = (GenericRecord) typeTree.parse(rowStr);
-
-    // If not a match, return null    
-    if (resultObj == null) {
-      return null;
-    }
-    // Check to see if the resulting Avro object matches the Schema we want for
-    // the current Hive table.
-    Schema curSchema = resultObj.getSchema();
-    if (curSchema.toString().hashCode() != schema.toString().hashCode()) {
-      LOG.error("ROW has schema " + curSchema.toString());
-      return null;
-    }
-
-    // TEST HERE.  IF FAIL, THEN RETURN NULL
-    LOG.error("EMIT: " + resultObj);
-
-    // Translate the Avro object into format that Hive wants
-    return avroDeserializer.deserialize(columnNames, columnTypes, new AvroGenericRecordWritable(resultObj), schema);
-  }
-
-  public Writable serialize(Object obj, ObjectInspector objInspector) throws SerDeException {
-    throw new SerDeException("Cannot serialize to RecordBreaker-parsed objects");
-  }
-
-  public SerDeStats getSerDeStats() {
-    return null;
+    return (GenericData.Record) typeTree.parse(rowStr);
   }
 }

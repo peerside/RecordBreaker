@@ -57,6 +57,9 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
   public InputStream getRawBytes() throws IOException {
     return fs.open(p);
   }
+  public boolean isHiveSupported() {
+    return false;
+  }
   public Schema getHiveTargetSchema() {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }

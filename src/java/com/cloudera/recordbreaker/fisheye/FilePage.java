@@ -129,14 +129,7 @@ public class FilePage extends WebPage {
 
             // querySupported container holds queryform
             // queryUnsupported container holds an error message
-            boolean isQuerySupported = false;
-            try {
-              isQuerySupported = (dd.getHiveCreateTableStatement("tabname") != null) && fe.isQueryServerAvailable(false);
-            } catch (UnsupportedOperationException uoe) {
-              uoe.printStackTrace();
-            }
-            
-            final boolean querySupported = isQuerySupported;
+            final boolean querySupported = dd.isHiveSupported() && fe.isQueryServerAvailable(false);
             add(new WebMarkupContainer("querySupported") {
                 {
                   setOutputMarkupPlaceholderTag(true);
@@ -237,7 +230,7 @@ public class FilePage extends WebPage {
               pp.add("selectionclause", selClause);
               pp.add("filename", path);
               //add(new ExternalLink("queryResultsLink", urlFor(QueryResultsPage.class, pp).toString(), "queryResults"));
-              System.err.println("Got results: " + urlFor(QueryResultsPage.class, pp).toString());
+              //System.err.println("Got results: " + urlFor(QueryResultsPage.class, pp).toString());
               target.appendJavaScript("window.open(\"" + urlFor(QueryResultsPage.class, pp).toString() + "\")");
             }
           }

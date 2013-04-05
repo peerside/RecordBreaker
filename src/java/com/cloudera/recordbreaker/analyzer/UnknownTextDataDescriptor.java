@@ -28,6 +28,7 @@ import java.util.Iterator;
 
 import org.apache.avro.Schema;
 
+import com.cloudera.recordbreaker.hive.HiveSerDe;
 import com.cloudera.recordbreaker.hive.RecordBreakerSerDe;
 import com.cloudera.recordbreaker.schemadict.SchemaSuggest;
 import com.cloudera.recordbreaker.schemadict.DictionaryMapping;
@@ -39,13 +40,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.commons.codec.binary.Base64;
 
-/**
+/*****************************************************
  * <code>UnknownTextDataDescriptor</code> encapsulates log files with which we are unfamiliar.
  * It is the only DataDescriptor implementation to use the LearnStructure and SchemaDictionary
  * work.
  *
- * @author "Michael Cafarella" <mjc@cloudera.com>
- */
+ * @author "Michael Cafarella" 
+ ******************************************************/
 public class UnknownTextDataDescriptor extends GenericDataDescriptor {
   public static String TEXTDATA_TYPE = "structured-text";
   
@@ -117,49 +118,16 @@ public class UnknownTextDataDescriptor extends GenericDataDescriptor {
     super(p, fs, TEXTDATA_TYPE, schemaReprs, schemaDescs, schemaBlobs);
   }
 
+  ///////////////////////////////////
+  // GenericDataDescriptor
+  //////////////////////////////////
+  public boolean isHiveSupported() {
+    return true;
+  }
   SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
     return new UnknownTextSchemaDescriptor(this, schemaRepr, blob);
   }
-
-  public Schema getHiveTargetSchema() {
-    UnknownTextSchemaDescriptor sd = (UnknownTextSchemaDescriptor) this.getSchemaDescriptor().get(0);
-    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
-    return unionFreeSchemas.get(0);
-  }
-  
-  public String getHiveCreateTableStatement(String tablename) {
-    UnknownTextSchemaDescriptor sd = (UnknownTextSchemaDescriptor) this.getSchemaDescriptor().get(0);
-    File workingParserPath = null;
-    try {
-      workingParserPath = File.createTempFile("recordbreaker", "parser", null);
-      FileOutputStream out = new FileOutputStream(workingParserPath);
-      try {
-        out.write(sd.getPayload());
-      } finally {
-        out.close();
-      }
-    } catch (IOException iex) {
-      iex.printStackTrace();
-      return null;
-    }
-    Schema parentS = sd.getSchema();
-    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
-    String escapedSchemaString = unionFreeSchemas.get(0).toString();
-    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
-    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE 'com.cloudera.recordbreaker.hive.RecordBreakerSerDe' WITH SERDEPROPERTIES('" +
-      RecordBreakerSerDe.DESERIALIZER + "'='" + workingParserPath.toString() + "', '" +
-      RecordBreakerSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
-      "STORED AS TEXTFILE";
-    return creatTxt;
-  }
-
-  public String getHiveImportDataStatement(String tablename) {
-    String fname = getFilename().toString();
-    String localMarker = "";
-    if (fname.startsWith("file")) {
-      localMarker = " local ";
-    }
-    String loadTxt = "load data" + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
-    return loadTxt;
+  public String getHiveSerDeClassName() {
+    return "com.cloudera.recordbreaker.hive.RecordBreakerSerDe";
   }
 }

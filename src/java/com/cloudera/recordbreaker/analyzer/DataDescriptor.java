@@ -67,6 +67,17 @@ public interface DataDescriptor {
    */
   public InputStream getRawBytes() throws IOException;
 
+  /**
+   * Does this data descriptor support hive queries?
+   */
+  public boolean isHiveSupported();
+  
+  /**
+   * Calling <code>getHiveTargetSchema</code> returns the
+   * Hive target schema.
+   *
+   * @return a <code>Schema</code> value
+   */
   public Schema getHiveTargetSchema();
   
   /**

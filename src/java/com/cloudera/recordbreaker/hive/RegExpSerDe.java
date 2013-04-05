@@ -57,24 +57,20 @@ import org.json.JSONException;
  *
  * @author "Michael Cafarella" 
  **********************************************************************/
-public class RegExpSerDe implements SerDe {
-  final public static String DESERIALIZER = "recordbreaker.patterns";
-  final public static String TARGET_SCHEMA = "recordbreaker.schema";  
-
+public class RegExpSerDe extends HiveSerDe {
   private static final Log LOG = LogFactory.getLog(RegExpSerDe.class);
-
-  Schema schema;
-  List<String> columnNames;
-  List<TypeInfo> columnTypes;
   List<Schema> schemaOptions;
   List<Pattern> patterns;
-  ObjectInspector oi;
-  AvroDeserializer avroDeserializer;  
 
-  public void initialize(Configuration conf, Properties tbl) {
-    String patternPayloadJSONFile = tbl.getProperty(DESERIALIZER);
-    String targetSchemaRepr = tbl.getProperty(TARGET_SCHEMA);
-
+  /**
+   * <code>initDeserializer</code> sets up the RegExp-specific
+   * parts of the SerDe.  In particular, it loads in the regular
+   * expressions and corresponding schema descriptions.
+   *
+   * The patternPayloadJSONFile parameter is a serailized JSON
+   * object that contains the schema and regexp info.
+   */
+  void initDeserializer(String patternPayloadJSONFile) {
     try {
       DataInputStream in = new DataInputStream(new FileInputStream(new File(patternPayloadJSONFile)));
       byte buf[] = new byte[8096];
@@ -111,27 +107,13 @@ public class RegExpSerDe implements SerDe {
     } catch (JSONException jse) {
       jse.printStackTrace();
     }
-    this.schema = Schema.parse(targetSchemaRepr);
-
-    try {
-      AvroObjectInspectorGenerator aoig = new AvroObjectInspectorGenerator(schema);
-      this.columnNames = aoig.getColumnNames();
-      this.columnTypes = aoig.getColumnTypes();
-      this.oi = aoig.getObjectInspector();
-    } catch (SerDeException sde) {
-      sde.printStackTrace();
-    }
-    this.avroDeserializer = new AvroDeserializer();
   }
 
-  public ObjectInspector getObjectInspector() throws SerDeException {
-    return oi;
-  }
-
-  public Class<? extends Writable> getSerializedClass() {
-    return AvroGenericRecordWritable.class;
-  }
-  public Object deserialize(Writable blob) throws SerDeException {
+  /**
+   * Deserialize a single line of text in the raw input.
+   * Transform into a GenericData.Record object for Hive.
+   */
+  GenericData.Record deserializeRowBlob(Writable blob) {
     String rowStr = ((Text) blob).toString();
     GenericData.Record rowRecord = null;
 
@@ -164,27 +146,9 @@ public class RegExpSerDe implements SerDe {
             rowRecord.put(fieldName, fieldValue);
           }
         }
-        break;
+        return rowRecord;
       }
     }
-    
-    if (rowRecord == null) {
-      LOG.error("RETURNING NULL RECORD FOR TEXT: " + rowStr);
-      return null;
-    }
-    Schema curSchema = rowRecord.getSchema();
-    if (curSchema.toString().hashCode() != schema.toString().hashCode()) {
-      LOG.error("ROW has schema " + curSchema.toString());
-      return null;
-    }
-    return avroDeserializer.deserialize(columnNames, columnTypes, new AvroGenericRecordWritable(rowRecord), schema);
-  }
-  
-  public Writable serialize(Object obj, ObjectInspector objInspector) throws SerDeException {
-    throw new SerDeException("Cannot serialize to Fisheye-parsed objects");
-  }
-  
-  public SerDeStats getSerDeStats() {
     return null;
   }
 }
