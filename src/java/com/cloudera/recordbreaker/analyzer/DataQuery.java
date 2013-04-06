@@ -190,7 +190,12 @@ public class DataQuery implements Serializable {
     try {
       ResultSet res = stmt.executeQuery(query);
       ResultSetMetaData rsmd = res.getMetaData();
-      
+      List<String> metatuple = new ArrayList<String>();
+      for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+        metatuple.add(rsmd.getColumnLabel(i));
+      }
+      result.add(metatuple);
+        
       while (res.next()) {
         List<String> tuple = new ArrayList<String>();
         for (int i = 1; i <= rsmd.getColumnCount(); i++) {

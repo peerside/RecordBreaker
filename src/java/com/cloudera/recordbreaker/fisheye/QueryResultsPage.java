@@ -57,6 +57,7 @@ import org.apache.wicket.ajax.AjaxRequestTarget;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.sql.SQLException;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -73,12 +74,27 @@ import java.util.ArrayList;
  * @author "Michael Cafarella" <mjc@lofie.local>
  **************************************************************************/
 public class QueryResultsPage extends WebPage {
+  class DataTablePair implements Serializable {
+    List<List<String>> headers;
+    List<List<String>> outputTuples;
+      
+    public DataTablePair(List<List<String>> headers, List<List<String>> outputTuples) {
+      this.headers = headers;
+      this.outputTuples = outputTuples;
+    }
+    public List<List<String>> getHeaderPairs() {
+      return headers;
+    }
+    public List<List<String>> getOutputTuples() {
+      return outputTuples;
+    }
+  }
+    
   class TableDisplayPanel extends WebMarkupContainer {
     long fid = -1L;
-    
+
     public TableDisplayPanel(String name, String fidStr, String filename, String projClauseStr, String selClauseStr) {
       super(name);
-
       //System.err.println("TABLE DISPLAY: filename=" + filename);
       FishEye fe = FishEye.getInstance();
       List<List<String>> queryResults = null;
@@ -103,20 +119,37 @@ public class QueryResultsPage extends WebPage {
         }
       }
 
-      add(new Label("filename", filename));
-      add(new ListView<List<String>>("resultTable", queryResults) {
-          protected void populateItem(ListItem<List<String>> tuple) {
-            List<String> singleTuple = tuple.getModelObject();
+      List<String> metadata = queryResults.remove(0);
+      List<List<String>> metadataList = new ArrayList<List<String>>();
+      metadataList.add(metadata);
 
-            tuple.add(new ListView<String>("resultTuple", singleTuple) {
-                protected void populateItem(ListItem<String> fieldItem) {
-                  String fieldVal = fieldItem.getModelObject();
-                  fieldItem.add(new Label("field", fieldVal));
-                }
-              });
+      add(new Label("filename", filename));
+      add(new ListView<List<String>>("attributelabels", metadataList) {
+          protected void populateItem(ListItem<List<String>> item) {
+            List<String> myListOfFieldLabels = item.getModelObject();
+            ListView<String> listOfFields = new ListView<String>("fieldlist", myListOfFieldLabels) {
+              protected void populateItem(ListItem<String> item2) {
+                String displayInfo = item2.getModelObject();
+                item2.add(new Label("alabel", "" + displayInfo));
+              }
+            };
+            item.add(listOfFields);
+          }
+        });
+      add(new ListView<List<String>>("resultTable", queryResults) {
+          protected void populateItem(ListItem<List<String>> item) {
+            List<String> myListOfSchemaElts = item.getModelObject();
+            ListView<String> listofTupleFields = new ListView<String>("resultTuple", myListOfSchemaElts) {
+              protected void populateItem(ListItem<String> item2) {
+                String displayStr = item2.getModelObject();
+                item2.add(new Label("field", "" + displayStr));
+              }
+            };
+            item.add(listofTupleFields);
           }
         });
     }
+
     public void onConfigure() {
       FishEye fe = FishEye.getInstance();
       FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);      
