@@ -148,53 +148,5 @@ public class SequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
   public String getSchemaSourceDescription() {
     return SCHEMA_ID;
   }
-
-  /**
-  public static void main(String argv[]) throws IOException {
-    if (argv.length < 1) {
-      System.err.println("SequenceFileSchemaDescriptor (-test <file>|-write <outfile>)");
-      return;
-    }
-
-    if ("-test".equals(argv[0])) {
-      System.err.println("Test SequenceFileSchemaDescriptor");
-      Configuration conf = new Configuration();
-      FileSystem fs = FileSystem.getLocal(conf);
-      Path p = new Path(argv[1]);
-      SequenceFileSchemaDescriptor sd = new SequenceFileSchemaDescriptor(fs, p);
-      System.err.println("Loaded SequenceFileSchemaDescriptor");
-      Schema s = sd.getSchema();
-      System.err.println("Got schema: " + s);
-      System.err.println();
-
-      for (Iterator it = sd.getIterator(); it.hasNext(); ) {
-        GenericData.Record pair = (GenericData.Record) it.next();
-        System.err.println(pair);
-      }
-    } else if ("-write".equals(argv[0])) {
-      System.err.println("Write SequenceFile");
-      Configuration conf = new Configuration();
-      FileSystem fs = FileSystem.getLocal(conf);
-      Path p = new Path(argv[1]);
-
-      SequenceFile.Writer outseq = SequenceFile.createWriter(fs,
-                                                             conf,
-                                                             p,
-                                                             IntWritable.class,
-                                                             UTF8.class,
-                                                             SequenceFile.CompressionType.BLOCK,
-                                                             new BZip2Codec());
-      try {
-        outseq.append(new IntWritable(1), new UTF8("Foo"));
-        outseq.append(new IntWritable(2), new UTF8("Bar"));
-        outseq.append(new IntWritable(3), new UTF8("Baz"));        
-      } finally {
-        outseq.close();
-      }
-    } else {
-      System.err.println("Did not recognize params.");
-    }
-  }
-  **/
 }
 
