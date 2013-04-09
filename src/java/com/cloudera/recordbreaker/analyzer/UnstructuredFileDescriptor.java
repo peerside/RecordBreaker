@@ -69,4 +69,7 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
   public String getHiveImportDataStatement(String tablename) {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());    
   }
+  public String getStorageFormatString() {
+    return null;
+  }
 }

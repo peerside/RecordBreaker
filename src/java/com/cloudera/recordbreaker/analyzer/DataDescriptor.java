@@ -71,6 +71,14 @@ public interface DataDescriptor {
    * Does this data descriptor support hive queries?
    */
   public boolean isHiveSupported();
+
+  /**
+   * What is the raw storage format for this file?  TEXTFILE? SEQUENCEFILE?
+   * 
+   * Can also indicate a custom one by using INPUTFORMAT X OUTPUTFORMAT Y,
+   * where X and Y are strings that identify an InputFormat or OutputFormat class.
+   */
+  public String getStorageFormatString(Schema s);  
   
   /**
    * Calling <code>getHiveTargetSchema</code> returns the

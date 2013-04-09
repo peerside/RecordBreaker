@@ -47,7 +47,6 @@ import au.com.bytecode.opencsv.CSVParser;
 public class GenericDataDescriptor implements DataDescriptor {
   final public static String CSV_TYPE = "csv";
   final public static String XML_TYPE = "xml";
-  final public static String AVRO_TYPE = "avro";
   final public static String AVROSEQFILE_TYPE = "avrosequencefile";
   final public static String SEQFILE_TYPE = "sequencefile";
   
@@ -153,9 +152,7 @@ public class GenericDataDescriptor implements DataDescriptor {
     this.filetype = filetype;
     this.schemas = new ArrayList<SchemaDescriptor>();
 
-    if (AVRO_TYPE.equals(filetype)) {
-      schemas.add(new AvroSchemaDescriptor(this));
-    } else if (AVROSEQFILE_TYPE.equals(filetype)) {
+    if (AVROSEQFILE_TYPE.equals(filetype)) {
       schemas.add(new AvroSequenceFileSchemaDescriptor(this));
     } else if (CSV_TYPE.equals(filetype)) {
       schemas.add(new CSVSchemaDescriptor(this));
@@ -214,6 +211,9 @@ public class GenericDataDescriptor implements DataDescriptor {
   public boolean isHiveSupported() {
     return false;
   }
+  public String getStorageFormatString(Schema s) {
+    return "TEXTFILE";
+  }
   public Schema getHiveTargetSchema() {
     SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
     List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
@@ -242,7 +242,7 @@ public class GenericDataDescriptor implements DataDescriptor {
     String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' WITH SERDEPROPERTIES('" +
       HiveSerDe.DESERIALIZER + "'='" + workingParserPath.toString() + "', '" +
       HiveSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
-      "STORED AS TEXTFILE";
+      "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
     return creatTxt;
 
   }
@@ -254,7 +254,6 @@ public class GenericDataDescriptor implements DataDescriptor {
     }
     String loadTxt = "load data" + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
     return loadTxt;
-    
   }
   public String getHiveSerDeClassName() {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());

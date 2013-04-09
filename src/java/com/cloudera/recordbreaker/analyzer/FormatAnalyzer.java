@@ -67,7 +67,7 @@ public class FormatAnalyzer {
     } else if (fname.endsWith(".xml")) {
       return new GenericDataDescriptor(p, fs, GenericDataDescriptor.XML_TYPE);
     } else if (fname.endsWith(".avro")) {
-      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.AVRO_TYPE);      
+      return new AvroDataDescriptor(p, fs);
     } else if (GenericDataDescriptor.isAvroSequenceFile(fs, p)) {
       return new GenericDataDescriptor(p, fs, GenericDataDescriptor.AVROSEQFILE_TYPE);
     } else if (GenericDataDescriptor.isSequenceFile(fs, p)) {
@@ -93,11 +93,12 @@ public class FormatAnalyzer {
   }
 
   public DataDescriptor loadDataDescriptor(FileSystem fs, Path p, String identifier, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
-    if (GenericDataDescriptor.CSV_TYPE.equals(identifier) ||
-        GenericDataDescriptor.XML_TYPE.equals(identifier) ||
-        GenericDataDescriptor.AVRO_TYPE.equals(identifier) ||
-        GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier) ||
-        GenericDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
+    if (AvroDataDescriptor.AVRO_TYPE.equals(identifier)) {
+      return new AvroDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (GenericDataDescriptor.CSV_TYPE.equals(identifier) ||
+               GenericDataDescriptor.XML_TYPE.equals(identifier) ||
+               GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier) ||
+               GenericDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
       return new GenericDataDescriptor(p, fs, identifier, schemaReprs, schemaDescs, schemaBlobs);
     } else if (ApacheDataDescriptor.APACHE_TYPE.equals(identifier)) {
       return new ApacheDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);

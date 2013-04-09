@@ -52,6 +52,10 @@ public class AvroSchemaDescriptor extends GenericSchemaDescriptor {
     }
   }
 
+  public byte[] getPayload() {
+    return "".getBytes();
+  }
+
   /**
    */
   public Iterator getIterator() {
