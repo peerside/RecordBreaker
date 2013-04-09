@@ -45,62 +45,13 @@ import au.com.bytecode.opencsv.CSVParser;
  * @author "Michael Cafarella" <mjc@lofie.local>
  *****************************************************************/
 public class GenericDataDescriptor implements DataDescriptor {
-  final public static String CSV_TYPE = "csv";
   final public static String XML_TYPE = "xml";
   final public static String AVROSEQFILE_TYPE = "avrosequencefile";
   final public static String SEQFILE_TYPE = "sequencefile";
   
-  private static int MAX_LINES = 25;
-  private static int MIN_MEAN_ELTS = 3;
-  private static int MIN_LINE_COUNT = 10;
-  private static double MAX_ALLOWABLE_LINE_STDDEV = 0.1;
 
-  /**
-   * Test whether a given file is amenable to CSV processing
-   */
-  public static boolean isCSV(FileSystem fs, Path p) {
-    String fname = p.getName();    
-    if (fname.endsWith(".csv")) {
-      return true;
-    }
-    CSVParser parser = new CSVParser();
-    try {
-      BufferedReader in = new BufferedReader(new InputStreamReader(fs.open(p)));
-      try {
-        int lineCount = 0;
-        List<Integer> observedEltCounts = new ArrayList<Integer>();
-        int totalEltCount = 0;
-        int minEltCount = Integer.MAX_VALUE;
-        int maxEltCount = -1;
 
-        String line = null;
-        while (lineCount < MAX_LINES && ((line = in.readLine()) != null)) {
-          String parts[] = parser.parseLine(line);
-          int numElts = parts.length;
-          minEltCount = Math.min(minEltCount, numElts);
-          maxEltCount = Math.max(maxEltCount, numElts);
-          totalEltCount += numElts;
-          observedEltCounts.add(numElts);
-        
-          lineCount++;
-        }
-        double meanEltCount = totalEltCount / (1.0 * observedEltCounts.size());
-        double totalVariance = 0;
-        for (Integer v: observedEltCounts) {
-          totalVariance += Math.pow(v - meanEltCount, 2);
-        }
-        double variance = totalVariance / observedEltCounts.size();
-        double stddev = Math.sqrt(variance);
-        if (lineCount >= MIN_LINE_COUNT && meanEltCount >= MIN_MEAN_ELTS && ((stddev / meanEltCount) < MAX_ALLOWABLE_LINE_STDDEV)) {
-          return true;
-        }
-      } finally {
-        in.close();
-      }
-    } catch (IOException ie) {
-    }
-    return false;
-  }
+
 
   /**
    * Test whether this is an AvroSequenceFile or not.
@@ -154,8 +105,6 @@ public class GenericDataDescriptor implements DataDescriptor {
 
     if (AVROSEQFILE_TYPE.equals(filetype)) {
       schemas.add(new AvroSequenceFileSchemaDescriptor(this));
-    } else if (CSV_TYPE.equals(filetype)) {
-      schemas.add(new CSVSchemaDescriptor(this));
     } else if (SEQFILE_TYPE.equals(filetype)) {
       schemas.add(new SequenceFileSchemaDescriptor(this));
     } else if (XML_TYPE.equals(filetype)) {
@@ -176,12 +125,8 @@ public class GenericDataDescriptor implements DataDescriptor {
 
   SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
     SchemaDescriptor sd = null;
-    if (AvroSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
-      sd = new AvroSchemaDescriptor(this, schemaRepr);      
-    } else if (AvroSequenceFileSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
+    if (AvroSequenceFileSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
       sd = new AvroSequenceFileSchemaDescriptor(this, schemaRepr);
-    } else if (CSVSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
-      sd = new CSVSchemaDescriptor(this, schemaRepr, blob);
     } else if (SequenceFileSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
       sd = new SequenceFileSchemaDescriptor(this, schemaRepr);
     } else if (XMLSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {

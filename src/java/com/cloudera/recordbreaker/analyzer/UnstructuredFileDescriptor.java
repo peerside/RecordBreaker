@@ -25,6 +25,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 
+import org.apache.avro.Schema;
+
 /********************************************************************
  * <code>UnstructuredFileDescriptor</code> holds no structured data.
  * It doesn't have a schema to recover.
@@ -69,7 +71,7 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
   public String getHiveImportDataStatement(String tablename) {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());    
   }
-  public String getStorageFormatString() {
+  public String getStorageFormatString(Schema s) {
     return null;
   }
 }

@@ -96,15 +96,16 @@ public abstract class TextRegexpDataDescriptor extends GenericDataDescriptor {
     schemas.add(new TextRegexpSchemaDescriptor(this, fileType, regexps, localschemas));
   }
 
+  SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
+    // We can wholly ignore any params here.
+    return new TextRegexpSchemaDescriptor(this, schemaId, regexps, localschemas);
+  }
+  
   ///////////////////////////////////
   // GenericDataDescriptor
   //////////////////////////////////
   public boolean isHiveSupported() {
     return true;
-  }
-  SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
-    // We can wholly ignore any params here.
-    return new TextRegexpSchemaDescriptor(this, schemaId, regexps, localschemas);
   }
   public String getHiveSerDeClassName() {
     return "com.cloudera.recordbreaker.hive.RegExpSerDe";

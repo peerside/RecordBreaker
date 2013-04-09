@@ -72,8 +72,6 @@ public abstract class HiveSerDe implements SerDe {
    * of what kind of data we're reading in.
    */
   public void initialize(Configuration conf, Properties tbl) {
-    initDeserializer(tbl.getProperty(DESERIALIZER));
-
     String targetSchemaRepr = tbl.getProperty(TARGET_SCHEMA);
     this.schema = Schema.parse(targetSchemaRepr);
     try {
@@ -84,7 +82,8 @@ public abstract class HiveSerDe implements SerDe {
     } catch (SerDeException sde) {
       sde.printStackTrace();
     }
-    this.avroDeserializer = new AvroDeserializer();    
+    this.avroDeserializer = new AvroDeserializer();
+    initDeserializer(tbl.getProperty(DESERIALIZER));
   }
 
   /**

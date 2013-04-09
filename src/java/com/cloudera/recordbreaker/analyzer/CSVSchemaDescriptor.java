@@ -36,17 +36,20 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
   static int MAX_LINES = 1000;
 
   boolean hasHeaderRow;
+  String headerHash;
   
   public CSVSchemaDescriptor(DataDescriptor dd) throws IOException {
     super(dd);
   }
   public CSVSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) {
     super(dd, schemaRepr);
-    this.hasHeaderRow = "true".equals(new String(miscPayload));
+
+    this.headerHash = new String(miscPayload);
+    this.hasHeaderRow = "".length() > 0;
   }
 
   public byte[] getPayload() {
-    return ("" + this.hasHeaderRow).getBytes();
+    return headerHash.getBytes();
   }
 
   /**
@@ -104,6 +107,7 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
     // 1.  Go through all columns in the CSV and identify cell data types
     //
     int numColumns = 0;
+    String firstLine = null;
     List<String> firstRow = new ArrayList<String>();
     List<List<Schema.Type>> allEltTypes = new ArrayList<List<Schema.Type>>();
     CSVParser parser = new CSVParser();    
@@ -135,6 +139,7 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
 
         if (lineno == 0) {
           numColumns = firstRow.size();
+          firstLine = s;
         } else {
           allEltTypes.add(schemaTypes);
         }
@@ -185,9 +190,11 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
 
     // Now reason about the types we see
     this.hasHeaderRow = false;
+    this.headerHash = "";
     if (headerAllStrings && typeClash) {
       // Definitely a header row
-      hasHeaderRow = true;
+      this.hasHeaderRow = true;
+      this.headerHash = "" + firstLine.hashCode();
     } else if (headerAllStrings && ! typeClash) {
       // Still may be a header row, but harder to say
       boolean allStringCols = true;
@@ -197,7 +204,8 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
         }
       }
       if (! allStringCols) {
-        hasHeaderRow = true;
+        this.hasHeaderRow = true;
+        this.headerHash = "" + firstLine.hashCode();
       }
     }
 
@@ -226,14 +234,14 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
    */
   public Iterator getIterator() {
     return new Iterator() {
-      CSVParser parser;
+      CSVRowParser rowParser;
       int rowNum;
       Object nextElt = null;
       BufferedReader in = null;
       {
         rowNum = 0;
         try {
-          this.parser = new CSVParser();
+          rowParser = new CSVRowParser(getSchema(), headerHash);
           in = new BufferedReader(new InputStreamReader(dd.getRawBytes()));
           nextElt = lookahead();          
         } catch (IOException iex) {
@@ -251,6 +259,29 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
       public void remove() {
         throw new UnsupportedOperationException();
       }
+      Object lookahead() {
+        String s = null;
+        try {
+          while ((s = in.readLine()) != null) {
+            rowNum++;
+            if (rowNum == 1 && hasHeaderRow) {
+              continue;
+            }
+            GenericData.Record cur = rowParser.parseRow(s);
+            if (cur != null) {
+              return cur;
+            }
+          }
+          if (s == null) {
+            in.close();
+          }
+        } catch (IOException iex) {
+          iex.printStackTrace();
+        }
+        return null;
+      }
+      
+      /**
       Object lookahead() {
         String s = null;
         try {
@@ -316,6 +347,7 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
         }
         return fieldValue;
       }
+      **/
     };
   }
 

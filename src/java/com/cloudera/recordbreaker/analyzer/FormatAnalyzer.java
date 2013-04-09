@@ -62,8 +62,8 @@ public class FormatAnalyzer {
     String fname = p.getName();
 
     // Test to see if the file is one of a handful of known structured formats.
-    if (GenericDataDescriptor.isCSV(fs, p)) {
-      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.CSV_TYPE);
+    if (CSVDataDescriptor.isCSV(fs, p)) {
+      return new CSVDataDescriptor(p, fs);
     } else if (fname.endsWith(".xml")) {
       return new GenericDataDescriptor(p, fs, GenericDataDescriptor.XML_TYPE);
     } else if (fname.endsWith(".avro")) {
@@ -95,8 +95,9 @@ public class FormatAnalyzer {
   public DataDescriptor loadDataDescriptor(FileSystem fs, Path p, String identifier, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
     if (AvroDataDescriptor.AVRO_TYPE.equals(identifier)) {
       return new AvroDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
-    } else if (GenericDataDescriptor.CSV_TYPE.equals(identifier) ||
-               GenericDataDescriptor.XML_TYPE.equals(identifier) ||
+    } else if (CSVDataDescriptor.CSV_TYPE.equals(identifier)) {
+      return new CSVDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (GenericDataDescriptor.XML_TYPE.equals(identifier) ||
                GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier) ||
                GenericDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
       return new GenericDataDescriptor(p, fs, identifier, schemaReprs, schemaDescs, schemaBlobs);
