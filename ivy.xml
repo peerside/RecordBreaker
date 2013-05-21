@@ -27,7 +27,7 @@
       <dependency org="commons-daemon" name="commons-daemon" rev="1.0.9"/>
 <!--      <dependency org="log4j" name="log4j" rev="${log4j.version}" /> -->
       <dependency org="org.apache.avro" name="avro" rev="${avro.version}" />
-      <dependency org="org.apache.avro" name="avro-tools" rev="${avro-tools.version}" />
+<!--      <dependency org="org.apache.avro" name="avro-tools" rev="${avro-tools.version}" /> -->
       <dependency org="org.apache.hadoop" name="hadoop-core" rev="2.0.0-mr1-cdh4.2.0" />
       <dependency org="org.apache.hadoop" name="hadoop-common" rev="2.0.0-cdh4.2.0" />
       <dependency org="org.apache.hadoop" name="hadoop-client" rev="2.0.0-cdh4.2.0" />
