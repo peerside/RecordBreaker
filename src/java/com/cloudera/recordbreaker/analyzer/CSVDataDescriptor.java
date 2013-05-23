@@ -109,6 +109,49 @@ public class CSVDataDescriptor extends GenericDataDescriptor {
   ///////////////////////////////////
   // GenericDataDescriptor
   //////////////////////////////////
+  public String getHiveCreateTableStatement(String tablename) {
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    Schema parentS = sd.getSchema();
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    String escapedSchemaString = unionFreeSchemas.get(0).toString();
+    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
+
+    StringBuffer creatTxt = new StringBuffer("create external table " + tablename + "(");
+    Schema s = unionFreeSchemas.get(0);
+    List<Schema.Field> fields = s.getFields();
+    for (int i = 0; i < fields.size(); i++) {
+      Schema.Field f = fields.get(i);
+      creatTxt.append(f.name() + " " + schemaTypeToString(f.schema().getType()));
+      if (i < fields.size()-1) {
+        creatTxt.append(", ");
+      }
+    }
+    creatTxt.append(") ROW FORMAT DELIMITED FIELDS TERMINATED BY ','");
+    return creatTxt.toString();
+  }
+
+  String schemaTypeToString(Schema.Type st) {
+    if ((st == Schema.Type.INT) ||
+        (st == Schema.Type.LONG)) {
+      return "int";
+    } else if ((st == Schema.Type.FLOAT) ||
+               (st == Schema.Type.DOUBLE)) {
+      return "double";
+    } else {
+      return "String";
+    }
+  }
+
+  public String getHiveImportDataStatement(String tablename) {
+    String fname = getFilename().toString();
+    String localMarker = "";
+    if (fname.startsWith("file")) {
+      localMarker = "local ";
+    }
+    String loadTxt = "load data " + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
+    return loadTxt;
+  }
+  
   public boolean isHiveSupported() {
     return true;
   }
