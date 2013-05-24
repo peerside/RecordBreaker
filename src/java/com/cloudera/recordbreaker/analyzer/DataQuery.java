@@ -64,6 +64,7 @@ public class DataQuery implements Serializable {
   Configuration conf;
   Connection hiveCon;
   Connection impalaCon;
+  HiveTableCache tableCache;
   Random r = new Random();
   Map<Path, String> tables;
   Set<Path> isLoaded;
@@ -100,6 +101,8 @@ public class DataQuery implements Serializable {
       this.impalaConnectString = conf.get("impala.connectstring", "jdbc:hive2://localhost:21050/;auth=noSasl");
       LOG.error("GOT HIVE CONNECT STRING: " + hiveConnectString);
       LOG.error("GOT IMPALA CONNECT STRING: " + impalaConnectString);      
+
+      this.tableCache = new HiveTableCache();
       
       this.hiveCon = DriverManager.getConnection(hiveConnectString, "cloudera", "cloudera");
       this.impalaCon = DriverManager.getConnection(impalaConnectString, "cloudera", "cloudera");      
@@ -173,7 +176,7 @@ public class DataQuery implements Serializable {
     Path p = desc.getFilename();
         
     // Set up Hive table
-    String tablename = tables.get(p);
+    String tablename = tableCache.get(p);
     if (tablename == null) {
       tablename = "datatable" + Math.abs(r.nextInt());
       Statement stmt = hiveCon.createStatement();
@@ -185,10 +188,7 @@ public class DataQuery implements Serializable {
       } finally {
         stmt.close();
       }
-    }
 
-    // Insert data from file, if it hasn't happened already
-    if (! isLoaded.contains(p)) {
       // Copy data into secret location prior to Hive import
       Path secretDst = new Path("/tmp/tmptables", "r" + r.nextInt());
       FileSystem fs = FileSystem.get(conf);
@@ -197,7 +197,7 @@ public class DataQuery implements Serializable {
       LOG.info("PREPARE AVRO AT " + secretDst);
 
       // Import data
-      Statement stmt = hiveCon.createStatement();
+      stmt = hiveCon.createStatement();
       try {
         LOG.info("IMPORT: " + desc.getHiveImportDataStatement(tablename, secretDst));
         stmt.execute(desc.getHiveImportDataStatement(tablename, secretDst));
@@ -205,6 +205,9 @@ public class DataQuery implements Serializable {
       } finally {
         stmt.close();
       }
+
+      // Insert into table cache
+      tableCache.put(p, tablename);
     }
 
     // Run the hive query against the table

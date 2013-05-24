@@ -72,6 +72,7 @@ public class FSAnalyzer {
   static String CREATE_TABLE_TYPE_GUESSES = "CREATE TABLE TypeGuesses(fid integer, typeid integer, foreign key(fid) references Files(fid), foreign key(typeid) references Types(typeid));";
   static String CREATE_TABLE_SCHEMAS = "CREATE TABLE Schemas(schemaid integer primary key autoincrement, schemarepr varchar(1024), schemasrcdescription varchar(32), schemapayload blob);";
   static String CREATE_TABLE_GUESSES = "CREATE TABLE SchemaGuesses(fid integer, schemaid integer, foreign key(fid) references Files(fid), foreign key(schemaid) references Schemas(schemaid));";
+  static String CREATE_TABLE_HIVESUPPORT = "CREATE TABLE HiveTables(fpath varchar(256), hiveTableName varchar(128));";
   void createTables() throws SQLiteException {
     dbQueue.execute(new SQLiteJob<Object>() {
         protected Object job(SQLiteConnection db) throws SQLiteException {
@@ -83,10 +84,46 @@ public class FSAnalyzer {
             db.exec(CREATE_TABLE_TYPES);
             db.exec(CREATE_TABLE_TYPE_GUESSES);
             db.exec(CREATE_TABLE_SCHEMAS);
-            db.exec(CREATE_TABLE_GUESSES);    
+            db.exec(CREATE_TABLE_GUESSES);
+            db.exec(CREATE_TABLE_HIVESUPPORT);
           } finally {
           }
           return null;
+        }
+      }).complete();
+  }
+
+  ///////////////////////////////////////////////
+  // Manage Hive Support
+  ///////////////////////////////////////////////
+  public String checkHiveSupport(final Path fpath) {
+    return dbQueue.execute(new SQLiteJob<String>() {
+        protected String job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("SELECT hiveTableName FROM HiveTables WHERE fpath = ?");
+          try {
+            stmt.bind(1, fpath.toString());
+            while (stmt.step()) {
+              return stmt.columnString(0);
+            }
+            return null;
+          } finally {
+            stmt.dispose();
+          }
+        }
+      }).complete();
+  }
+  public void addHiveSupport(final Path fpath, final String tablename) {
+    dbQueue.execute(new SQLiteJob<Object>() {
+        protected Object job(SQLiteConnection db) throws SQLiteException {
+          SQLiteStatement stmt = db.prepare("INSERT into HiveTables VALUES(?, ?)");
+          try {
+            stmt.bind(1, fpath.toString());
+            stmt.bind(2, tablename);
+            stmt.step();
+            return null;
+          } finally {
+            stmt.dispose();
+          }
         }
       }).complete();
   }
