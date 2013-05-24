@@ -15,6 +15,7 @@
 package com.cloudera.recordbreaker.learnstructure.test;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -25,32 +26,33 @@ import org.junit.rules.Timeout;
 import org.junit.rules.TemporaryFolder;
 
 /**
- * TestFilelistingInference tests the LearnStructure component for 'commonlog.txt' data
+ * TestCommonlogInference tests the LearnStructure component for 'commonlog.txt' data
  *
  * @author "Michael Cafarella" <mjc@cloudera.com>
  * @version 1.0
  * @since 1.0
  * @see InferenceTest
  */
-public class TestFilelistingInference extends InferenceTest {
+public class TestCommonlogInference extends InferenceTest {
   @Rule
   public TemporaryFolder tmpOutDir = new TemporaryFolder();
   File workingDir = null;
+
   /**
-   * Creates a new <code>FilelistingInferenceTest</code> instance.
+   * Creates a new <code>CommonlogInferenceTest</code> instance.
    *
    */
-  public TestFilelistingInference() {
+  public TestCommonlogInference() {
   }
 
   @Before
-  public void prepare() {
+  public void prepare() throws IOException {
     workingDir = tmpOutDir.newFolder("workingdir");
   }
-
+  
   @Test(timeout=10000)
-  public void testFilelistingInference() {
-    Assert.assertTrue(runSingletonTest(workingDir, new File(sampleDir, "filelisting.txt")));
+  public void testCommonlogInference() {
+    Assert.assertTrue(runSingletonTest(workingDir, new File(sampleDir, "commonlog.txt")));
   }
 
   @After
