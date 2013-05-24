@@ -47,11 +47,6 @@ import au.com.bytecode.opencsv.CSVParser;
 public class GenericDataDescriptor implements DataDescriptor {
   final public static String XML_TYPE = "xml";
   final public static String AVROSEQFILE_TYPE = "avrosequencefile";
-  final public static String SEQFILE_TYPE = "sequencefile";
-  
-
-
-
 
   /**
    * Test whether this is an AvroSequenceFile or not.
@@ -76,22 +71,6 @@ public class GenericDataDescriptor implements DataDescriptor {
     }
   }
 
-  /**
-   * Test whether this is a SequenceFile or not.
-   */
-  public static boolean isSequenceFile(FileSystem fs, Path p) {
-    try {
-      SequenceFile.Reader in = new SequenceFile.Reader(fs, p, new Configuration());
-      try {
-        return true;
-      } finally {
-        in.close();
-      }
-    } catch (IOException iex) {
-      return false;
-    }
-  }
-
   List<SchemaDescriptor> schemas;
   FileSystem fs;
   Path p;
@@ -105,8 +84,6 @@ public class GenericDataDescriptor implements DataDescriptor {
 
     if (AVROSEQFILE_TYPE.equals(filetype)) {
       schemas.add(new AvroSequenceFileSchemaDescriptor(this));
-    } else if (SEQFILE_TYPE.equals(filetype)) {
-      schemas.add(new SequenceFileSchemaDescriptor(this));
     } else if (XML_TYPE.equals(filetype)) {
       schemas.add(new XMLSchemaDescriptor(this));
     }
@@ -127,8 +104,6 @@ public class GenericDataDescriptor implements DataDescriptor {
     SchemaDescriptor sd = null;
     if (AvroSequenceFileSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
       sd = new AvroSequenceFileSchemaDescriptor(this, schemaRepr);
-    } else if (SequenceFileSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
-      sd = new SequenceFileSchemaDescriptor(this, schemaRepr);
     } else if (XMLSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
       sd = new XMLSchemaDescriptor(this, schemaRepr, blob);
     } else {
@@ -164,41 +139,35 @@ public class GenericDataDescriptor implements DataDescriptor {
     List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
     return unionFreeSchemas.get(0);
   }
+  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
+  }
   public String getHiveCreateTableStatement(String tablename) {
     SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
-    File workingParserPath = null;
-    try {
-      workingParserPath = File.createTempFile("parser", "parser", null);
-      FileOutputStream out = new FileOutputStream(workingParserPath);
-      try {
-        out.write(sd.getPayload());
-      } finally {
-        out.close();
-      }
-    } catch (IOException iex) {
-      iex.printStackTrace();
-      return null;
-    }
     Schema parentS = sd.getSchema();
     List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
     String escapedSchemaString = unionFreeSchemas.get(0).toString();
     escapedSchemaString = escapedSchemaString.replace("'", "\\'");
 
     String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' WITH SERDEPROPERTIES('" +
-      HiveSerDe.DESERIALIZER + "'='" + workingParserPath.toString() + "', '" +
+      HiveSerDe.DESERIALIZER + "'='" + getDeserializerPayload() + "', '" +
       HiveSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
       "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
+
+    System.err.println("EMITTING CREATE TABLE: " + creatTxt);
     return creatTxt;
 
   }
-  public String getHiveImportDataStatement(String tablename) {
-    String fname = getFilename().toString();
+  public String getHiveImportDataStatement(String tablename, Path importFile) {
+    String fname = importFile.toString();
     String localMarker = "";
     if (fname.startsWith("file")) {
-      localMarker = " local ";
+      localMarker = "local ";
     }
-    String loadTxt = "load data" + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
+    String loadTxt = "load data " + localMarker + "inpath '" + importFile + "' overwrite into table " + tablename;
     return loadTxt;
+  }
+  public String getDeserializerPayload() {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
   public String getHiveSerDeClassName() {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());

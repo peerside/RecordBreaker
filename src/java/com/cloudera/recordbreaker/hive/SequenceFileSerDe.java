@@ -19,6 +19,9 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.avro.hadoop.io.AvroDatumConverter;
+import org.apache.avro.hadoop.io.AvroDatumConverterFactory;
 
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -26,26 +29,32 @@ import org.apache.avro.generic.GenericRecord;
 import com.cloudera.recordbreaker.analyzer.CSVRowParser;
 
 /***************************************************************
- * The <code>CSVSerDe</code> deserializes text CSV-format strings
- * into tuples that Hive can process.
+ * The <code>SequenceFileSerDe</code> deserializes binary SequenceFile
+ * data into Avro tuples that Hive can process
  *
  * @author "Michael Cafarella"
  ***************************************************************/
-public class CSVSerDe extends HiveSerDe {
-  private static final Log LOG = LogFactory.getLog(CSVSerDe.class);
-  String headerRowHash = null;
-  CSVRowParser rowParser = null;
+public class SequenceFileSerDe extends HiveSerDe {
+  private static final Log LOG = LogFactory.getLog(SequenceFileSerDe.class);
+  AvroDatumConverter valADC = null;
 
-  void initDeserializer(String payload) {
-    this.headerRowHash = payload;
-    this.rowParser = new CSVRowParser(schema, headerRowHash);
+  void initDeserializer(String valClassNamePayload) {
+    // none necessary
+    AvroDatumConverterFactory adcFactory = new AvroDatumConverterFactory(new Configuration());
+    try {
+      this.valADC = adcFactory.create(Class.forName(valClassNamePayload));
+    } catch (ClassNotFoundException cnfe) {
+      cnfe.printStackTrace();
+    }
   }
 
   GenericData.Record deserializeRowBlob(Writable blob) {
-    String rowStr = ((Text) blob).toString();
-    if (("" + rowStr.hashCode()).compareTo(headerRowHash) == 0) {
+    if (valADC != null) {
+      GenericData.Record cur = new GenericData.Record(schema);
+      cur.put("val", this.valADC.convert(blob));
+      return cur;
+    } else {
       return null;
     }
-    return rowParser.parseRow(rowStr);
   }
 }

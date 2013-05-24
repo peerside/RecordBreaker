@@ -18,6 +18,8 @@ import java.util.List;
 import java.io.IOException;
 import java.io.InputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.avro.Schema;
 
 /***************************************************************************************
@@ -78,7 +80,13 @@ public interface DataDescriptor {
    * Can also indicate a custom one by using INPUTFORMAT X OUTPUTFORMAT Y,
    * where X and Y are strings that identify an InputFormat or OutputFormat class.
    */
-  public String getStorageFormatString(Schema s);  
+  public String getStorageFormatString(Schema s);
+
+  /**
+   * A string value that can be passed to the datatype-specific SerDe to
+   * initialize deserialization
+   */
+  public String getDeserializerPayload();
   
   /**
    * Calling <code>getHiveTargetSchema</code> returns the
@@ -96,6 +104,7 @@ public interface DataDescriptor {
    * @param tablename a <code>String</code> value
    * @return a <code>String</code> value
    */
+  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException;
   public String getHiveCreateTableStatement(String tablename);
 
   /**
@@ -107,5 +116,5 @@ public interface DataDescriptor {
    * @param tablename a <code>String</code> value
    * @return a <code>String</code> value
    */
-  public String getHiveImportDataStatement(String tablename);
+  public String getHiveImportDataStatement(String tablename, Path importFile);
 }

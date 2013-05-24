@@ -34,6 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.reflect.ReflectData;
+import org.apache.avro.hadoop.io.AvroDatumConverter;
+import org.apache.avro.hadoop.io.AvroDatumConverterFactory;
 
 /**************************************************************
  * <code>SequenceFileSchemaDescriptor</code> is for capturing Hadoop
@@ -45,20 +47,24 @@ import org.apache.avro.reflect.ReflectData;
  **************************************************************/
 public class SequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
   public static String SCHEMA_ID = "seqfile";
+  String valClassName;
+  
   /**
    * A new <code>SequenceFileSchemaDescriptor</code> takes a path and a filesystem
    */
   public SequenceFileSchemaDescriptor(DataDescriptor dd) throws IOException {
     super(dd);
   }
-  public SequenceFileSchemaDescriptor(DataDescriptor dd, String schemaRepr) {
+  public SequenceFileSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) {
     super(dd, schemaRepr);
+    this.valClassName = new String(miscPayload);
   }
 
   /**
    * Figure out the schema for non-Avro SequenceFiles.  Yields a synthesized Avro schema.
    */
   void computeSchema() throws IOException {
+    AvroDatumConverterFactory adcFactory = new AvroDatumConverterFactory(new Configuration());
     try {
       SequenceFile.Reader in = new SequenceFile.Reader(FSAnalyzer.getInstance().getFS(), dd.getFilename(), new Configuration());
       try {
@@ -68,21 +74,34 @@ public class SequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
         //
         Class keyClass = in.getKeyClass();
         Class valClass = in.getValueClass();
-        Schema keySchema = ReflectData.get().getSchema(keyClass);
-        Schema valSchema = ReflectData.get().getSchema(valClass);
+        this.valClassName = valClass.getName();
 
+        AvroDatumConverter keyADC = adcFactory.create(keyClass);
+        AvroDatumConverter valADC = adcFactory.create(valClass);
+        
         //
         // Build a "pair record" with "key" and "value" fields to hold the subschemas.
         //
         List<Schema.Field> fieldList = new ArrayList<Schema.Field>();        
-        fieldList.add(new Schema.Field("key", keySchema, "", null));
-        fieldList.add(new Schema.Field("val", valSchema, "", null));
-        this.schema = Schema.createRecord(fieldList);
+        //fieldList.add(new Schema.Field("key", keyADC.getWriterSchema(), "", null));
+        fieldList.add(new Schema.Field("val", valADC.getWriterSchema(), "", null));
+        this.schema = Schema.createRecord("seqschema", "", "", false);
+        this.schema.setFields(fieldList);
       } finally {
         in.close();
       }
+    } catch (UnsupportedOperationException uoe) {
+      uoe.printStackTrace();
     } catch (IOException iex) {
+      iex.printStackTrace();
     }
+  }
+
+  /**
+   * Return val classname as payload
+   */
+  public byte[] getPayload() {
+    return valClassName.getBytes();
   }
 
   /**
@@ -95,11 +114,17 @@ public class SequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
       SequenceFile.Reader in = null;
       Class keyClass;
       Class valClass;
+      AvroDatumConverter keyADC;
+      AvroDatumConverter valADC;      
       {
+        AvroDatumConverterFactory adcFactory = new AvroDatumConverterFactory(new Configuration());
         try {
           in = new SequenceFile.Reader(FSAnalyzer.getInstance().getFS(), dd.getFilename(), new Configuration());
           keyClass = in.getKeyClass();
           valClass = in.getValueClass();
+          keyADC = adcFactory.create(keyClass);
+          valADC = adcFactory.create(valClass);
+          
           nextElt = lookahead();
         } catch (IOException iex) {
           this.nextElt = null;
@@ -125,8 +150,8 @@ public class SequenceFileSchemaDescriptor extends GenericSchemaDescriptor {
 
           if (in.next(key, val)) {
             GenericData.Record cur = new GenericData.Record(schema);
-            cur.put("key", key);
-            cur.put("val", val);
+            //cur.put("key", keyADC.convert(key));
+            cur.put("val", valADC.convert(val));
             return cur;
           }
         } catch (IOException iex) {

@@ -97,7 +97,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
     } finally {
       in.close();
     }
-    System.err.println("Recovered unknowntext schema: " + schema);
+    //System.err.println("Recovered unknowntext schema: " + schema);
   }
 
   public byte[] getPayload() {

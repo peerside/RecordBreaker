@@ -44,7 +44,7 @@ public class CSVSchemaDescriptor extends GenericSchemaDescriptor {
   public CSVSchemaDescriptor(DataDescriptor dd, String schemaRepr, byte[] miscPayload) {
     super(dd, schemaRepr);
 
-    this.headerHash = new String(miscPayload);
+    this.headerHash = (miscPayload == null) ? "" : new String(miscPayload);
     this.hasHeaderRow = "".length() > 0;
   }
 

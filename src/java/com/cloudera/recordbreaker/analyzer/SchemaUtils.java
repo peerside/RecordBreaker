@@ -69,11 +69,8 @@ public class SchemaUtils {
     return unrollUnionsWithData(schema, grObj, true, topLevelOnly);
   }
 
-  static List<Schema> unrollUnionsWithData(Schema schema, Object grObj, boolean isTopLevel, boolean topLevelOnly) {  
-    if (schema.getType() == Schema.Type.RECORD) {
-      if (! (grObj instanceof GenericRecord)) {
-        return null;
-      }
+  static List<Schema> unrollUnionsWithData(Schema schema, Object grObj, boolean isTopLevel, boolean topLevelOnly) {
+    if (schema.getType() == Schema.Type.RECORD && grObj instanceof GenericRecord) {
       GenericRecord gr = (GenericRecord) grObj;
       List<List<Schema>> fieldSchemaLists = new ArrayList<List<Schema>>();
       int targetTotal = 1;

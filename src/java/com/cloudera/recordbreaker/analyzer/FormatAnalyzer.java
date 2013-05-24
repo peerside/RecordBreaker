@@ -70,8 +70,8 @@ public class FormatAnalyzer {
       return new AvroDataDescriptor(p, fs);
     } else if (GenericDataDescriptor.isAvroSequenceFile(fs, p)) {
       return new GenericDataDescriptor(p, fs, GenericDataDescriptor.AVROSEQFILE_TYPE);
-    } else if (GenericDataDescriptor.isSequenceFile(fs, p)) {
-      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.SEQFILE_TYPE);
+    } else if (SequenceFileDataDescriptor.isSequenceFile(fs, p)) {
+      return new SequenceFileDataDescriptor(p, fs);
     } else if (ApacheDataDescriptor.isApacheLogFile(fs, p)) {
       return new ApacheDataDescriptor(p, fs);
     } else if (SyslogDataDescriptor.isSyslogFile(fs, p)) {
@@ -97,9 +97,10 @@ public class FormatAnalyzer {
       return new AvroDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
     } else if (CSVDataDescriptor.CSV_TYPE.equals(identifier)) {
       return new CSVDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (SequenceFileDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
+      return new SequenceFileDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);      
     } else if (GenericDataDescriptor.XML_TYPE.equals(identifier) ||
-               GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier) ||
-               GenericDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
+               GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier)) {
       return new GenericDataDescriptor(p, fs, identifier, schemaReprs, schemaDescs, schemaBlobs);
     } else if (ApacheDataDescriptor.APACHE_TYPE.equals(identifier)) {
       return new ApacheDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);

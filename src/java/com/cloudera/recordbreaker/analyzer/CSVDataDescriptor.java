@@ -15,6 +15,11 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import org.apache.avro.Schema;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericData;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,6 +29,7 @@ import java.io.InputStreamReader;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -109,6 +115,51 @@ public class CSVDataDescriptor extends GenericDataDescriptor {
   ///////////////////////////////////
   // GenericDataDescriptor
   //////////////////////////////////
+  public boolean isHiveSupported() {
+    return true;
+  }
+  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
+    // THIS IS WHERE THE MAGIC HAPPENS!!!
+    // Convert CSV into Avro!!!!
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    Schema schema = unionFreeSchemas.get(0);
+
+    String headerRowHash = new String(sd.getPayload());
+    CSVRowParser rowParser = new CSVRowParser(schema, headerRowHash);
+
+    // Open stream to write out Avro contents
+    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+    DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
+    dataFileWriter.create(schema, dstFs.create(dst, true));
+    int numRecords = 0;
+    int MAX_RECORDS = 1000;
+    try {
+      BufferedReader in = new BufferedReader(new InputStreamReader(srcFs.open(getFilename())));
+      try {
+        String rowStr = null;
+        while (((rowStr = in.readLine()) != null) && (numRecords < MAX_RECORDS)) {
+          if (("" + rowStr.hashCode()).compareTo(headerRowHash) == 0) {
+            continue;
+          }
+          GenericData.Record record = rowParser.parseRow(rowStr);
+          if (record == null) {
+            continue;
+          }
+          if (record.getSchema().toString().hashCode() != schema.toString().hashCode()) {
+            continue;
+          }
+          dataFileWriter.append(record);
+          numRecords++;
+        }
+      } finally {
+        in.close();
+      }
+    } finally {
+      dataFileWriter.close();
+    }
+  }
+  
   public String getHiveCreateTableStatement(String tablename) {
     SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
     Schema parentS = sd.getSchema();
@@ -116,46 +167,16 @@ public class CSVDataDescriptor extends GenericDataDescriptor {
     String escapedSchemaString = unionFreeSchemas.get(0).toString();
     escapedSchemaString = escapedSchemaString.replace("'", "\\'");
 
-    StringBuffer creatTxt = new StringBuffer("create external table " + tablename + "(");
-    Schema s = unionFreeSchemas.get(0);
-    List<Schema.Field> fields = s.getFields();
-    for (int i = 0; i < fields.size(); i++) {
-      Schema.Field f = fields.get(i);
-      creatTxt.append(f.name() + " " + schemaTypeToString(f.schema().getType()));
-      if (i < fields.size()-1) {
-        creatTxt.append(", ");
-      }
-    }
-    creatTxt.append(") ROW FORMAT DELIMITED FIELDS TERMINATED BY ','");
-    return creatTxt.toString();
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
+      "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
+    return creatTxt;
   }
-
-  String schemaTypeToString(Schema.Type st) {
-    if ((st == Schema.Type.INT) ||
-        (st == Schema.Type.LONG)) {
-      return "int";
-    } else if ((st == Schema.Type.FLOAT) ||
-               (st == Schema.Type.DOUBLE)) {
-      return "double";
-    } else {
-      return "String";
-    }
-  }
-
-  public String getHiveImportDataStatement(String tablename) {
-    String fname = getFilename().toString();
-    String localMarker = "";
-    if (fname.startsWith("file")) {
-      localMarker = "local ";
-    }
-    String loadTxt = "load data " + localMarker + "inpath '" + getFilename() + "' overwrite into table " + tablename;
-    return loadTxt;
-  }
-  
-  public boolean isHiveSupported() {
-    return true;
+  public String getStorageFormatString(Schema targetSchema) {
+    String escapedSchemaString = targetSchema.toString().replace("'", "\\'");
+    return "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
+      "TBLPROPERTIES('avro.schema.literal'='" + escapedSchemaString + "')";
   }
   public String getHiveSerDeClassName() {
-    return "com.cloudera.recordbreaker.hive.CSVSerDe";
+    return "org.apache.hadoop.hive.serde2.avro.AvroSerDe";
   }
 }

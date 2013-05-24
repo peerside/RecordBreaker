@@ -31,6 +31,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.io.IOException;
 import com.almworks.sqlite4java.SQLiteException;
 
@@ -42,6 +45,7 @@ import com.almworks.sqlite4java.SQLiteException;
  ***********************************************************/
 public class FSCrawler {
   final static int INFINITE_CRAWL_DEPTH = -1;
+  private static final Log LOG = LogFactory.getLog(FSCrawler.class);  
   
   static SimpleDateFormat fileDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -99,6 +103,7 @@ public class FSCrawler {
       if (fsId < 0) {
         return false;
       }
+      LOG.info("Grabbing filesystem: " + fsURI);      
       final FileSystem fs = FileSystem.get(fsURI, new Configuration());
       final Path startDir = fs.makeQualified(new Path(fsURI.getPath()));
 

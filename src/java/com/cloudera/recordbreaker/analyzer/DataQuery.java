@@ -21,7 +21,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.sql.DriverManager;
 
+import org.apache.hadoop.fs.permission.FsPermission; 
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
@@ -32,8 +34,13 @@ import java.util.HashSet;
 import java.util.ArrayList;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.avro.Schema;
 
@@ -46,12 +53,17 @@ import org.apache.avro.Schema;
  * @since 1.0
  ********************************************************/
 public class DataQuery implements Serializable {
+  private static final Log LOG = LogFactory.getLog(DataQuery.class);
   private static boolean inited = false;
   private static DataQuery dataQuery;
-  private static String driverName = "org.apache.hadoop.hive.jdbc.HiveDriver";
-  private static String connectString = "jdbc:hive://localhost:10000/default";
+  private static String hiveDriverName = "org.apache.hive.jdbc.HiveDriver";
+  private static String impalaDriverName = "org.apache.hive.jdbc.HiveDriver";
 
-  Connection con;
+  String hiveConnectString;
+  String impalaConnectString;
+  Configuration conf;
+  Connection hiveCon;
+  Connection impalaCon;
   Random r = new Random();
   Map<Path, String> tables;
   Set<Path> isLoaded;
@@ -81,8 +93,16 @@ public class DataQuery implements Serializable {
 
   public DataQuery() throws SQLException {
     try {
-      Class.forName(driverName);
-      this.con = DriverManager.getConnection(connectString, "", "");
+      this.conf = new Configuration();
+      Class.forName(hiveDriverName);
+      Class.forName(impalaDriverName);
+      this.hiveConnectString = conf.get("hive.connectstring", "jdbc:hive2://localhost:10000/default");
+      this.impalaConnectString = conf.get("impala.connectstring", "jdbc:hive2://localhost:21050/;auth=noSasl");
+      LOG.error("GOT HIVE CONNECT STRING: " + hiveConnectString);
+      LOG.error("GOT IMPALA CONNECT STRING: " + impalaConnectString);      
+      
+      this.hiveCon = DriverManager.getConnection(hiveConnectString, "cloudera", "cloudera");
+      this.impalaCon = DriverManager.getConnection(impalaConnectString, "cloudera", "cloudera");      
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     } catch (Exception ex) {
@@ -93,24 +113,29 @@ public class DataQuery implements Serializable {
   }
 
   public void close() throws SQLException {
-    if (con != null) {
-      this.con.close();
+    if (hiveCon != null) {
+      this.hiveCon.close();
     }
-    this.con = null;
+    this.hiveCon = null;
+
+    if (impalaCon != null) {
+      this.impalaCon.close();
+    }
+    this.impalaCon = null;
   }
 
   /**
    * Connection string for Hive
    */
   public String getHiveConnectionString() {
-    return connectString;
+    return hiveConnectString;
   }
   
   /**
    * Run a sample set of Hive test queries to check whether the Hive server is up and active
    */
   public boolean testQueryServer() {
-    if (con == null) {
+    if (hiveCon == null) {
       return false;
     }
     try {
@@ -118,9 +143,9 @@ public class DataQuery implements Serializable {
       // Create table
       //
       String tablename = "test_datatable" + Math.abs(r.nextInt());
-      Statement stmt = con.createStatement();
+      Statement stmt = hiveCon.createStatement();
       try {
-        ResultSet rs = stmt.executeQuery("CREATE TABLE " + tablename + "(a int, b int, c int)");
+        stmt.execute("CREATE TABLE " + tablename + "(a int, b int, c int)");
       } finally {
         stmt.close();
       }
@@ -128,9 +153,9 @@ public class DataQuery implements Serializable {
       //
       // Drop table
       //
-      stmt = con.createStatement();
+      stmt = hiveCon.createStatement();
       try {
-        ResultSet rs = stmt.executeQuery("DROP TABLE " + tablename);
+        stmt.execute("DROP TABLE " + tablename);
       } finally {
         stmt.close();
       }
@@ -141,7 +166,8 @@ public class DataQuery implements Serializable {
     }
   }
 
-  public List<List<String>> query(DataDescriptor desc, String projectionClause, String selectionClause) throws SQLException {
+  public List<List<String>> query(DataDescriptor desc, String projectionClause, String selectionClause) throws SQLException, IOException {
+    LOG.info("RUNNING ON DESCRIPTOR: " + desc.getClass());
     SchemaDescriptor sd = desc.getSchemaDescriptor().get(0);
     Schema schema = sd.getSchema();
     Path p = desc.getFilename();
@@ -150,10 +176,11 @@ public class DataQuery implements Serializable {
     String tablename = tables.get(p);
     if (tablename == null) {
       tablename = "datatable" + Math.abs(r.nextInt());
-      Statement stmt = con.createStatement();
+      Statement stmt = hiveCon.createStatement();
       try {
         String creatTxt = desc.getHiveCreateTableStatement(tablename);
-        ResultSet res = stmt.executeQuery(creatTxt);
+        LOG.info("Create: " + creatTxt);
+        stmt.execute(creatTxt);
         tables.put(p, tablename);
       } finally {
         stmt.close();
@@ -162,9 +189,18 @@ public class DataQuery implements Serializable {
 
     // Insert data from file, if it hasn't happened already
     if (! isLoaded.contains(p)) {
-      Statement stmt = con.createStatement();
-      try {            
-        ResultSet res = stmt.executeQuery(desc.getHiveImportDataStatement(tablename));
+      // Copy data into secret location prior to Hive import
+      Path secretDst = new Path("/tmp/tmptables", "r" + r.nextInt());
+      FileSystem fs = FileSystem.get(conf);
+      desc.prepareAvroFile(fs, fs, secretDst, conf);
+      fs.setPermission(secretDst, new FsPermission("-rwxrwxrwx"));
+      LOG.info("PREPARE AVRO AT " + secretDst);
+
+      // Import data
+      Statement stmt = hiveCon.createStatement();
+      try {
+        LOG.info("IMPORT: " + desc.getHiveImportDataStatement(tablename, secretDst));
+        stmt.execute(desc.getHiveImportDataStatement(tablename, secretDst));
         isLoaded.add(p);
       } finally {
         stmt.close();
@@ -186,7 +222,7 @@ public class DataQuery implements Serializable {
       query = query + " WHERE " + selectionClause;
     }
     List<List<String>> result = new ArrayList<List<String>>();
-    Statement stmt = con.createStatement();
+    Statement stmt = hiveCon.createStatement();
     try {
       ResultSet res = stmt.executeQuery(query);
       ResultSetMetaData rsmd = res.getMetaData();

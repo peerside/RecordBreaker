@@ -27,6 +27,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.avro.Schema;
+import org.apache.avro.Schema;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericData;
 
 import com.cloudera.recordbreaker.hive.HiveSerDe;
 import com.cloudera.recordbreaker.hive.RecordBreakerSerDe;
@@ -118,16 +124,78 @@ public class UnknownTextDataDescriptor extends GenericDataDescriptor {
     super(p, fs, TEXTDATA_TYPE, schemaReprs, schemaDescs, schemaBlobs);
   }
 
+  SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
+    return new UnknownTextSchemaDescriptor(this, schemaRepr, blob);
+  }
   ///////////////////////////////////
   // GenericDataDescriptor
   //////////////////////////////////
   public boolean isHiveSupported() {
     return true;
   }
-  SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
-    return new UnknownTextSchemaDescriptor(this, schemaRepr, blob);
+  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    Schema schema = unionFreeSchemas.get(0);
+
+    // Open stream to write out Avro contents
+    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+    DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
+    dataFileWriter.create(schema, dstFs.create(dst, true));
+    int numRecords = 0;
+    int MAX_RECORDS = 1000;
+    try {
+      for (Iterator it = sd.getIterator(); it.hasNext() && numRecords < MAX_RECORDS; ) {
+        GenericData.Record rowRecord = (GenericData.Record) it.next();
+        if (rowRecord.getSchema().toString().hashCode() != schema.toString().hashCode()) {
+          continue;
+        }
+        dataFileWriter.append(rowRecord);
+        numRecords++;
+      }
+    } finally {
+      dataFileWriter.close();
+    }
+  }
+  public String getHiveCreateTableStatement(String tablename) {
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    Schema parentS = sd.getSchema();
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    String escapedSchemaString = unionFreeSchemas.get(0).toString();
+    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
+
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
+      "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
+    return creatTxt;
+  }
+  public String getStorageFormatString(Schema targetSchema) {
+    String escapedSchemaString = targetSchema.toString().replace("'", "\\'");
+    return "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
+      "TBLPROPERTIES('avro.schema.literal'='" + escapedSchemaString + "')";
+  }
+  public String getHiveSerDeClassName() {
+    return "org.apache.hadoop.hive.serde2.avro.AvroSerDe";
+  }
+  /**
+  public String getDeserializerPayload() {
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    File workingParserPath = null;
+    try {
+      workingParserPath = File.createTempFile("parser", "parser", null);
+      FileOutputStream out = new FileOutputStream(workingParserPath);
+      try {
+        out.write(sd.getPayload());
+      } finally {
+        out.close();
+      }
+    } catch (IOException iex) {
+      iex.printStackTrace();
+      return null;
+    }
+    return workingParserPath.toString();
   }
   public String getHiveSerDeClassName() {
     return "com.cloudera.recordbreaker.hive.RecordBreakerSerDe";
   }
+  **/
 }

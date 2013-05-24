@@ -62,13 +62,16 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
   public boolean isHiveSupported() {
     return false;
   }
+  public String getDeserializerPayload() {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
+  }
   public Schema getHiveTargetSchema() {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
   public String getHiveCreateTableStatement(String tablename) {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
-  public String getHiveImportDataStatement(String tablename) {
+  public String getHiveImportDataStatement(String tablename, Path importFile) {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());    
   }
   public String getStorageFormatString(Schema s) {

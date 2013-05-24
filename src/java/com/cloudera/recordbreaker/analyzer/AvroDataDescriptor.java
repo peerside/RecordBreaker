@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2013, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
 package com.cloudera.recordbreaker.analyzer;
 
 import org.apache.avro.Schema;
@@ -9,6 +23,9 @@ import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+
+import org.apache.hadoop.conf.Configuration;
 
 import com.cloudera.recordbreaker.hive.HiveSerDe;
 
@@ -42,6 +59,21 @@ public class AvroDataDescriptor extends GenericDataDescriptor {
   //////////////////////////////////
   public boolean isHiveSupported() {
     return true;
+  }
+  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
+    FileUtil.copy(srcFs, getFilename(), dstFs, dst, false, true, conf);
+  }
+  
+  public String getHiveCreateTableStatement(String tablename) {
+    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
+    Schema parentS = sd.getSchema();
+    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
+    String escapedSchemaString = unionFreeSchemas.get(0).toString();
+    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
+
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
+      "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
+    return creatTxt;
   }
   public String getStorageFormatString(Schema targetSchema) {
     String escapedSchemaString = targetSchema.toString().replace("'", "\\'");
