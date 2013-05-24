@@ -205,12 +205,13 @@ public class DataQuery implements Serializable {
       } finally {
         stmt.close();
       }
-
       // Insert into table cache
       tableCache.put(p, tablename);
     }
 
-    // Run the hive query against the table
+    //
+    // Build the SQL query against the table
+    //
     if (projectionClause == null || projectionClause.trim().length() == 0) {
       projectionClause = "*";
     }
@@ -219,15 +220,31 @@ public class DataQuery implements Serializable {
       selectionClause = "";
     }
     selectionClause = selectionClause.trim();
-    
     String query = "SELECT " + projectionClause + " FROM " + tablename;
     if (selectionClause.length() > 0) {
       query = query + " WHERE " + selectionClause;
     }
+
+    //
+    // Try to run it first with the impala connection.
+    // If that fails, try hive.
+    //
     List<List<String>> result = new ArrayList<List<String>>();
-    Statement stmt = hiveCon.createStatement();
+    Statement stmt = impalaCon.createStatement();
     try {
-      ResultSet res = stmt.executeQuery(query);
+      ResultSet res = null;
+      try {
+        res = stmt.executeQuery(query);
+        LOG.info("Ran Impala query on " + p + ": " + query);
+      } catch (Exception iex) {
+        // Fail back to Hive!
+        stmt.close();
+        stmt = hiveCon.createStatement();
+        res = stmt.executeQuery(query);
+        LOG.info("Ran Hive query on " + p + ": " + query);
+      }
+
+      // OK now do the real work
       ResultSetMetaData rsmd = res.getMetaData();
       List<String> metatuple = new ArrayList<String>();
       for (int i = 1; i <= rsmd.getColumnCount(); i++) {
