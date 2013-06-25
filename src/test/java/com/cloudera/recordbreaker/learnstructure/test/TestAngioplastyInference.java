@@ -15,41 +15,43 @@
 package com.cloudera.recordbreaker.learnstructure.test;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.junit.rules.TemporaryFolder;
 
 /**
- * TestWikipediaInference tests the LearnStructure component for 'commonlog.txt' data
+ * TestAngioplastyInference tests the LearnStructure component for 'angioplasty.txt' data
  *
  * @author "Michael Cafarella" <mjc@cloudera.com>
  * @version 1.0
  * @since 1.0
  * @see InferenceTest
  */
-public class TestWikipediaInference extends InferenceTest {
+public class TestAngioplastyInference extends InferenceTest {
   @Rule
   public TemporaryFolder tmpOutDir = new TemporaryFolder();
   File workingDir = null;
+
   /**
-   * Creates a new <code>WikipediaInferenceTest</code> instance.
+   * Creates a new <code>AngioplastyInferenceTest</code> instance.
+   *
    */
-  public TestWikipediaInference() {
+  public TestAngioplastyInference() {
   }
 
   @Before
-  public void prepare() {
+  public void prepare() throws IOException {
     workingDir = tmpOutDir.newFolder("workingdir");
   }
-
+  
   @Test(timeout=10000)
-  public void testWikipediaInference() {
-    Assert.assertTrue(runSingletonTest(workingDir, new File(sampleDir, "wikipediatopics.txt")));
+  public void testAngioplastyInference() {
+    Assert.assertTrue(runSingletonTest(workingDir, new File(sampleDir, "angioplasty.txt")));
   }
 
   @After

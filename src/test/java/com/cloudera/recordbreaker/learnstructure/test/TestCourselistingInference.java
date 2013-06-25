@@ -15,6 +15,7 @@
 package com.cloudera.recordbreaker.learnstructure.test;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Rule;
@@ -44,7 +45,7 @@ public class TestCourselistingInference extends InferenceTest {
   }
 
   @Before
-  public void prepare() {
+  public void prepare() throws IOException {
     workingDir = tmpOutDir.newFolder("workingdir");
   }
 

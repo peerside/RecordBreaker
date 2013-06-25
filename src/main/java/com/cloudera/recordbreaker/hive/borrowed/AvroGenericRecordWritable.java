@@ -68,7 +68,6 @@ public class AvroGenericRecordWritable implements Writable{
     this.record = record;
   }
 
-  @Override
   public void write(DataOutput out) throws IOException {
     // Write schema since we need it to pull the data out. (see point #1 above)
     String schemaString = record.getSchema().toString(false);
@@ -82,7 +81,6 @@ public class AvroGenericRecordWritable implements Writable{
     gdw.write(record, be);
   }
 
-  @Override
   public void readFields(DataInput in) throws IOException {
     Schema schema = Schema.parse(in.readUTF());
     record = new GenericData.Record(schema);
