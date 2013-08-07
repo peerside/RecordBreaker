@@ -63,6 +63,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.ArrayList;
+import java.text.DecimalFormat;
 
 /************************************************************************
  * <code>QueryResultsPage</code> shows the results of a single one-off
@@ -91,17 +92,28 @@ public class QueryResultsPage extends WebPage {
   }
     
   class TableDisplayPanel extends WebMarkupContainer {
-    long fid = -1L;
-
-    public TableDisplayPanel(String name, String fidStr, String filename, String projClauseStr, String selClauseStr) {
+    String fidStr;
+    String fidStr1;
+    long fid;
+    long fid1;
+    long fid2;
+    
+    public TableDisplayPanel(String name, String fidStr, String filename, String fidStr1, String filename1, String fidStr2, String filename2, String projClauseStr, String selClauseStr) {
       super(name);
+      this.fidStr = fidStr;
+      this.fidStr1 = fidStr1;
+      
+      long startTime = System.currentTimeMillis();
       //System.err.println("TABLE DISPLAY: filename=" + filename);
       FishEye fe = FishEye.getInstance();
-      List<List<String>> queryResults = null;
+      List<List<String>> queryResults = new ArrayList<List<String>>();
       if (fe.hasFSAndCrawl()) {
+        ///
+        // Single table query!
+        ///
         if (fidStr != null) {
           try {
-            this.fid = Long.parseLong(fidStr);
+            fid = Long.parseLong(fidStr);
             FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
             DataQuery dq = DataQuery.getInstance();
             FSAnalyzer fsa = fe.getAnalyzer();
@@ -109,9 +121,30 @@ public class QueryResultsPage extends WebPage {
             DataDescriptor dd = fsd.getDataDescriptor();
 
             if (dq != null) {
-              queryResults = dq.query(dd, projClauseStr, selClauseStr);
-            } else {
-              queryResults = new ArrayList<List<String>>();
+              queryResults = dq.query(dd, null, projClauseStr, selClauseStr);
+            }
+          } catch (Exception ex) {
+            ex.printStackTrace();
+          }
+        }
+        ///
+        // Multi table query!
+        ///
+        if (fidStr1 != null) {
+          try {
+            fid1 = Long.parseLong(fidStr1);
+            FileSummary fs1 = new FileSummary(fe.getAnalyzer(), fid1);
+            fid2 = Long.parseLong(fidStr2);
+            FileSummary fs2 = new FileSummary(fe.getAnalyzer(), fid2);
+            DataQuery dq = DataQuery.getInstance();
+            FSAnalyzer fsa = fe.getAnalyzer();
+            FileSummaryData fsd1 = fsa.getFileSummaryData(fid1);
+            DataDescriptor dd1 = fsd1.getDataDescriptor();
+            FileSummaryData fsd2 = fsa.getFileSummaryData(fid2);
+            DataDescriptor dd2 = fsd2.getDataDescriptor();
+
+            if (dq != null) {
+              queryResults = dq.query(dd1, dd2, projClauseStr, selClauseStr);
             }
           } catch (Exception ex) {
             ex.printStackTrace();
@@ -119,11 +152,21 @@ public class QueryResultsPage extends WebPage {
         }
       }
 
-      List<String> metadata = queryResults.remove(0);
-      List<List<String>> metadataList = new ArrayList<List<String>>();
-      metadataList.add(metadata);
+      long endTime = System.currentTimeMillis();
+      double elapsedTime = (endTime - startTime) / 1000.0;
+      List<String> metadata = null;
+      List<List<String>> metadataList = new ArrayList<List<String>>();      
+      if (queryResults.size() == 0) {
+        List<String> tuple = new ArrayList<String>();
+        tuple.add("No results found");
+        queryResults.add(tuple);
+      } else {
+        metadata = queryResults.remove(0);
+        metadataList.add(metadata);
+      }
 
       add(new Label("filename", filename));
+      add(new Label("elapsedtime", new DecimalFormat("#.##").format(elapsedTime)));
       add(new ListView<List<String>>("attributelabels", metadataList) {
           protected void populateItem(ListItem<List<String>> item) {
             List<String> myListOfFieldLabels = item.getModelObject();
@@ -152,9 +195,15 @@ public class QueryResultsPage extends WebPage {
 
     public void onConfigure() {
       FishEye fe = FishEye.getInstance();
-      FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);      
       AccessController accessCtrl = fe.getAccessController();
-      setVisibilityAllowed(fe.hasFSAndCrawl() && (fs != null && accessCtrl.hasReadAccess(fs)));
+      if (fidStr != null) {
+        FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
+        setVisibilityAllowed(fe.hasFSAndCrawl() && (fs != null && accessCtrl.hasReadAccess(fs)));
+      } else if (fidStr1 != null) {
+        FileSummary fs1 = new FileSummary(fe.getAnalyzer(), fid1);
+        FileSummary fs2 = new FileSummary(fe.getAnalyzer(), fid2);      
+        setVisibilityAllowed(fe.hasFSAndCrawl() && (fs1 != null && accessCtrl.hasReadAccess(fs1)) && (fs2 != null && accessCtrl.hasReadAccess(fs2)));
+      }
     }
   }
   
@@ -162,12 +211,12 @@ public class QueryResultsPage extends WebPage {
     add(new CrawlWarningBox());
     add(new SettingsWarningBox());    
     add(new AccessControlWarningBox("accessControlWarningBox", null));
-    add(new TableDisplayPanel("queryresultspanel", "0", "", null, null));
+    add(new TableDisplayPanel("queryresultspanel", "0", "", "0", "", "0", "", null, null));
   }
   public QueryResultsPage(PageParameters params) {
     add(new CrawlWarningBox());
     add(new SettingsWarningBox());    
     add(new AccessControlWarningBox("accessControlWarningBox", null));
-    add(new TableDisplayPanel("queryresultspanel", params.get("fid").toString(), params.get("filename").toString(), params.get("projectionclause").toString(), params.get("selectionclause").toString()));
+    add(new TableDisplayPanel("queryresultspanel", params.get("fid").toString(), params.get("filename").toString(), params.get("fid1").toString(), params.get("filename1").toString(), params.get("fid2").toString(), params.get("filename2").toString(), params.get("projectionclause").toString(), params.get("selectionclause").toString()));
   }
 }

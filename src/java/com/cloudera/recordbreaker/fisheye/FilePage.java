@@ -23,11 +23,14 @@ import com.cloudera.recordbreaker.analyzer.DataQuery;
 import com.cloudera.recordbreaker.analyzer.TypeSummary;
 import com.cloudera.recordbreaker.analyzer.SchemaSummary;
 import com.cloudera.recordbreaker.analyzer.TypeGuessSummary;
+import com.cloudera.recordbreaker.analyzer.PageHistory;
 
 import org.apache.wicket.markup.html.WebPage;
-import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.markup.html.list.ListView;
+import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.link.ExternalLink;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.link.DownloadLink;
 import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -61,6 +64,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.ArrayList;
+import java.io.Serializable;
 
 /*******************************************************
  * Wicket Page class that describes a specific File.
@@ -73,6 +77,22 @@ import java.util.ArrayList;
  * @see WebPage
  *******************************************************/
 public class FilePage extends WebPage {
+
+  class JoinPair implements Serializable {
+    String fid;
+    String joinPath;
+    public JoinPair(String fid, String joinPath) {
+      this.fid = fid;
+      this.joinPath = joinPath;
+    }
+    public String getJoinFid() {
+      return fid;
+    }
+    public String getJoinPath() {
+      return joinPath;
+    }
+  }
+  
   final class FilePageDisplay extends WebMarkupContainer {
     long fid = -1L;
     
@@ -80,20 +100,25 @@ public class FilePage extends WebPage {
      * Sets up the FilePageDisplay frame.  This is only shown
      * when there is a valid FID and a valid filesystem
      */
-    public FilePageDisplay(String name, String fidStr) {
+    public FilePageDisplay(String name, final String fidStr) {
       super(name);
       FishEye fe = FishEye.getInstance();
+      final PageHistory history = PageHistory.get();
+      final List<JoinPair> joinPairs = new ArrayList<JoinPair>();      
+      for (FileSummary fs: history.getRecentHistory()) {
+        joinPairs.add(new JoinPair("" + fs.getFid(), fs.getPath().toString()));
+      }
 
       if (fe.hasFSAndCrawl()) {
         if (fidStr != null) {
           try {
             this.fid = Long.parseLong(fidStr);
-            FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
+            final FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
             FSAnalyzer fsa = fe.getAnalyzer();
             FileSummaryData fsd = fsa.getFileSummaryData(fid);
             DataDescriptor dd = fsd.getDataDescriptor();
             List<TypeGuessSummary> tgses = fs.getTypeGuesses();
-
+            
             add(new Label("filetitle", fs.getFname()));
             add(new ExternalLink("filesubtitlelink", urlFor(FilesPage.class, new PageParameters("targetdir=" + fs.getPath().getParent().toString())).toString(), fs.getPath().getParent().toString()));
             // Set up the download file link
@@ -130,11 +155,35 @@ public class FilePage extends WebPage {
             // querySupported container holds queryform
             // queryUnsupported container holds an error message
             final boolean querySupported = dd.isHiveSupported() && fe.isQueryServerAvailable(false);
+            final boolean hasJoins = joinPairs.size() > 0;
             add(new WebMarkupContainer("querySupported") {
                 {
                   setOutputMarkupPlaceholderTag(true);
                   setVisibilityAllowed(querySupported);
                   add(new QueryForm("queryform", new ValueMap(), fid));
+                  history.visitNewPage(fs);
+
+                  // Add support for join-choices here
+                  add(new WebMarkupContainer("hasJoins") {
+                      {
+                        setOutputMarkupPlaceholderTag(true);
+                        setVisibilityAllowed(hasJoins);
+                        
+                        add(new ListView<JoinPair>("joinlistview", joinPairs) {
+                            protected void populateItem(ListItem<JoinPair> joinItem) {
+                              JoinPair modelObj = joinItem.getModelObject();
+
+                              PageParameters pps = new PageParameters();
+                              pps.add("fid1", fidStr);
+                              pps.add("fid2", "" + modelObj.getJoinFid());
+                              joinItem.add(new ExternalLink("joinpath",
+                                                            urlFor(JoinPage.class, pps).toString(),
+                                                            modelObj.getJoinPath()));
+                              ///joinItem.add(new Label("schemadesc", modelObj.getSchemaDesc()));
+                            }
+                          });
+                      }
+                    });
                 }
               });
             add(new WebMarkupContainer("queryUnsupported") {
@@ -249,11 +298,13 @@ public class FilePage extends WebPage {
     add(new FilePageDisplay("currentFileDisplay", ""));
     add(new FileContentsTable());
   }
-  public FilePage(PageParameters params) {
+  public FilePage(PageParameters params) {     
     add(new CrawlWarningBox());
     add(new SettingsWarningBox());    
     add(new AccessControlWarningBox("accessControlWarningBox", Integer.parseInt(params.get("fid").toString())));
     add(new FilePageDisplay("currentFileDisplay", params.get("fid").toString()));
     add(new FileContentsTable(Long.parseLong(params.get("fid").toString())));
+
+    //RecentPages.addView(fs.getFname(), urlFor(FilesPage.class, inputPP).toString());    
   }
 }

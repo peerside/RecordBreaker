@@ -58,6 +58,7 @@ public class DataQuery implements Serializable {
   private static DataQuery dataQuery;
   private static String hiveDriverName = "org.apache.hive.jdbc.HiveDriver";
   private static String impalaDriverName = "org.apache.hive.jdbc.HiveDriver";
+  private static String tmpTablesDir = "/tmp/tmptables";
 
   String hiveConnectString;
   String impalaConnectString;
@@ -169,13 +170,9 @@ public class DataQuery implements Serializable {
     }
   }
 
-  public List<List<String>> query(DataDescriptor desc, String projectionClause, String selectionClause) throws SQLException, IOException {
-    LOG.info("RUNNING ON DESCRIPTOR: " + desc.getClass());
-    SchemaDescriptor sd = desc.getSchemaDescriptor().get(0);
-    Schema schema = sd.getSchema();
-    Path p = desc.getFilename();
-        
+  String grabTable(DataDescriptor desc) throws SQLException, IOException {
     // Set up Hive table
+    Path p = desc.getFilename();    
     String tablename = tableCache.get(p);
     if (tablename == null) {
       tablename = "datatable" + Math.abs(r.nextInt());
@@ -190,8 +187,12 @@ public class DataQuery implements Serializable {
       }
 
       // Copy data into secret location prior to Hive import
-      Path secretDst = new Path("/tmp/tmptables", "r" + r.nextInt());
-      FileSystem fs = FileSystem.get(conf);
+      FileSystem fs = FileSystem.get(conf);      
+      Path tmpTables = new Path(tmpTablesDir);
+      if (! fs.exists(tmpTables)) {
+        fs.mkdirs(tmpTables, new FsPermission("-rwxrwxrwx"));
+      }
+      Path secretDst = new Path(tmpTables, "r" + r.nextInt());
       desc.prepareAvroFile(fs, fs, secretDst, conf);
       fs.setPermission(secretDst, new FsPermission("-rwxrwxrwx"));
       LOG.info("PREPARE AVRO AT " + secretDst);
@@ -208,19 +209,38 @@ public class DataQuery implements Serializable {
       // Insert into table cache
       tableCache.put(p, tablename);
     }
-
+    return tablename;
+  }
+  
+  public List<List<String>> query(DataDescriptor desc1, DataDescriptor desc2, String projectionClause, String selectionClause) throws SQLException, IOException {
+    String tablename1 = grabTable(desc1);
+    String tablename2 = null;
+    if (desc2 != null) {
+      tablename2 = grabTable(desc2);
+    }
+        
     //
     // Build the SQL query against the table
     //
     if (projectionClause == null || projectionClause.trim().length() == 0) {
       projectionClause = "*";
     }
-    projectionClause = projectionClause.trim();
     if (selectionClause == null) {
       selectionClause = "";
     }
+    if (tablename2 == null) {
+      projectionClause = projectionClause.replaceAll("DATA", tablename1);
+      selectionClause = selectionClause.replaceAll("DATA", tablename1);
+    }
+    projectionClause = projectionClause.trim();    
     selectionClause = selectionClause.trim();
-    String query = "SELECT " + projectionClause + " FROM " + tablename;
+    String query;
+    if (tablename2 == null) {
+      query = "SELECT " + projectionClause + " FROM " + tablename1;
+    } else {
+      query = "SELECT " + projectionClause + " FROM " + tablename1 + " DATA1" + ", " + tablename2 + " DATA2";
+    }
+      
     if (selectionClause.length() > 0) {
       query = query + " WHERE " + selectionClause;
     }
@@ -231,17 +251,19 @@ public class DataQuery implements Serializable {
     //
     List<List<String>> result = new ArrayList<List<String>>();
     Statement stmt = impalaCon.createStatement();
+    LOG.info("Processing: " + query);
     try {
       ResultSet res = null;
       try {
         res = stmt.executeQuery(query);
-        LOG.info("Ran Impala query on " + p + ": " + query);
+        LOG.info("Ran Impala query: " + query);
       } catch (Exception iex) {
+        iex.printStackTrace();
         // Fail back to Hive!
         stmt.close();
         stmt = hiveCon.createStatement();
         res = stmt.executeQuery(query);
-        LOG.info("Ran Hive query on " + p + ": " + query);
+        LOG.info("Ran Hive query: " + query);
       }
 
       // OK now do the real work
