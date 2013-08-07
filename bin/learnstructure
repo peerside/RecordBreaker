@@ -77,7 +77,7 @@ if [ "$cygwin" == false ] ; then
 
   CLASSPATH+=":$JAVA_HOME/lib/tools.jar"
   CLASSPATH+=":$CMDPATH/target/test"
-  CLASSPATH+=":$CMDPATH/target"
+  CLASSPATH+=":$CMDPATH/target/classes"
   CLASSPATH+=":$CMDPATH/conf"  
 
   append_jars_onto_classpath "${CMDPATH/target}"
@@ -112,7 +112,7 @@ elif [ "$CMD" = "analyzefile" ] ; then
 elif [ "$CMD" = "analyzefs" ] ; then
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.analyzer.FSAnalyzer "$@"
 elif [ "$CMD" = "fisheye" ] ; then
-  exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.fisheye.FishEye "$@"
+  exec java -verbose $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.fisheye.FishEye "$@"
 elif [ "$CMD" = "class" ]; then
   # Just do a java class with the environment setup
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" "$@"
