@@ -48,7 +48,7 @@ public class Token {
     case META_TOKENCLASSID:
       return false;
     case CHAR_TOKENCLASSID:
-      return false;
+      return true;
     case IPADDR_TOKENCLASSID:
       return true;
     case PERMISSIONS_TOKENCLASSID:
@@ -110,7 +110,7 @@ public class Token {
     case META_TOKENCLASSID:
       return null;
     case CHAR_TOKENCLASSID:
-      return null;
+      return Schema.create(Schema.Type.STRING);
     case IPADDR_TOKENCLASSID:
       return Schema.create(Schema.Type.STRING);
     case PERMISSIONS_TOKENCLASSID:
@@ -236,7 +236,7 @@ public class Token {
       return get().toString();
     }
     public Object get() {
-      return c;
+      return new Utf8(String.valueOf(c));
     }
   }
 

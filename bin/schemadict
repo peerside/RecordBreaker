@@ -67,17 +67,17 @@ if [ "$cygwin" == false ] ; then
       CLASSPATH+=":${SCHEMADICT_CLASSPATH}"
   fi
 
-  JOPTS+="-Djava.library.path=$CMDPATH/build/test:$CMDPATH/build"
+  JOPTS+="-Djava.library.path=$CMDPATH/target/test:$CMDPATH/target"
 
-  append_jars_onto_classpath "$CMDPATH/build/ivy/lib/recordbreaker/default"
-  append_jars_onto_classpath "$CMDPATH/build"
+  append_jars_onto_classpath "$CMDPATH/target/lib"
+  append_jars_onto_classpath "$CMDPATH/target"
 
   CLASSPATH+=":$JAVA_HOME/lib/tools.jar"
-  CLASSPATH+=":$CMDPATH/build/test"
-  CLASSPATH+=":$CMDPATH/build"
+  CLASSPATH+=":$CMDPATH/target/test"
+  CLASSPATH+=":$CMDPATH/target"
 
-  append_jars_onto_classpath "${CMDPATH/build}"
-  append_jars_onto_classpath "${CMDPATH/build/test}"
+  append_jars_onto_classpath "${CMDPATH/target}"
+  append_jars_onto_classpath "${CMDPATH/target/test}"
   append_jars_onto_classpath "${SCHEMADICT_HOME}"
 else
   # windows with cygwin

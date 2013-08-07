@@ -73,7 +73,7 @@ public class TestSchemaDictionary {
   }
 
   @Before
-  public void prepare() {
+  public void prepare() throws IOException {
     workingDir = tmpOutDir.newFolder("workingdir");
   }
 
