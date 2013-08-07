@@ -24,6 +24,7 @@ import java.io.InputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.conf.Configuration;
 
 import org.apache.avro.Schema;
 
@@ -66,6 +67,9 @@ public class UnstructuredFileDescriptor implements DataDescriptor {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
   public Schema getHiveTargetSchema() {
+    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
+  }
+  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
   public String getHiveCreateTableStatement(String tablename) {
