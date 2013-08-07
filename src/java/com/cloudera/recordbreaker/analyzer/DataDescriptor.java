@@ -97,7 +97,7 @@ public interface DataDescriptor {
   public Schema getHiveTargetSchema();
   
   /**
-   * Calling <code>getHiveImportStatement</code> will
+   * Calling <code>getHiveCreateTableStatement</code> will
    * return a string that can be used to create a Hive table
    * that reflects this crawled data.
    *
