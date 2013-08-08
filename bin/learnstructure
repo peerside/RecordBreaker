@@ -70,7 +70,7 @@ if [ "$cygwin" == false ] ; then
   fi
 
   JOPTS+="-Djava.library.path=$CMDPATH/target/test:$CMDPATH/target"
-  UOPTS="-Dtestname=foo"
+  UOPTS+="-Djava.security.krb5.realm=OX.AC.UK -Djava.security.krb5.kdc=kdc0.ox.ac.uk:kdc1.ox.ac.uk"
 
   append_jars_onto_classpath "$CMDPATH/target/lib"
   append_jars_onto_classpath "$CMDPATH/target"
@@ -78,10 +78,13 @@ if [ "$cygwin" == false ] ; then
   CLASSPATH+=":$JAVA_HOME/lib/tools.jar"
   CLASSPATH+=":$CMDPATH/target/test"
   CLASSPATH+=":$CMDPATH/target/classes"
+  CLASSPATH+=":$CMDPATH/target/classes/web"
+  CLASSPATH+=":$CMDPATH/target/classes/web/fisheye"  
   CLASSPATH+=":$CMDPATH/conf"  
 
-  append_jars_onto_classpath "${CMDPATH/target}"
-  append_jars_onto_classpath "${CMDPATH/target/test}"
+  append_jars_onto_classpath "${CMDPATH}/target"
+  append_jars_onto_classpath "${CMDPATH}/target/test"
+  append_jars_onto_classpath "${CMDPATH}/target/dependency"
   append_jars_onto_classpath "${RECORDBREAKER_HOME}"
 else
   # windows with cygwin
@@ -112,7 +115,7 @@ elif [ "$CMD" = "analyzefile" ] ; then
 elif [ "$CMD" = "analyzefs" ] ; then
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.analyzer.FSAnalyzer "$@"
 elif [ "$CMD" = "fisheye" ] ; then
-  exec java -verbose $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.fisheye.FishEye "$@"
+  exec java $JOPTS $UOPTS -classpath "$CLASSPATH" com.cloudera.recordbreaker.fisheye.FishEye "$@"
 elif [ "$CMD" = "class" ]; then
   # Just do a java class with the environment setup
   exec java $JOPTS $UOPTS -classpath "$CLASSPATH" "$@"
