@@ -22,6 +22,8 @@ import java.util.Iterator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
@@ -38,6 +40,7 @@ import org.apache.avro.generic.GenericData;
  * @since 1.0
  **********************************************************************************/
 public class FormatAnalyzer {
+  private static final Log LOG = LogFactory.getLog(FormatAnalyzer.class);    
   final static int MAX_ANALYSIS_LINES = 400;
   File schemaDbDir;
   
@@ -65,11 +68,11 @@ public class FormatAnalyzer {
     if (CSVDataDescriptor.isCSV(fs, p)) {
       return new CSVDataDescriptor(p, fs);
     } else if (fname.endsWith(".xml")) {
-      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.XML_TYPE);
+      return new XMLDataDescriptor(p, fs);
     } else if (fname.endsWith(".avro")) {
       return new AvroDataDescriptor(p, fs);
-    } else if (GenericDataDescriptor.isAvroSequenceFile(fs, p)) {
-      return new GenericDataDescriptor(p, fs, GenericDataDescriptor.AVROSEQFILE_TYPE);
+    } else if (AvroSequenceFileDataDescriptor.isAvroSequenceFile(fs, p)) {
+      return new AvroSequenceFileDataDescriptor(p, fs);
     } else if (SequenceFileDataDescriptor.isSequenceFile(fs, p)) {
       return new SequenceFileDataDescriptor(p, fs);
     } else if (ApacheDataDescriptor.isApacheLogFile(fs, p)) {
@@ -99,9 +102,10 @@ public class FormatAnalyzer {
       return new CSVDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
     } else if (SequenceFileDataDescriptor.SEQFILE_TYPE.equals(identifier)) {
       return new SequenceFileDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);      
-    } else if (GenericDataDescriptor.XML_TYPE.equals(identifier) ||
-               GenericDataDescriptor.AVROSEQFILE_TYPE.equals(identifier)) {
-      return new GenericDataDescriptor(p, fs, identifier, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (XMLDataDescriptor.XML_TYPE.equals(identifier)) {
+      return new XMLDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
+    } else if (AvroSequenceFileDataDescriptor.AVROSEQFILE_TYPE.equals(identifier)) {
+      return new AvroSequenceFileDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
     } else if (ApacheDataDescriptor.APACHE_TYPE.equals(identifier)) {
       return new ApacheDataDescriptor(p, fs, schemaReprs, schemaDescs, schemaBlobs);
     } else if (SyslogDataDescriptor.SYSLOG_TYPE.equals(identifier)) {

@@ -40,9 +40,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericData;
 
-import com.cloudera.recordbreaker.hive.HiveSerDe;
-import com.cloudera.recordbreaker.hive.RegExpSerDe;
-
 /***********************************************************************
  * Describe class <code>TextRegexpDataDescriptor</code> here.
  *
@@ -111,9 +108,6 @@ public abstract class TextRegexpDataDescriptor extends GenericDataDescriptor {
   ///////////////////////////////////
   // GenericDataDescriptor
   //////////////////////////////////
-  public boolean isHiveSupported() {
-    return true;
-  }
   public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
     SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
     List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
@@ -171,31 +165,4 @@ public abstract class TextRegexpDataDescriptor extends GenericDataDescriptor {
       dataFileWriter.close();
     }
   }
-  public String getHiveCreateTableStatement(String tablename) {
-    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
-    Schema parentS = sd.getSchema();
-    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
-    String escapedSchemaString = unionFreeSchemas.get(0).toString();
-    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
-
-    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
-      "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
-    return creatTxt;
-  }
-  public String getStorageFormatString(Schema targetSchema) {
-    String escapedSchemaString = targetSchema.toString().replace("'", "\\'");
-    return "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
-      "TBLPROPERTIES('avro.schema.literal'='" + escapedSchemaString + "')";
-  }
-  public String getHiveSerDeClassName() {
-    return "org.apache.hadoop.hive.serde2.avro.AvroSerDe";
-  }
-  /**
-  public String getHiveSerDeClassName() {
-    return "com.cloudera.recordbreaker.hive.RegExpSerDe";
-  }
-  public String getDeserializerPayload() {
-    return "";
-  }
-  **/
 }

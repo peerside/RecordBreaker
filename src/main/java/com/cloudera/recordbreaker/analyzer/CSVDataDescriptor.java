@@ -35,8 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 
 import au.com.bytecode.opencsv.CSVParser;
 
-import com.cloudera.recordbreaker.hive.HiveSerDe;
-
 /*****************************************************
  * <code>CSVDataDescriptor</code> describes comma-separated
  * textual data.  Based on previous analysis of the file,
@@ -115,9 +113,6 @@ public class CSVDataDescriptor extends GenericDataDescriptor {
   ///////////////////////////////////
   // GenericDataDescriptor
   //////////////////////////////////
-  public boolean isHiveSupported() {
-    return true;
-  }
   public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
     // THIS IS WHERE THE MAGIC HAPPENS!!!
     // Convert CSV into Avro!!!!
@@ -158,25 +153,5 @@ public class CSVDataDescriptor extends GenericDataDescriptor {
     } finally {
       dataFileWriter.close();
     }
-  }
-  
-  public String getHiveCreateTableStatement(String tablename) {
-    SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
-    Schema parentS = sd.getSchema();
-    List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
-    String escapedSchemaString = unionFreeSchemas.get(0).toString();
-    escapedSchemaString = escapedSchemaString.replace("'", "\\'");
-
-    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
-      "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
-    return creatTxt;
-  }
-  public String getStorageFormatString(Schema targetSchema) {
-    String escapedSchemaString = targetSchema.toString().replace("'", "\\'");
-    return "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
-      "TBLPROPERTIES('avro.schema.literal'='" + escapedSchemaString + "')";
-  }
-  public String getHiveSerDeClassName() {
-    return "org.apache.hadoop.hive.serde2.avro.AvroSerDe";
   }
 }

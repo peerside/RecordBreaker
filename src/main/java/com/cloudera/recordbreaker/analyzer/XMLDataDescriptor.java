@@ -14,54 +14,38 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import org.apache.avro.Schema;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.FileOutputStream;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.fs.FileUtil;
+
 import org.apache.hadoop.conf.Configuration;
 
 /*****************************************************
- * <code>SequenceFileDataDescriptor</code> describes SequenceFile
- * data in the wild.  We iterate through it by returning Avro instances.
+ * <code>XMLDataDescriptor</code> describes data that
+ * was found in XML in the wild.  We convert the data to
+ * Avro for querying by Hive/Impala.  This only works for
+ * 'simple' XML files that resemble lists of records.  (Think: items
+ * that can be easily parsed using SAX rather than a full DOM parser.)
  *
  * @author Michael Cafarella
  *****************************************************/
-public class SequenceFileDataDescriptor extends GenericDataDescriptor {
-  final public static String SEQFILE_TYPE = "sequencefile";
-
-  /**
-   * Test whether this is a SequenceFile or not.
-   */
-  public static boolean isSequenceFile(FileSystem fs, Path p) {
-    try {
-      SequenceFile.Reader in = new SequenceFile.Reader(fs, p, new Configuration());
-      try {
-        return true;
-      } finally {
-        in.close();
-      }
-    } catch (IOException iex) {
-      return false;
-    }
-  }
+public class XMLDataDescriptor extends GenericDataDescriptor {
+  final public static String XML_TYPE = "xml";
   
-  public SequenceFileDataDescriptor(Path p, FileSystem fs) throws IOException {
-    super(p, fs, SEQFILE_TYPE);
-    schemas.add(new SequenceFileSchemaDescriptor(this));
+  public XMLDataDescriptor(Path p, FileSystem fs) throws IOException {
+    super(p, fs, XML_TYPE);
+    schemas.add(new XMLSchemaDescriptor(this));
   }
 
-  public SequenceFileDataDescriptor(Path p, FileSystem fs, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
-    super(p, fs, SEQFILE_TYPE, schemaReprs, schemaDescs, schemaBlobs);
+  public XMLDataDescriptor(Path p, FileSystem fs, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
+    super(p, fs, XML_TYPE, schemaReprs, schemaDescs, schemaBlobs);
   }
 
   SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
-    return new SequenceFileSchemaDescriptor(this, schemaRepr, blob);
+    return new XMLSchemaDescriptor(this, schemaRepr, blob);
   }
 
   ///////////////////////////////////
@@ -71,7 +55,7 @@ public class SequenceFileDataDescriptor extends GenericDataDescriptor {
     return false;
   }
   public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
-    // THIS IS WHERE THE MAGIC HAPPENS!!!    
-    // Convert SequenceFile into Avro!!!!
+    throw new IOException("XML-to-Avro conversion yet implemented");
   }
 }
+  

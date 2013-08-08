@@ -14,35 +14,44 @@
  */
 package com.cloudera.recordbreaker.analyzer;
 
-import org.apache.avro.Schema;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.FileOutputStream;
 import java.util.List;
+import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.avro.hadoop.io.AvroSequenceFile;
+
 import org.apache.hadoop.conf.Configuration;
 
 /*****************************************************
- * <code>SequenceFileDataDescriptor</code> describes SequenceFile
- * data in the wild.  We iterate through it by returning Avro instances.
+ * <code>AvroSequenceFileDataDescriptor</code> describes the
+ * special case of Avro data stored in a SequenceFile format.
+ * We convert the data to standard Avro for querying by Hive/Impala.
  *
  * @author Michael Cafarella
  *****************************************************/
-public class SequenceFileDataDescriptor extends GenericDataDescriptor {
-  final public static String SEQFILE_TYPE = "sequencefile";
+public class AvroSequenceFileDataDescriptor extends GenericDataDescriptor {
+  final public static String AVROSEQFILE_TYPE = "avrosequencefile";
 
   /**
-   * Test whether this is a SequenceFile or not.
+   * Test whether this is an AvroSequenceFile or not.
    */
-  public static boolean isSequenceFile(FileSystem fs, Path p) {
+  public static boolean isAvroSequenceFile(FileSystem fs, Path p) {
     try {
       SequenceFile.Reader in = new SequenceFile.Reader(fs, p, new Configuration());
       try {
-        return true;
+        SequenceFile.Metadata seqFileMetadata = in.getMetadata();
+        TreeMap<Text, Text> kvs = seqFileMetadata.getMetadata();
+        if (kvs.get(AvroSequenceFile.METADATA_FIELD_KEY_SCHEMA) != null &&
+            kvs.get(AvroSequenceFile.METADATA_FIELD_VALUE_SCHEMA) != null) {
+          return true;
+        } else {
+          return false;
+        }
       } finally {
         in.close();
       }
@@ -50,18 +59,18 @@ public class SequenceFileDataDescriptor extends GenericDataDescriptor {
       return false;
     }
   }
-  
-  public SequenceFileDataDescriptor(Path p, FileSystem fs) throws IOException {
-    super(p, fs, SEQFILE_TYPE);
-    schemas.add(new SequenceFileSchemaDescriptor(this));
+
+  public AvroSequenceFileDataDescriptor(Path p, FileSystem fs) throws IOException {
+    super(p, fs, AVROSEQFILE_TYPE);
+    schemas.add(new AvroSequenceFileSchemaDescriptor(this));
   }
 
-  public SequenceFileDataDescriptor(Path p, FileSystem fs, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
-    super(p, fs, SEQFILE_TYPE, schemaReprs, schemaDescs, schemaBlobs);
+  public AvroSequenceFileDataDescriptor(Path p, FileSystem fs, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
+    super(p, fs, AVROSEQFILE_TYPE, schemaReprs, schemaDescs, schemaBlobs);
   }
 
   SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
-    return new SequenceFileSchemaDescriptor(this, schemaRepr, blob);
+    return new AvroSequenceFileSchemaDescriptor(this, schemaRepr);
   }
 
   ///////////////////////////////////
@@ -71,7 +80,7 @@ public class SequenceFileDataDescriptor extends GenericDataDescriptor {
     return false;
   }
   public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
-    // THIS IS WHERE THE MAGIC HAPPENS!!!    
-    // Convert SequenceFile into Avro!!!!
+    throw new IOException("AvroSeq-to-Avro conversion yet implemented");
   }
 }
+  

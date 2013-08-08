@@ -36,6 +36,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.almworks.sqlite4java.SQLite;
 import com.almworks.sqlite4java.SQLiteJob;
 import com.almworks.sqlite4java.SQLiteQueue;
@@ -51,6 +54,7 @@ import com.almworks.sqlite4java.SQLiteConnection;
  * @author "Michael Cafarella" <mjc@cloudera.com>
  ***************************************************************/
 public class FSAnalyzer {
+  private static final Log LOG = LogFactory.getLog(FSAnalyzer.class);      
   static FSAnalyzer fsaInstance;
   public static FSAnalyzer getInstance() {
     return fsaInstance;
@@ -181,10 +185,15 @@ public class FSAnalyzer {
     }
     try {
       URI uri = new URI(uriStr);
-      return FileSystem.get(uri, new Configuration());
+      FileSystem result = FileSystem.get(uri, new Configuration());
+      LOG.info("GETFS 1: " + result);
+      return result;
     } catch (IOException iex) {
+      LOG.info("GETFS 2: " + null);
+      LOG.info("EX: " + iex.toString());
       return null;
     } catch (URISyntaxException use) {
+      LOG.info("GETFS 3: " + null);      
       return null;
     }
   }

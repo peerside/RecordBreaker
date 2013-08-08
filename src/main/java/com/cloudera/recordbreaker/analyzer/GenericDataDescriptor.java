@@ -26,16 +26,13 @@ import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.util.List;
-import java.util.TreeMap;
+
 import java.util.Iterator;
 import java.util.ArrayList;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.avro.hadoop.io.AvroSequenceFile;
-
-import com.cloudera.recordbreaker.hive.HiveSerDe;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import au.com.bytecode.opencsv.CSVParser;
 
@@ -44,32 +41,9 @@ import au.com.bytecode.opencsv.CSVParser;
  *
  * @author "Michael Cafarella" <mjc@lofie.local>
  *****************************************************************/
-public class GenericDataDescriptor implements DataDescriptor {
-  final public static String XML_TYPE = "xml";
+public abstract class GenericDataDescriptor implements DataDescriptor {
+  private static final Log LOG = LogFactory.getLog(GenericDataDescriptor.class);  
   final public static String AVROSEQFILE_TYPE = "avrosequencefile";
-
-  /**
-   * Test whether this is an AvroSequenceFile or not.
-   */
-  public static boolean isAvroSequenceFile(FileSystem fs, Path p) {
-    try {
-      SequenceFile.Reader in = new SequenceFile.Reader(fs, p, new Configuration());
-      try {
-        SequenceFile.Metadata seqFileMetadata = in.getMetadata();
-        TreeMap<Text, Text> kvs = seqFileMetadata.getMetadata();
-        if (kvs.get(AvroSequenceFile.METADATA_FIELD_KEY_SCHEMA) != null &&
-            kvs.get(AvroSequenceFile.METADATA_FIELD_VALUE_SCHEMA) != null) {
-          return true;
-        } else {
-          return false;
-        }
-      } finally {
-        in.close();
-      }
-    } catch (IOException iex) {
-      return false;
-    }
-  }
 
   List<SchemaDescriptor> schemas;
   FileSystem fs;
@@ -81,12 +55,6 @@ public class GenericDataDescriptor implements DataDescriptor {
     this.fs = fs;
     this.filetype = filetype;
     this.schemas = new ArrayList<SchemaDescriptor>();
-
-    if (AVROSEQFILE_TYPE.equals(filetype)) {
-      schemas.add(new AvroSequenceFileSchemaDescriptor(this));
-    } else if (XML_TYPE.equals(filetype)) {
-      schemas.add(new XMLSchemaDescriptor(this));
-    }
   }
   
   public GenericDataDescriptor(Path p, FileSystem fs, String filetype, List<String> schemaReprs, List<String> schemaDescs, List<byte[]> schemaBlobs) throws IOException {
@@ -100,17 +68,7 @@ public class GenericDataDescriptor implements DataDescriptor {
     }
   }
 
-  SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException {
-    SchemaDescriptor sd = null;
-    if (AvroSequenceFileSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
-      sd = new AvroSequenceFileSchemaDescriptor(this, schemaRepr);
-    } else if (XMLSchemaDescriptor.SCHEMA_ID.equals(schemaId)) {
-      sd = new XMLSchemaDescriptor(this, schemaRepr, blob);
-    } else {
-      throw new IOException("Unrecognized schema descriptor: " + schemaId);
-    }
-    return sd;
-  }
+  abstract SchemaDescriptor loadSchemaDescriptor(String schemaRepr, String schemaId, byte[] blob) throws IOException;
 
   public Path getFilename() {
     return this.p;
@@ -129,18 +87,15 @@ public class GenericDataDescriptor implements DataDescriptor {
   // Hive Support
   //////////////////////////
   public boolean isHiveSupported() {
-    return false;
-  }
-  public String getStorageFormatString(Schema s) {
-    return "TEXTFILE";
+    return true;
   }
   public Schema getHiveTargetSchema() {
     SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
     List<Schema> unionFreeSchemas = SchemaUtils.getUnionFreeSchemasByFrequency(sd, 100, true);
     return unionFreeSchemas.get(0);
   }
-  public void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException {
-  }
+  public abstract void prepareAvroFile(FileSystem srcFs, FileSystem dstFs, Path dst, Configuration conf) throws IOException;
+
   public String getHiveCreateTableStatement(String tablename) {
     SchemaDescriptor sd = this.getSchemaDescriptor().get(0);
     Schema parentS = sd.getSchema();
@@ -148,14 +103,18 @@ public class GenericDataDescriptor implements DataDescriptor {
     String escapedSchemaString = unionFreeSchemas.get(0).toString();
     escapedSchemaString = escapedSchemaString.replace("'", "\\'");
 
-    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' WITH SERDEPROPERTIES('" +
-      HiveSerDe.DESERIALIZER + "'='" + getDeserializerPayload() + "', '" +
-      HiveSerDe.TARGET_SCHEMA + "'='" + escapedSchemaString + "') " +
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
       "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
-
-    System.err.println("EMITTING CREATE TABLE: " + creatTxt);
     return creatTxt;
-
+  }
+  
+  public String getStorageFormatString(Schema targetSchema) {
+    String escapedSchemaString = targetSchema.toString().replace("'", "\\'");
+    return "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
+      "TBLPROPERTIES('avro.schema.literal'='" + escapedSchemaString + "')";
+  }
+  public String getHiveSerDeClassName() {
+    return "org.apache.hadoop.hive.serde2.avro.AvroSerDe";
   }
   public String getHiveImportDataStatement(String tablename, Path importFile) {
     String fname = importFile.toString();
@@ -167,9 +126,6 @@ public class GenericDataDescriptor implements DataDescriptor {
     return loadTxt;
   }
   public String getDeserializerPayload() {
-    throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
-  }
-  public String getHiveSerDeClassName() {
     throw new UnsupportedOperationException("Cannot run Hive queries on file " + getFilename());
   }
 }
