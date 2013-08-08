@@ -44,6 +44,7 @@ import au.com.bytecode.opencsv.CSVParser;
 public abstract class GenericDataDescriptor implements DataDescriptor {
   private static final Log LOG = LogFactory.getLog(GenericDataDescriptor.class);  
   final public static String AVROSEQFILE_TYPE = "avrosequencefile";
+  final private static String HIVE_SERDE_CLASSNAME = "org.apache.hadoop.hive.serde2.avro.AvroSerDe";  
 
   List<SchemaDescriptor> schemas;
   FileSystem fs;
@@ -80,6 +81,7 @@ public abstract class GenericDataDescriptor implements DataDescriptor {
     return schemas;
   }
   public InputStream getRawBytes() throws IOException {
+    LOG.info("Opening raw stream for content at " + p);
     return fs.open(p);
   }
 
@@ -103,7 +105,7 @@ public abstract class GenericDataDescriptor implements DataDescriptor {
     String escapedSchemaString = unionFreeSchemas.get(0).toString();
     escapedSchemaString = escapedSchemaString.replace("'", "\\'");
 
-    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + getHiveSerDeClassName() + "' " +
+    String creatTxt = "create table " + tablename + " ROW FORMAT SERDE '" + HIVE_SERDE_CLASSNAME + "' " +
       "STORED AS " + getStorageFormatString(unionFreeSchemas.get(0));
     return creatTxt;
   }
@@ -113,9 +115,7 @@ public abstract class GenericDataDescriptor implements DataDescriptor {
     return "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat' " +
       "TBLPROPERTIES('avro.schema.literal'='" + escapedSchemaString + "')";
   }
-  public String getHiveSerDeClassName() {
-    return "org.apache.hadoop.hive.serde2.avro.AvroSerDe";
-  }
+
   public String getHiveImportDataStatement(String tablename, Path importFile) {
     String fname = importFile.toString();
     String localMarker = "";
