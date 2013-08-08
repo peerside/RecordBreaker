@@ -186,14 +186,12 @@ public class FSAnalyzer {
     try {
       URI uri = new URI(uriStr);
       FileSystem result = FileSystem.get(uri, new Configuration());
-      LOG.info("GETFS 1: " + result);
       return result;
     } catch (IOException iex) {
-      LOG.info("GETFS 2: " + null);
-      LOG.info("EX: " + iex.toString());
+      LOG.error(iex.toString());
       return null;
     } catch (URISyntaxException use) {
-      LOG.info("GETFS 3: " + null);      
+      LOG.error(use.toString());
       return null;
     }
   }
