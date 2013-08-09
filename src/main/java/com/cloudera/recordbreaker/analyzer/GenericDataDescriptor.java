@@ -81,7 +81,6 @@ public abstract class GenericDataDescriptor implements DataDescriptor {
     return schemas;
   }
   public InputStream getRawBytes() throws IOException {
-    LOG.info("Opening raw stream for content at " + p);
     return fs.open(p);
   }
 
