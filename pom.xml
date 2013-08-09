@@ -13,8 +13,8 @@
 	<properties>
 		<avro-tools.version>1.7.1</avro-tools.version>
 		<avro.version>1.7.1</avro.version>
-		<hadoop-common.version>2.0.5-alpha</hadoop-common.version>
-		<hadoop-hdfs.version>2.0.5-alpha</hadoop-hdfs.version>
+		<hadoop-common.version>2.0.1-alpha</hadoop-common.version>
+		<hadoop-hdfs.version>2.0.1-alpha</hadoop-hdfs.version>
     
 		<hive.version>0.11.0</hive.version>
 		<jetty.version>6.1.26</jetty.version>
