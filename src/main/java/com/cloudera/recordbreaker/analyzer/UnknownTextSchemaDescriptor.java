@@ -42,6 +42,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /************************************************************************
  * <code>UnknownTextSchemaDescriptor</code> returns schema data that we
  * figure out from the data itself.
@@ -52,6 +55,7 @@ import org.apache.hadoop.conf.Configuration;
  * @see SchemaDescriptor
  *************************************************************************/
 public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
+  private static final Log LOG = LogFactory.getLog(UnknownTextSchemaDescriptor.class);    
   public static String SCHEMA_ID = "recordbreaker-recovered";
   public static int MAX_LINES = 1000;
   InferredType typeTree;
@@ -127,6 +131,7 @@ public class UnknownTextSchemaDescriptor extends GenericSchemaDescriptor {
           in = new BufferedReader(new InputStreamReader(dd.getRawBytes()));
           nextElt = lookahead();
         } catch (IOException iex) {
+          LOG.info("iex: " + iex.toString());
           nextElt = null;
         }
       }
