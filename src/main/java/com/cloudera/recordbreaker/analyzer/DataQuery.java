@@ -100,8 +100,8 @@ public class DataQuery implements Serializable {
       Class.forName(impalaDriverName);
       this.hiveConnectString = conf.get("hive.connectstring", "jdbc:hive2://localhost:10000/default");
       this.impalaConnectString = conf.get("impala.connectstring", "jdbc:hive2://localhost:21050/;auth=noSasl");
-      LOG.error("GOT HIVE CONNECT STRING: " + hiveConnectString);
-      LOG.error("GOT IMPALA CONNECT STRING: " + impalaConnectString);      
+      LOG.info("GOT HIVE CONNECT STRING: " + hiveConnectString);
+      LOG.info("GOT IMPALA CONNECT STRING: " + impalaConnectString);      
 
       this.tableCache = new HiveTableCache();
       
