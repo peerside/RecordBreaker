@@ -15,6 +15,9 @@
 package com.cloudera.recordbreaker.analyzer;
 
 import java.util.*;
+import java.io.Serializable;
+
+import org.apache.hadoop.fs.Path;
 
 /****************************************************
  * Describe class <code>PageHistory</code> here.
@@ -23,7 +26,7 @@ import java.util.*;
  * @version 1.0
  * @since 1.0
  *****************************************************/
-public class PageHistory {
+public class PageHistory implements Serializable {
   static PageHistory ph;
   public static PageHistory get() {
     if (ph == null) {
@@ -33,18 +36,29 @@ public class PageHistory {
   }
 
   int queueSize;
-  List<FileSummary> history;
+  List<Long> fidHistory;
+  List<String> pathHistory;
   public PageHistory(int qs) {
     this.queueSize = qs;
-    this.history = new ArrayList<FileSummary>();
+    this.fidHistory = new ArrayList<Long>();
+    this.pathHistory = new ArrayList<String>();    
   }
-  public List<FileSummary> getRecentHistory() {
-    return history;
+  public List<Long> getRecentFids() {
+    return fidHistory;
   }
-  public void visitNewPage(FileSummary file) {
-    if (history.size() > queueSize) {
-      history.remove(history.size()-1);
+  public List<String> getRecentPaths() {
+    return pathHistory;
+  }
+  public void visitNewPage(long fid, String path) {
+    if (fidHistory.size() > queueSize) {
+      fidHistory.remove(fidHistory.size()-1);
+      pathHistory.remove(pathHistory.size()-1);
     }
-    history.add(0, file);
+    fidHistory.add(0, fid);
+    pathHistory.add(0, path);
+  }
+  
+  public void visitNewPage(FileSummary file) {
+    visitNewPage(file.getFid(), file.getPath().toString());
   }
 }

@@ -56,6 +56,8 @@ import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 
+import org.apache.hadoop.fs.Path;
+
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
@@ -104,9 +106,11 @@ public class FilePage extends WebPage {
       super(name);
       FishEye fe = FishEye.getInstance();
       final PageHistory history = PageHistory.get();
-      final List<JoinPair> joinPairs = new ArrayList<JoinPair>();      
-      for (FileSummary fs: history.getRecentHistory()) {
-        joinPairs.add(new JoinPair("" + fs.getFid(), fs.getPath().toString()));
+      final List<JoinPair> joinPairs = new ArrayList<JoinPair>();
+      List<Long> historyFids = history.getRecentFids();
+      List<String> historyPaths = history.getRecentPaths();
+      for (int i = 0; i < historyFids.size(); i++) {
+        joinPairs.add(new JoinPair("" + historyFids.get(i), historyPaths.get(i)));
       }
 
       if (fe.hasFSAndCrawl()) {
@@ -114,6 +118,9 @@ public class FilePage extends WebPage {
           try {
             this.fid = Long.parseLong(fidStr);
             final FileSummary fs = new FileSummary(fe.getAnalyzer(), fid);
+            final long fsFid = fid;
+            final String fsPath = fs.getPath().toString();
+            
             FSAnalyzer fsa = fe.getAnalyzer();
             FileSummaryData fsd = fsa.getFileSummaryData(fid);
             DataDescriptor dd = fsd.getDataDescriptor();
@@ -161,7 +168,7 @@ public class FilePage extends WebPage {
                   setOutputMarkupPlaceholderTag(true);
                   setVisibilityAllowed(querySupported);
                   add(new QueryForm("queryform", new ValueMap(), fid));
-                  history.visitNewPage(fs);
+                  history.visitNewPage(fsFid, fsPath);
 
                   // Add support for join-choices here
                   add(new WebMarkupContainer("hasJoins") {
