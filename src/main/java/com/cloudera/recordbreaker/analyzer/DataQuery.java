@@ -100,18 +100,39 @@ public class DataQuery implements Serializable {
       Class.forName(impalaDriverName);
       this.hiveConnectString = conf.get("hive.connectstring", "jdbc:hive2://localhost:10000/default");
       this.impalaConnectString = conf.get("impala.connectstring", "jdbc:hive2://localhost:21050/;auth=noSasl");
-      LOG.info("GOT HIVE CONNECT STRING: " + hiveConnectString);
-      LOG.info("GOT IMPALA CONNECT STRING: " + impalaConnectString);      
+      LOG.info("Hive connect string: " + hiveConnectString);
+      LOG.info("Impala connect string: " + impalaConnectString);      
 
       this.tableCache = new HiveTableCache();
       
-      this.hiveCon = DriverManager.getConnection(hiveConnectString, "cloudera", "cloudera");
+      try {
+        this.hiveCon = DriverManager.getConnection(hiveConnectString, "cloudera", "cloudera");
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      } 
       this.impalaCon = DriverManager.getConnection(impalaConnectString, "cloudera", "cloudera");      
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     } catch (Exception ex) {
       ex.printStackTrace();
     }
+
+    // Force impala to refresh metadata
+    if (impalaCon != null) {
+      Statement stmt = impalaCon.createStatement();
+      try {
+        try {
+          LOG.info("Rebuilding Impala metadata...");
+          stmt.execute("INVALIDATE METADATA");
+        } catch (Exception iex) {
+          LOG.info("Impala metadata rebuild failed: " + iex.toString());
+        }
+      } finally {
+        stmt.close();
+      }
+    }
+
+    // Misc data structures
     this.tables = new HashMap<Path, String>();
     this.isLoaded = new HashSet<Path>();
   }
@@ -186,26 +207,40 @@ public class DataQuery implements Serializable {
         stmt.close();
       }
 
-      // Copy data into secret location prior to Hive import
+      // Copy avro version of data into secret location prior to Hive import
       FileSystem fs = FileSystem.get(conf);      
       Path tmpTables = new Path(tmpTablesDir);
       if (! fs.exists(tmpTables)) {
         fs.mkdirs(tmpTables, new FsPermission("-rwxrwxrwx"));
       }
       Path secretDst = new Path(tmpTables, "r" + r.nextInt());
+      LOG.info("Preparing Avro data at " + secretDst);      
       desc.prepareAvroFile(fs, fs, secretDst, conf);
       fs.setPermission(secretDst, new FsPermission("-rwxrwxrwx"));
-      LOG.info("PREPARE AVRO AT " + secretDst);
 
       // Import data
       stmt = hiveCon.createStatement();
       try {
-        LOG.info("IMPORT: " + desc.getHiveImportDataStatement(tablename, secretDst));
+        LOG.info("Import data into Hive: " + desc.getHiveImportDataStatement(tablename, secretDst));
         stmt.execute(desc.getHiveImportDataStatement(tablename, secretDst));
         isLoaded.add(p);
       } finally {
         stmt.close();
       }
+
+      // Refresh impala metadata
+      stmt = impalaCon.createStatement();      
+      try {
+        try {
+          LOG.info("Rebuilding Impala metadata...");
+          stmt.execute("INVALIDATE METADATA");
+        } catch (Exception iex) {
+          LOG.info("Impala metadata rebuild failed: " + iex.toString());
+        }
+      } finally {
+        stmt.close();
+      }
+      
       // Insert into table cache
       tableCache.put(p, tablename);
     }
