@@ -159,7 +159,12 @@ public class FileContentsTable extends WebMarkupContainer {
                     DataField dataField = item2.getModelObject();
 
 
-                    // SELECT * FROM DATA WHERE ATTR = 'celltext'
+                    //
+                    // Build list of suggested queries for the HTML popover.
+                    // 
+                    // 1.  SELECT * FROM DATA WHERE ATTR = 'celltext'
+                    // <others coming>
+                    //
                     String totalHTML = "";
                     WebMarkupContainer popovercontent = new WebMarkupContainer("popovercontent");
                     Label celltextalone = new Label("celltextalone", "" + dataField.getDataStr());

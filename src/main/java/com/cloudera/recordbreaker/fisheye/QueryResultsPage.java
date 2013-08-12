@@ -33,6 +33,8 @@ import org.apache.wicket.markup.html.link.DownloadLink;
 import org.apache.wicket.ajax.markup.html.form.AjaxButton;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 
+import org.apache.wicket.model.Model;
+import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.request.Request;
 import org.apache.wicket.request.Response;
 import org.apache.wicket.request.http.WebResponse;
@@ -90,6 +92,27 @@ public class QueryResultsPage extends WebPage {
       return outputTuples;
     }
   }
+  class DataField implements Serializable {
+    String fieldName;
+    boolean isStringVal;
+    String dataStr;
+    String filename;
+    public DataField(String fieldName, Object dataObj) {
+      this.fieldName = fieldName;
+      this.isStringVal = ! ((dataObj instanceof Integer) || (dataObj instanceof Double) || (dataObj instanceof Float));
+      this.dataStr = "" + dataObj;
+      this.filename = filename;
+    }
+    public String getDataFieldName() {
+      return fieldName;
+    }
+    public boolean isStringVal() {
+      return isStringVal;
+    }
+    public String getDataStr() {
+      return dataStr;
+    }
+  }
     
   class TableDisplayPanel extends WebMarkupContainer {
     String fidStr;
@@ -106,7 +129,7 @@ public class QueryResultsPage extends WebPage {
       long startTime = System.currentTimeMillis();
       //System.err.println("TABLE DISPLAY: filename=" + filename);
       FishEye fe = FishEye.getInstance();
-      List<List<String>> queryResults = new ArrayList<List<String>>();
+      List<List<Object>> queryResults = new ArrayList<List<Object>>();
       if (fe.hasFSAndCrawl()) {
         ///
         // Single table query!
@@ -154,15 +177,27 @@ public class QueryResultsPage extends WebPage {
 
       long endTime = System.currentTimeMillis();
       double elapsedTime = (endTime - startTime) / 1000.0;
-      List<String> metadata = null;
-      List<List<String>> metadataList = new ArrayList<List<String>>();      
+      List<String> metadata = new ArrayList<String>();
+      List<List<String>> metadataList = new ArrayList<List<String>>();
+      List<List<DataField>> dataFieldQueryResults = new ArrayList<List<DataField>>();
       if (queryResults.size() == 0) {
-        List<String> tuple = new ArrayList<String>();
+        List<Object> tuple = new ArrayList<Object>();
         tuple.add("No results found");
         queryResults.add(tuple);
       } else {
-        metadata = queryResults.remove(0);
+        List<Object> queryResultObjects = queryResults.remove(0);
+        for (Object obj: queryResultObjects) {
+          metadata.add(obj.toString());
+        }
         metadataList.add(metadata);
+
+        for (List<Object> tupleObjects: queryResults) {
+          List<DataField> dataFieldTuple = new ArrayList<DataField>();
+          for (int i = 0; i < tupleObjects.size(); i++) {
+            dataFieldTuple.add(new DataField(metadata.get(i), tupleObjects.get(i)));
+          }
+          dataFieldQueryResults.add(dataFieldTuple);
+        }
       }
 
       // If a single file
@@ -200,13 +235,45 @@ public class QueryResultsPage extends WebPage {
             item.add(listOfFields);
           }
         });
-      add(new ListView<List<String>>("resultTable", queryResults) {
-          protected void populateItem(ListItem<List<String>> item) {
-            List<String> myListOfSchemaElts = item.getModelObject();
-            ListView<String> listofTupleFields = new ListView<String>("resultTuple", myListOfSchemaElts) {
-              protected void populateItem(ListItem<String> item2) {
-                String displayStr = item2.getModelObject();
-                item2.add(new Label("field", "" + displayStr));
+
+      final long singleFid = fid;
+      final String singletonFilename = filename;      
+      final boolean singletonResult = (fidStr != null);
+      add(new ListView<List<DataField>>("resultTable", dataFieldQueryResults) {
+          protected void populateItem(ListItem<List<DataField>> item) {
+            List<DataField> myListOfSchemaElts = item.getModelObject();
+            ListView<DataField> listofTupleFields = new ListView<DataField>("resultTuple", myListOfSchemaElts) {
+              protected void populateItem(ListItem<DataField> item2) {
+                DataField dataField = item2.getModelObject();
+
+                //
+                // Build list of suggested queries for the HTML popover.
+                // 
+                // 1.  SELECT * FROM DATA WHERE ATTR = 'celltext'
+                // <others coming>
+                //
+                String totalHTML = "";
+                WebMarkupContainer popovercontent = new WebMarkupContainer("popovercontent");
+                Label fieldalone = new Label("fieldalone", "" + dataField.getDataStr());
+                item2.add(popovercontent);
+                item2.add(fieldalone); 
+                if (singletonResult && dataField.getDataStr().length() > 0) {
+                  String sqlQueryText = "SELECT * FROM <i>DATA</i> WHERE " + dataField.getDataFieldName() + " = " + (dataField.isStringVal() ? "'" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "'" : "");
+                  String selectionClause = dataField.getDataFieldName() + "+%3D+" + (dataField.isStringVal() ? "%27" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "%27" : "");
+
+                  // Single-table selection
+                  String sqlHyperlink = "/QueryResults?fid=" + singleFid + "&projectionclause=*" + "&selectionclause=" + selectionClause + "&filename=" + singletonFilename;
+                  
+                  totalHTML = "<ul><li><a href='" + sqlHyperlink + "'>" + sqlQueryText + "</a></ul>";
+
+                  popovercontent.add(new AttributeModifier("data-content", true, new Model(totalHTML)));
+                  popovercontent.add(new Label("field", "" + dataField.getDataStr()));
+                  popovercontent.setVisibilityAllowed(true);
+                  fieldalone.setVisibilityAllowed(false);
+                } else {
+                  popovercontent.setVisibilityAllowed(false);
+                  fieldalone.setVisibilityAllowed(true);
+                }
               }
             };
             item.add(listofTupleFields);

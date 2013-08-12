@@ -112,7 +112,11 @@
                 <tbody>
                   <tr wicket:id="resultTable">
                     <td wicket:id="resultTuple">
-                      <span wicket:id="field"></span>
+                      <button type="button" id="example" class="btn btn-link" data-container="body" data-html="true" data-toggle="popover" data-placement="top" wicket:id="popovercontent" data-title="Suggested Queries" data-content="{GENERATED_LINK}">
+                        
+                        <span wicket:id="field"></span>
+                      </button>
+                      <span wicket:id="fieldalone"></span>                      
                     </td>
                   </tr>
                 </tbody>
@@ -129,6 +133,10 @@
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script>
+      $(function ()
+        { $("button").popover();
+       });
+
       function changeHighlight(buttonLabel) {
         document.getElementById('rawbutton').setAttribute('class', 'btn btn-small');
         document.getElementById('databutton').setAttribute('class', 'btn btn-small');

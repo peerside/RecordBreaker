@@ -247,7 +247,7 @@ public class DataQuery implements Serializable {
     return tablename;
   }
   
-  public List<List<String>> query(DataDescriptor desc1, DataDescriptor desc2, String projectionClause, String selectionClause) throws SQLException, IOException {
+  public List<List<Object>> query(DataDescriptor desc1, DataDescriptor desc2, String projectionClause, String selectionClause) throws SQLException, IOException {
     String tablename1 = grabTable(desc1);
     String tablename2 = null;
     if (desc2 != null) {
@@ -284,7 +284,7 @@ public class DataQuery implements Serializable {
     // Try to run it first with the impala connection.
     // If that fails, try hive.
     //
-    List<List<String>> result = new ArrayList<List<String>>();
+    List<List<Object>> result = new ArrayList<List<Object>>();
     Statement stmt = impalaCon.createStatement();
     LOG.info("Processing: " + query);
     try {
@@ -303,16 +303,16 @@ public class DataQuery implements Serializable {
 
       // OK now do the real work
       ResultSetMetaData rsmd = res.getMetaData();
-      List<String> metatuple = new ArrayList<String>();
+      List<Object> metatuple = new ArrayList<Object>();
       for (int i = 1; i <= rsmd.getColumnCount(); i++) {
         metatuple.add(rsmd.getColumnLabel(i));
       }
       result.add(metatuple);
         
       while (res.next()) {
-        List<String> tuple = new ArrayList<String>();
+        List<Object> tuple = new ArrayList<Object>();
         for (int i = 1; i <= rsmd.getColumnCount(); i++) {
-          tuple.add("" + res.getObject(i));
+          tuple.add(res.getObject(i));
         }
         result.add(tuple);
       }
