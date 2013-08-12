@@ -85,28 +85,53 @@ public class FileContentsTable extends WebMarkupContainer {
       this.isBottom = isBottom;
     }
   }
+  class DataField implements Serializable {
+    String fieldName;
+    boolean isStringVal;
+    String dataStr;
+    String filename;
+    public DataField(String fieldName, Object dataObj, String filename) {
+      this.fieldName = fieldName;
+      this.isStringVal = ! ((dataObj instanceof Integer) || (dataObj instanceof Double) || (dataObj instanceof Float));
+      this.dataStr = "" + dataObj;
+      this.filename = filename;
+    }
+    public String getDataFieldName() {
+      return fieldName;
+    }
+    public boolean isStringVal() {
+      return isStringVal;
+    }
+    public String getDataStr() {
+      return dataStr;
+    }
+    public String getFilename() {
+      return filename;
+    }
+  }
   class DataTablePair implements Serializable {
     List<List<HeaderPair>> headerPairs;
-    List<List<String>> outputTupleList;
+    List<List<DataField>> outputTupleList;
     
-    public DataTablePair(List<List<HeaderPair>> headerPairs, List<List<String>> outputTupleList) {
+    public DataTablePair(List<List<HeaderPair>> headerPairs, List<List<DataField>> outputTupleList) {
       this.headerPairs = headerPairs;
       this.outputTupleList = outputTupleList;
     }
     List<List<HeaderPair>> getHeaderPairs() {
       return headerPairs;
     }
-    List<List<String>> getTupleList() {
+    List<List<DataField>> getTupleList() {
       return outputTupleList;
     }
   }
 
-  void renderToPage(String label, List<DataTablePair> tablePairs) {
+  void renderToPage(String label, List<DataTablePair> tablePairs, final boolean renderLinks) {
+    final long localFid = this.fid;
     add(new ListView<DataTablePair>(label, tablePairs) {
         protected void populateItem(ListItem<DataTablePair> outerItem) {
           DataTablePair outerModelObj = outerItem.getModelObject();
           List<List<HeaderPair>> outputHeaderList = outerModelObj.getHeaderPairs();
-          List<List<String>> outputTupleList = outerModelObj.getTupleList();
+          List<List<DataField>> outputTupleList = outerModelObj.getTupleList();
             
           outerItem.add(new ListView<List<HeaderPair>>("attributelabels", outputHeaderList) {
               protected void populateItem(ListItem<List<HeaderPair>> item) {
@@ -125,14 +150,29 @@ public class FileContentsTable extends WebMarkupContainer {
               }
             });
 
-          outerItem.add(new ListView<List<String>>("schemalistview", outputTupleList) {
-              protected void populateItem(ListItem<List<String>> item) {
-                List<String> myListOfSchemaElts = item.getModelObject();
+          outerItem.add(new ListView<List<DataField>>("schemalistview", outputTupleList) {
+              protected void populateItem(ListItem<List<DataField>> item) {
+                List<DataField> myListOfSchemaElts = item.getModelObject();
         
-                ListView<String> listofTupleFields = new ListView<String>("tupleview", myListOfSchemaElts) {
-                  protected void populateItem(ListItem<String> item2) {
-                    String displayStr = item2.getModelObject();
-                    item2.add(new Label("celltext", "" + displayStr));
+                ListView<DataField> listofTupleFields = new ListView<DataField>("tupleview", myListOfSchemaElts) {
+                  protected void populateItem(ListItem<DataField> item2) {
+                    DataField dataField = item2.getModelObject();
+
+
+                    // SELECT * FROM DATA WHERE ATTR = 'celltext'
+                    String totalHTML = "";
+                    if (renderLinks && dataField.getDataStr().length() > 0) {
+                      String sqlQueryText = "SELECT * FROM <i>DATA</i> WHERE " + dataField.getDataFieldName() + " = " + (dataField.isStringVal() ? "'" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "'" : "");
+                      String selectionClause = dataField.getDataFieldName() + "+%3D+" + (dataField.isStringVal() ? "%27" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "%27" : "");
+                      String sqlHyperlink = "/QueryResults?fid=" + localFid + "&projectionclause=*" + "&selectionclause=" + selectionClause + "&filename=" + dataField.getFilename();
+                      totalHTML = "<a href='" + sqlHyperlink + "'>" + sqlQueryText + "</a>";
+                      WebMarkupContainer popovercontent = new WebMarkupContainer("popovercontent");
+                      popovercontent.add(new AttributeModifier("data-content", true, new Model(totalHTML)));
+                      popovercontent.add(new Label("celltext", "" + dataField.getDataStr()));
+                      item2.add(popovercontent);
+                    } else {
+                      item2.add(new Label("celltext", "" + dataField.getDataStr()));
+                    }
                   }
                 };
                 item.add(listofTupleFields);
@@ -151,6 +191,7 @@ public class FileContentsTable extends WebMarkupContainer {
     FishEye fe = FishEye.getInstance();
     FSAnalyzer fsa = fe.getAnalyzer();
     FileSummaryData fsd = fsa.getFileSummaryData(fid);
+    String path = fsd.path + fsd.fname;    
     DataDescriptor dd = fsd.getDataDescriptor();
     List<SchemaDescriptor> sds = dd.getSchemaDescriptor();
 
@@ -182,8 +223,8 @@ public class FileContentsTable extends WebMarkupContainer {
       // Doing so entails "unrolling" the schemas that contain unions.
       // That is, translating such schemas into a set of union-free schemas.
       //
-      List<List<List<String>>> perSchemaTupleLists = new ArrayList<List<List<String>>>();
-      List<List<List<String>>> dataOrderTupleLists = new ArrayList<List<List<String>>>();
+      List<List<List<DataField>>> perSchemaTupleLists = new ArrayList<List<List<DataField>>>();
+      List<List<List<DataField>>> dataOrderTupleLists = new ArrayList<List<List<DataField>>>();
       List<Integer> schemaOrder = new ArrayList<Integer>();
       List<SchemaPair> schemaFrequency = new ArrayList<SchemaPair>();
 
@@ -210,7 +251,7 @@ public class FileContentsTable extends WebMarkupContainer {
       for (int i = 0; i < allSchemas.size(); i++) {
         Schema s1 = allSchemas.get(i);
         schemaLabelLists.add(SchemaUtils.flattenNames(s1));
-        perSchemaTupleLists.add(new ArrayList<List<String>>());
+        perSchemaTupleLists.add(new ArrayList<List<DataField>>());
         schemaFrequency.add(new SchemaPair(i, 0));
       }
 
@@ -236,8 +277,8 @@ public class FileContentsTable extends WebMarkupContainer {
         for (List<String> schemaLabels: schemaLabelLists) {
           int numGood = 0;
           for (String schemaHeader: schemaLabels) {
-            String result = SchemaUtils.getNestedValues(gr, schemaHeader);
-            if (result.length() > 0) {
+            Object result = SchemaUtils.getNestedValues(gr, schemaHeader);
+            if (result.toString().length() > 0) {
               numGood++;
             }
           }
@@ -254,14 +295,14 @@ public class FileContentsTable extends WebMarkupContainer {
           // to the next line.
           continue;
         }
-        List<String> tupleElts = new ArrayList<String>();
+        List<DataField> tupleElts = new ArrayList<DataField>();
         for (String schemaHeader: bestSchemaLabels) {
-          tupleElts.add(SchemaUtils.getNestedValues(gr, schemaHeader));
+          tupleElts.add(new DataField(schemaHeader, SchemaUtils.getNestedValues(gr, schemaHeader), path));
         }
         perSchemaTupleLists.get(bestIdx).add(tupleElts);
 
         if (bestIdx != lastBestIdx) {
-          dataOrderTupleLists.add(new ArrayList<List<String>>());
+          dataOrderTupleLists.add(new ArrayList<List<DataField>>());
         }
         dataOrderTupleLists.get(dataOrderTupleLists.size()-1).add(tupleElts);
         schemaOrder.add(bestIdx);
@@ -279,8 +320,8 @@ public class FileContentsTable extends WebMarkupContainer {
       // schemaOrder holds a list of M indexes, one for each tuple in the data
       //   to be displayed.
       //
-      List<List<List<HeaderPair>>> outputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
-      List<List<List<String>>> outputTupleLists = null;
+      //List<List<List<HeaderPair>>> outputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
+      //List<List<List<String>>> outputTupleLists = null;
 
       //
       // Step 4.  Build 3 different display modes.
@@ -298,32 +339,32 @@ public class FileContentsTable extends WebMarkupContainer {
 
       // 4a. raw mode
       List<List<List<HeaderPair>>> rawOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
-      List<List<List<String>>> rawOutputTupleLists = new ArrayList<List<List<String>>>();
+      List<List<List<DataField>>> rawOutputTupleLists = new ArrayList<List<List<DataField>>>();
 
       List<List<HeaderPair>> headerSet = new ArrayList<List<HeaderPair>>();
       rawOutputHeaderSets.add(headerSet);
       List<HeaderPair> header = new ArrayList<HeaderPair>();
       header.add(new HeaderPair("", 1));
       headerSet.add(header);
-      List<List<String>> singleTable = new ArrayList<List<String>>();
+      List<List<DataField>> singleTable = new ArrayList<List<DataField>>();
       rawOutputTupleLists.add(singleTable);
 
-      for (List<List<String>> tupleList: dataOrderTupleLists) {
-        for (List<String> tuple: tupleList) {
-          List<String> singleTuple = new ArrayList<String>();
+      for (List<List<DataField>> tupleList: dataOrderTupleLists) {
+        for (List<DataField> tuple: tupleList) {
+          List<DataField> singleTuple = new ArrayList<DataField>();
           StringBuffer sbuf = new StringBuffer();
-          for (String s: tuple) {
-            sbuf.append(s);
+          for (DataField df: tuple) {
+            sbuf.append(df.getDataStr());
             sbuf.append(" ");
           }
-          singleTuple.add(sbuf.toString().trim());
+          singleTuple.add(new DataField("", sbuf.toString().trim(), path));
           singleTable.add(singleTuple);
         }
       }
 
       // 4b. dataorder mode
       List<List<List<HeaderPair>>> dataOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
-      List<List<List<String>>> dataOutputTupleLists = dataOrderTupleLists;      
+      List<List<List<DataField>>> dataOutputTupleLists = dataOrderTupleLists;      
       // Show data in order of how it appears in the file
       for (int i = 1; i < schemaOrder.size(); i++) {
         if (schemaOrder.get(i) != schemaOrder.get(i-1)) {
@@ -336,7 +377,7 @@ public class FileContentsTable extends WebMarkupContainer {
 
       // 4c. schemaorder mode      
       List<List<List<HeaderPair>>> schemaOutputHeaderSets = new ArrayList<List<List<HeaderPair>>>();
-      List<List<List<String>>> schemaOutputTupleLists = new ArrayList<List<List<String>>>();
+      List<List<List<DataField>>> schemaOutputTupleLists = new ArrayList<List<List<DataField>>>();
 
       // Show data in order of schema popularity by descending frequency
       SchemaPair sortedByFreq[] = schemaFrequency.toArray(new SchemaPair[schemaFrequency.size()]);
@@ -376,19 +417,19 @@ public class FileContentsTable extends WebMarkupContainer {
       for (int i = 0; i < rawOutputHeaderSets.size(); i++) {
         rawTablePairs.add(new DataTablePair(rawOutputHeaderSets.get(i), rawOutputTupleLists.get(i)));
       }
-      renderToPage("rawtables", rawTablePairs);
+      renderToPage("rawtables", rawTablePairs, false);
       
       List<DataTablePair> dataTablePairs = new ArrayList<DataTablePair>();
       for (int i = 0; i < dataOutputHeaderSets.size(); i++) {
         dataTablePairs.add(new DataTablePair(dataOutputHeaderSets.get(i), dataOutputTupleLists.get(i)));
       }
-      renderToPage("datatables", dataTablePairs);
+      renderToPage("datatables", dataTablePairs, false);
       
       List<DataTablePair> schemaTablePairs = new ArrayList<DataTablePair>();            
       for (int i = 0; i < schemaOutputHeaderSets.size(); i++) {
         schemaTablePairs.add(new DataTablePair(schemaOutputHeaderSets.get(i), schemaOutputTupleLists.get(i)));
       }
-      renderToPage("schematables", schemaTablePairs);
+      renderToPage("schematables", schemaTablePairs, true);
     }
     setOutputMarkupPlaceholderTag(true);
     setVisibilityAllowed(false);

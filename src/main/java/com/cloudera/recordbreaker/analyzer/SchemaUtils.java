@@ -238,7 +238,7 @@ public class SchemaUtils {
    * Grab a value from a record that is potentially deeply-nested, using
    * a dot-notation field label.
    */
-  public static String getNestedValues(GenericRecord gr, String fieldname) {
+  public static Object getNestedValues(GenericRecord gr, String fieldname) {
     int dotIndex = fieldname.indexOf(".");
     if (dotIndex >= 0) {
       String firstComponent = fieldname.substring(0, dotIndex);
@@ -247,7 +247,7 @@ public class SchemaUtils {
       return (oobj2 == null || (! (oobj2 instanceof GenericRecord))) ? "" : getNestedValues((GenericRecord) oobj2, remainder);
     } else {
       Object result = gr.get(fieldname);
-      return (result == null ? "" : result.toString());
+      return (result == null ? "" : result);
     }
   }
 }

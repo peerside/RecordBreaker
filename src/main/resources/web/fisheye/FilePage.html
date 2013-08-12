@@ -33,7 +33,7 @@
   <body>
     <script src="http://code.jquery.com/jquery.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="js/bootstrap.min.js"></script>
+    <script src="js/bootstrap.js"></script>
     
 
     <div class="container">
@@ -236,7 +236,10 @@
                 <tbody>
                   <tr wicket:id="schemalistview">
                     <td wicket:id="tupleview">
-                    <span wicket:id="celltext"></span>
+                      <button type="button" id="example" class="btn btn-link" data-container="body" data-html="true" data-toggle="popover" data-placement="auto" wicket:id="popovercontent" data-content="{GENERATED_LINK}">
+                        
+                        <span wicket:id="celltext"></span>
+                      </button>
                     </td>
                   </tr>
                 </tbody>                
@@ -251,6 +254,10 @@
 <!--    <script src="http://code.jquery.com/jquery.js"></script>
     <script src="js/bootstrap.js"></script>     -->
     <script>
+      $(function ()
+        { $("button").popover();
+       });
+      
       function changeHighlight(buttonLabel) {
         document.getElementById('rawbutton').setAttribute('class', 'btn btn-small');
         document.getElementById('databutton').setAttribute('class', 'btn btn-small');
