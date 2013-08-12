@@ -161,17 +161,23 @@ public class FileContentsTable extends WebMarkupContainer {
 
                     // SELECT * FROM DATA WHERE ATTR = 'celltext'
                     String totalHTML = "";
+                    WebMarkupContainer popovercontent = new WebMarkupContainer("popovercontent");
+                    Label celltextalone = new Label("celltextalone", "" + dataField.getDataStr());
+                    item2.add(popovercontent);
+                    item2.add(celltextalone);                    
                     if (renderLinks && dataField.getDataStr().length() > 0) {
                       String sqlQueryText = "SELECT * FROM <i>DATA</i> WHERE " + dataField.getDataFieldName() + " = " + (dataField.isStringVal() ? "'" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "'" : "");
                       String selectionClause = dataField.getDataFieldName() + "+%3D+" + (dataField.isStringVal() ? "%27" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "%27" : "");
                       String sqlHyperlink = "/QueryResults?fid=" + localFid + "&projectionclause=*" + "&selectionclause=" + selectionClause + "&filename=" + dataField.getFilename();
-                      totalHTML = "<a href='" + sqlHyperlink + "'>" + sqlQueryText + "</a>";
-                      WebMarkupContainer popovercontent = new WebMarkupContainer("popovercontent");
+                      totalHTML = "<ul><li><a href='" + sqlHyperlink + "'>" + sqlQueryText + "</a></ul>";
+
                       popovercontent.add(new AttributeModifier("data-content", true, new Model(totalHTML)));
                       popovercontent.add(new Label("celltext", "" + dataField.getDataStr()));
-                      item2.add(popovercontent);
+                      popovercontent.setVisibilityAllowed(true);
+                      celltextalone.setVisibilityAllowed(false);
                     } else {
-                      item2.add(new Label("celltext", "" + dataField.getDataStr()));
+                      popovercontent.setVisibilityAllowed(false);
+                      celltextalone.setVisibilityAllowed(true);                      
                     }
                   }
                 };
@@ -193,6 +199,7 @@ public class FileContentsTable extends WebMarkupContainer {
     FileSummaryData fsd = fsa.getFileSummaryData(fid);
     String path = fsd.path + fsd.fname;    
     DataDescriptor dd = fsd.getDataDescriptor();
+    final boolean querySupported = dd.isHiveSupported() && fe.isQueryServerAvailable(false);    
     List<SchemaDescriptor> sds = dd.getSchemaDescriptor();
 
     class SchemaPair implements Comparable {
@@ -429,7 +436,7 @@ public class FileContentsTable extends WebMarkupContainer {
       for (int i = 0; i < schemaOutputHeaderSets.size(); i++) {
         schemaTablePairs.add(new DataTablePair(schemaOutputHeaderSets.get(i), schemaOutputTupleLists.get(i)));
       }
-      renderToPage("schematables", schemaTablePairs, true);
+      renderToPage("schematables", schemaTablePairs, querySupported);
     }
     setOutputMarkupPlaceholderTag(true);
     setVisibilityAllowed(false);

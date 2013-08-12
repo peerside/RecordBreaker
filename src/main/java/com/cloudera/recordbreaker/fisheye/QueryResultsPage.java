@@ -165,7 +165,28 @@ public class QueryResultsPage extends WebPage {
         metadataList.add(metadata);
       }
 
-      add(new Label("filename", filename));
+      // If a single file
+      ExternalLink filenameLink = new ExternalLink("filenamelink", urlFor(FilePage.class, new PageParameters("fid=" + fid)).toString(), filename);
+      add(filenameLink);
+      if (fidStr == null) {
+        filenameLink.setVisibilityAllowed(false);
+      } else {
+        filenameLink.setVisibilityAllowed(true);
+      }
+
+      // If multiple files
+      ExternalLink filenameLink1 = new ExternalLink("filenamelink1", urlFor(FilePage.class, new PageParameters("fid=" + fid1)).toString(), filename1);
+      ExternalLink filenameLink2 = new ExternalLink("filenamelink2", urlFor(FilePage.class, new PageParameters("fid=" + fid2)).toString(), filename2);
+      add(filenameLink1);
+      add(filenameLink2);
+      if (fidStr1 == null) {
+        filenameLink1.setVisibilityAllowed(false);
+        filenameLink2.setVisibilityAllowed(false);
+      } else {
+        filenameLink1.setVisibilityAllowed(true);
+        filenameLink2.setVisibilityAllowed(true);
+      }
+      
       add(new Label("elapsedtime", new DecimalFormat("#.##").format(elapsedTime)));
       add(new ListView<List<String>>("attributelabels", metadataList) {
           protected void populateItem(ListItem<List<String>> item) {
