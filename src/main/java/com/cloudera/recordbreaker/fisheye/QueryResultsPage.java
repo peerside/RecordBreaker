@@ -56,6 +56,9 @@ import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
@@ -77,6 +80,7 @@ import java.text.DecimalFormat;
  * @author "Michael Cafarella" <mjc@lofie.local>
  **************************************************************************/
 public class QueryResultsPage extends WebPage {
+  private static final Log LOG = LogFactory.getLog(QueryResultsPage.class);
   class DataTablePair implements Serializable {
     List<List<String>> headers;
     List<List<String>> outputTuples;
@@ -239,6 +243,10 @@ public class QueryResultsPage extends WebPage {
       final long singleFid = fid;
       final String singletonFilename = filename;      
       final boolean singletonResult = (fidStr != null);
+      final String rawIncomingSelections = selClauseStr;
+      final String escapedIncomingSelections = selClauseStr.replaceAll(" ", "+").replaceAll("=", "%3D").replaceAll("'", "%27");
+      LOG.info("Incoming SQL selection: " + rawIncomingSelections + "(" + escapedIncomingSelections + ")");
+      
       add(new ListView<List<DataField>>("resultTable", dataFieldQueryResults) {
           protected void populateItem(ListItem<List<DataField>> item) {
             List<DataField> myListOfSchemaElts = item.getModelObject();
@@ -248,9 +256,11 @@ public class QueryResultsPage extends WebPage {
 
                 //
                 // Build list of suggested queries for the HTML popover.
+                // So far, this works only on single-table selection
                 // 
                 // 1.  SELECT * FROM DATA WHERE ATTR = 'celltext'
-                // <others coming>
+                // 2.  SELECT * FROM DATA WHERE ATTR = 'celltext' AND all the previous selection criteria
+                // <others?>
                 //
                 String totalHTML = "";
                 WebMarkupContainer popovercontent = new WebMarkupContainer("popovercontent");
@@ -258,13 +268,21 @@ public class QueryResultsPage extends WebPage {
                 item2.add(popovercontent);
                 item2.add(fieldalone); 
                 if (singletonResult && dataField.getDataStr().length() > 0) {
-                  String sqlQueryText = "SELECT * FROM <i>DATA</i> WHERE " + dataField.getDataFieldName() + " = " + (dataField.isStringVal() ? "'" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "'" : "");
-                  String selectionClause = dataField.getDataFieldName() + "+%3D+" + (dataField.isStringVal() ? "%27" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "%27" : "");
-
-                  // Single-table selection
-                  String sqlHyperlink = "/QueryResults?fid=" + singleFid + "&projectionclause=*" + "&selectionclause=" + selectionClause + "&filename=" + singletonFilename;
+                  // Novel selection criteria
+                  String newSelectionClause = dataField.getDataFieldName() + "+%3D+" + (dataField.isStringVal() ? "%27" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "%27" : "");
                   
-                  totalHTML = "<ul><li><a href='" + sqlHyperlink + "'>" + sqlQueryText + "</a></ul>";
+                  // SQL Query 1.  Just the novel criteria
+                  String sqlQueryText1 = "SELECT * FROM <i>DATA</i> WHERE " + dataField.getDataFieldName() + " = " + (dataField.isStringVal() ? "'" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "'" : "");
+                  String sqlHyperlink1 = "/QueryResults?fid=" + singleFid + "&projectionclause=*" + "&selectionclause=" + newSelectionClause + "&filename=" + singletonFilename;
+                  totalHTML = "<ul>" + "<li><a href='" + sqlHyperlink1 + "'>" + sqlQueryText1 + "</a>";
+
+                  if (rawIncomingSelections.length() > 0) {
+                    // SQL Query 2.  The novel criteria plus the old criteria
+                    String sqlQueryText2 = "SELECT * FROM <i>DATA</i> WHERE " + dataField.getDataFieldName() + " = " + (dataField.isStringVal() ? "'" : "") + dataField.getDataStr() + (dataField.isStringVal() ? "'" : "") + " AND " + rawIncomingSelections;
+                    String sqlHyperlink2 = "/QueryResults?fid=" + singleFid + "&projectionclause=*" + "&selectionclause=" + newSelectionClause + "+AND+" + escapedIncomingSelections + "&filename=" + singletonFilename;
+                    totalHTML += "<li><a href='" + sqlHyperlink2 + "'>" + sqlQueryText2 + "</a>";
+                  }
+                  totalHTML += "</ul>";
 
                   popovercontent.add(new AttributeModifier("data-content", true, new Model(totalHTML)));
                   popovercontent.add(new Label("field", "" + dataField.getDataStr()));
