@@ -2,18 +2,22 @@ import scala.io.Source
 import scala.math._
 import scala.collection.mutable._
 
+
 abstract class BaseType
-case class PInt(value: Int) extends BaseType
-case class PIntConst(value: Int) extends BaseType
-case class PFloat(value: Double) extends BaseType
-case class PAlphanum(value: String) extends BaseType
-case class PString(value: String) extends BaseType
-case class PStringConst(value: String) extends BaseType
-case class PChar(value: String) extends BaseType
-case class POther(value: String) extends BaseType
-case class PMetaToken(lval:PChar, center:List[BaseType], rval:PChar) extends BaseType
+trait ParsedValue[T] extends BaseType {
+  val parsedValue: T
+  def getValue(): T = {parsedValue}
+}
+case class PInt() extends BaseType
+case class PFloat() extends BaseType
+case class PAlphanum() extends BaseType
+case class POther() extends BaseType
 case class PVoid() extends BaseType
 case class PEmpty() extends BaseType
+case class PString(terminator: String) extends BaseType with ParsedValue[String] {val parsedValue=terminator}
+case class PIntConst(cval: Int) extends BaseType with ParsedValue[Int] {val parsedValue=cval}
+case class PStringConst(cval: String) extends BaseType with ParsedValue[String] {val parsedValue=cval}
+case class PMetaToken(lval:POther, center:List[BaseType], rval:POther) extends BaseType
 
 abstract class HigherType
 case class HTStruct(value: List[HigherType]) extends HigherType
@@ -56,8 +60,6 @@ def oracle(input:Chunks): Prophecy = {
         case c: PAlphanum => alphaCount+=1
         case d: PString => strCount+=1
         case e: POther => otherCount+=1
-        //case f: PChar => charCounts(f.value) += 1
-        case f: PChar => charCount+=1
         case g: PVoid => voidCount+=1
         case h: PEmpty => emptyCount+=1
         case x: PMetaToken => metaCount+=1
@@ -172,7 +174,6 @@ def oracle(input:Chunks): Prophecy = {
                                                                          case c: PAlphanum => xlist contains "alpha"
                                                                          case d: PString => xlist contains "str"
                                                                          case e: POther => xlist contains "other"
-                                                                         case f: PChar => xlist contains "char"
                                                                          case g: PVoid => xlist contains "void"
                                                                          case h: PEmpty => xlist contains "empty"
                                                                          case x: PMetaToken => xlist contains "meta"
@@ -222,7 +223,6 @@ def oracle(input:Chunks): Prophecy = {
                                                                         case c: PAlphanum => "alpha"
                                                                         case d: PString => "str"
                                                                         case e: POther => "other"
-                                                                        case f: PChar => "char"
                                                                         case g: PVoid => "void"
                                                                         case h: PEmpty => "empty"
                                                                         case x: PMetaToken => "meta"
@@ -273,14 +273,14 @@ def costData(encoding:HigherType, input:Chunks):Double = {
       case (a:HTStruct,_) => {if (a.value.length == 0) (if (inputIn.length == 0) 0 else 999999) else a.value.zip(inputIn).map(x=>costSingleChunk(x._1, List(x._2))).sum}
       case (b:HTUnion,_) => {if (b.value.length == 0) (if (inputIn.length == 0) 0 else 999999) else b.value.map(x => costSingleChunk(x, inputIn)).min}
       // Eventually add in support for HTEnum and HTSwitch
-      case (HTBaseType(bt), inList) if (inList.length == 1) => (bt, inList.head) match {
+      case (HTBaseType(bt), inputIn2) if (inputIn2.length == 1) => (bt, inputIn2.head) match {
         case (a1: PInt, elt1:PInt) => 32
         case (b1: PIntConst, elt1:PInt) => 0
-        case (c1: PFloat, elt1:PInt) => 32
-        case (d1: PAlphanum, elt1:PInt) => d1.value.length
-        case (e1: PString, elt1:PInt) => e1.value.length
-        case (f1: PStringConst, elt1:PInt) => 0
-        case (g1: PChar, elt1:PInt) => g1.value.length
+        case (c1: PFloat, elt1:PFloat) => 32
+        case (d1: PAlphanum, elt1:PAlphanum with ParsedValue[String]) => elt1.getValue().length
+        case (e1: PString, elt1:PString with ParsedValue[String]) => elt1.getValue().length
+        case (f1: PStringConst, elt1:PString) => 0
+        case (g1: POther, elt1:POther with ParsedValue[String]) => elt1.getValue().length
         case _ => 999999
       }
       case (HTBaseType(bt), inList) if (inList.length == 0) => bt match {
@@ -391,7 +391,7 @@ def combineAdjacentStringConstants(in: HigherType): HigherType = {
     } else {
       remainder match {
         case HTBaseType(c1) :: HTBaseType(c2) :: rest if (c1.isInstanceOf[PStringConst] && c2.isInstanceOf[PStringConst]) =>
-          findAdjacent(soFar :+ HTBaseType(PStringConst(c1.asInstanceOf[PStringConst].value + c2.asInstanceOf[PStringConst].value)), rest)
+          findAdjacent(soFar :+ HTBaseType(PStringConst(c1.asInstanceOf[PStringConst].cval + c2.asInstanceOf[PStringConst].cval)), rest)
         case first :: rest => findAdjacent(soFar :+ first, rest)
         case _ => remainder
       }
@@ -425,7 +425,7 @@ def refineAll(orig: HigherType, input: Chunks) = {
  * Parse text file
  ***********************************/
 def parseFile(fname: String): Chunks = {
-  def findMeta(lhs:PChar, rhs:PChar, l:List[BaseType]):List[BaseType] = {
+  def findMeta(lhs:POther with ParsedValue[String], rhs:POther with ParsedValue[String], l:List[BaseType]):List[BaseType] = {
     var (left,toprocess) = l.span(x => x != lhs)
     var (center, rest) = toprocess.slice(1,toprocess.length).span(x => x != rhs)
     if (center.length > 0) {
@@ -435,7 +435,13 @@ def parseFile(fname: String): Chunks = {
     }
   }
   def findMetaTokens(a:List[BaseType]) = {
-    findMeta(PChar("("), PChar(")"), findMeta(PChar("["), PChar("]"), findMeta(PChar("<"), PChar(">"), a)))
+    findMeta(new POther() with ParsedValue[String] {val parsedValue="("},
+             new POther() with ParsedValue[String] {val parsedValue=")"},
+             findMeta(new POther() with ParsedValue[String] {val parsedValue="["},
+                      new POther() with ParsedValue[String] {val parsedValue="]"},
+                      findMeta(new POther() with ParsedValue[String] {val parsedValue="<"},
+                               new POther() with ParsedValue[String] {val parsedValue=">"},
+                               a)))
   }
 
   val src = Source.fromFile(fname, "UTF-8")
@@ -448,11 +454,10 @@ def parseFile(fname: String): Chunks = {
 
     for (t <- tokens) {
       val c = t match {
-          case x if t.forall(_.isDigit) => PInt(x.toInt)
-          case y if {try{Some(y.toDouble); true} catch {case _:Throwable => false}} => PFloat(y.toDouble)
-          case u if ((! t.forall(_.isDigit)) && t.filter(_.isDigit).length > 0) => PAlphanum(u)            
-          case a if a.length() == 1 => PChar(a)
-          case z => PString(z)
+          case x if t.forall(_.isDigit) => new PInt() with ParsedValue[Int] {val parsedValue=x.toInt}
+          case y if {try{Some(y.toDouble); true} catch {case _:Throwable => false}} => new PFloat() with ParsedValue[Double] {val parsedValue=y.toDouble}
+          case a if a.length() == 1 => new POther() with ParsedValue[String] {val parsedValue=a}
+          case u => new PAlphanum() with ParsedValue[String] {val parsedValue=u}
       }
       cs = cs:+c
     }
@@ -468,13 +473,13 @@ val css = parseFile("test3.txt")
 val testMode = true
 if (testMode) {
   val testCaseOrig = discover(css)
-  val testCase1 = HTStruct(List(HTBaseType(PInt(10)), HTStruct(List())))
-  val testCase2 = HTUnion(List(HTBaseType(PInt(10)), HTUnion(List())))
-  val testCase3 = HTUnion(List(HTStruct(List(HTBaseType(PFloat(12.1)), HTBaseType(PInt(10)))),
-                               HTStruct(List(HTBaseType(PString("foo")), HTBaseType(PInt(10))))))
+  val testCase1 = HTStruct(List(HTBaseType(PInt()), HTStruct(List())))
+  val testCase2 = HTUnion(List(HTBaseType(PInt()), HTUnion(List())))
+  val testCase3 = HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))),
+                               HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))
   val testCase4 = HTStruct(List(HTBaseType(PStringConst("foo")),
                                 HTBaseType(PStringConst("foo")),
-                                HTBaseType(PInt(10))))
+                                HTBaseType(PInt())))
   val testCase = testCaseOrig
 
   println("Test case: " + testCase)
