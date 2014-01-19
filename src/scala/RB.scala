@@ -1,32 +1,93 @@
+/*
+ * Copyright (c) 2013, Cloudera, Inc. All Rights Reserved.
+ *
+ * Cloudera, Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"). You may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied. See the License for
+ * the specific language governing permissions and limitations under the
+ * License.
+ */
 import scala.io.Source
 import scala.math._
 import scala.collection.mutable._
 
 
+/** The BaseType is an atomic type (int, str, etc) that can be either
+  *  parsed or inferred post-parsing.
+  */
 abstract class BaseType
 trait ParsedValue[T] extends BaseType {
   val parsedValue: T
   def getValue(): T = {parsedValue}
 }
+
+/** Basic integer. Parsed from input */
 case class PInt() extends BaseType
+
+/** Basic float.  Parsed from input */
 case class PFloat() extends BaseType
+
+/** Basic string.  Parsed from input */
 case class PAlphanum() extends BaseType
+
+/** Single-char string.  Created during metatoken parsing */
 case class POther() extends BaseType
+
+/** An option of Union that doesn't do anything.  Side effect of union refinement */
 case class PVoid() extends BaseType
+
+/** An option of Struct that doesn't do anything.  Side effect of struct refinement */
 case class PEmpty() extends BaseType
+
+/** A particular kind of string that has a known terminating character.  Inferred.
+ *  @param terminator Terminating char for string
+ */
 case class PString(terminator: String) extends BaseType with ParsedValue[String] {val parsedValue=terminator}
+
+/** An int that is always the same.  Inferred.
+ *  @param cval Constant value
+ */
 case class PIntConst(cval: Int) extends BaseType with ParsedValue[Int] {val parsedValue=cval}
+
+/** A string that is always the same.  Inferred.
+  * @param cval Constant value
+  */
 case class PStringConst(cval: String) extends BaseType with ParsedValue[String] {val parsedValue=cval}
+
+/** A meta token that has a list of BaseTypes with single-char POther on either side.
+  * @param lval Left-hand char
+  * @param center List of BaseTypes that makes up the MetaToken
+  * @param rval Right-hand char
+ */
 case class PMetaToken(lval:POther, center:List[BaseType], rval:POther) extends BaseType
 
 abstract class HigherType
 case class HTStruct(value: List[HigherType]) extends HigherType
 case class HTArray(value: HigherType) extends HigherType
 case class HTUnion(value: List[HigherType]) extends HigherType
-case class HTBaseType(value: BaseType) extends HigherType
+case class HTBaseType(value: BaseType) extends HigherType {
+  def getParser(): Parser[HigherType] = {
+    new Parser[HigherType] {
+      def apply(in: Input)
+    }
+  }
+}
 case class HTNamedBaseType(name: String, value: BaseType) extends HigherType
 case class HTArrayFW(value: HigherType, size: Int) extends HigherType
 case class HTOption(value: HigherType) extends HigherType
+
+def flattenAndName(ht: HigherType, parentName: String): List[(HigherType, String)] = {
+  ht match {
+    case a: HTStruct => a.value.foldLeft(List[(HigherType,String)]())((lhs, rhs) => lhs ++ flattenAndName(rhs, parentName + "." + a.getClass.getName))
+    case b: HTUnion => b.value.foldLeft(List[(HigherType,String)]())((lhs, rhs) => lhs ++ flattenAndName(rhs, parentName + "." + b.getClass.getName))
+    case c: HTBaseType => List((c, parentName + "." + c.value.getClass.getName))
+  }
+}
 
 type Chunk = List[BaseType]
 type Chunks = List[Chunk]
@@ -38,6 +99,33 @@ case class ArrayProphecy(prefix: Chunks, middle:Chunks, postfix:Chunks) extends 
 case class UnionProphecy(css: List[Chunks]) extends Prophecy
 
 
+////////////////////////////////////
+// Parsing with HigherTypes
+////////////////////////////////////
+trait HTParsers extends Parsers {
+  type Elem = HigherType
+  val baseParser:Parser[HigherType] = 
+}
+
+def flattenAndParse(ht: HigherType, input: Chunk): HigherType = {
+  if (input.length == 0) {
+    ht match {
+      case HTBaseType(a) => bt match {
+        case a: PVoid => ParseSuccess(List(), input)
+        case b: PEmpty => ParseSuccess(List(), input)
+        case _ => ParseError("Input has zero length but next type to parse is HTBaseType(" + _ + ")", input)
+      }
+      case _ => ParseError("Input has zero length but next type to parse is " + _, input)
+    }
+  } else {
+    (ht, input.head) match {
+      case (HTStruct(a), _) => ht.value.foldLeft(ParseSuccess(List(), input))((x,y) => 
+  }
+
+
+////////////////////////////////////
+// Structure prediction
+////////////////////////////////////
 def oracle(input:Chunks): Prophecy = {
   val minCoverage = 1
   val maxMass = 2
@@ -46,7 +134,7 @@ def oracle(input:Chunks): Prophecy = {
   // Compute histograms over input chunks
   //
   var intCounts, floatCounts, alphaCounts, strCounts, otherCounts, voidCounts, emptyCounts, metaCounts, charCounts = new HashMap[Int, Int]().withDefaultValue(0)
-  var tokenHistograms = new HashMap[(String, Int), Int]().withDefaultValue(0)
+  val tokenHistograms = new HashMap[(String, Int), Int]().withDefaultValue(0)
   var uniqueBaseTypes = new HashSet[BaseType]()
   var numUniqueVals = 0
   var numChunks = 0
@@ -407,7 +495,9 @@ def combineAdjacentStringConstants(in: HigherType): HigherType = {
 ///////////////////////////////////////////
 // Data-dependent rewrite rules
 ///////////////////////////////////////////
-
+//def rewriteWithConstants(in:HigherType, input: Chunks):HigherType = {
+//  input.map(chunk => LabeledHigherType root = in.parse(chunk))
+//}
 
 
 ///////////////////////////////////////////
@@ -426,8 +516,8 @@ def refineAll(orig: HigherType, input: Chunks) = {
  ***********************************/
 def parseFile(fname: String): Chunks = {
   def findMeta(lhs:POther with ParsedValue[String], rhs:POther with ParsedValue[String], l:List[BaseType]):List[BaseType] = {
-    var (left,toprocess) = l.span(x => x != lhs)
-    var (center, rest) = toprocess.slice(1,toprocess.length).span(x => x != rhs)
+    val (left,toprocess) = l.span(x => x != lhs)
+    val (center, rest) = toprocess.slice(1,toprocess.length).span(x => x != rhs)
     if (center.length > 0) {
       left ++ List(PMetaToken(lhs, center, rhs)) ++ findMeta(lhs, rhs, rest.slice(1,rest.length))
     } else {
@@ -485,6 +575,11 @@ if (testMode) {
   println("Test case: " + testCase)
   val improvedCase = refineAll(testCase, css)
   println("Improved case: " + improvedCase)
+  val flatlist = flattenAndName(improvedCase, "root")
+  for (f <- flatlist) {
+    val (ht, nme) = f
+    println("Flat: " + nme, ht)
+  }
 } else {
   val htOrig = discover(css)
   val htImproved = refineAll(htOrig, css)
