@@ -156,15 +156,10 @@ object inferstructure {
           innerAverage((normalForm ++ otherHist).sorted, Nil).reverse
         }
 
-        // REMIND -- foreach() instead?
         def relEntropy(srcHist: List[(Int, T)], otherHist: List[(Int, Double)]): Double = {
-          var total:Double = 0
-          for (j <- 1 to srcHist.length-1) {
-            total += n.toDouble(srcHist(j)._2) * math.log(n.toDouble(srcHist(j)._2) / otherHist(j)._2)
-          }
-          total
+          val combinedPairs = srcHist.slice(1,srcHist.length-1).zip(otherHist.slice(1, srcHist.length-1))
+          return combinedPairs.map(combinedElt => inN.toDouble(combinedElt._1._2) * math.log(inN.toDouble(combinedElt._1._2 / combinedElt._2._2))).sum
         }
-
         val averageHist = average(otherHist.normalForm)
         0.5 * relEntropy(this.normalForm, averageHist) + 0.5 * relEntropy(otherHist.normalForm, averageHist)
       }
