@@ -12,93 +12,99 @@
  * the specific language governing permissions and limitations under the
  * License.
  */
+package com.cloudera.recordbreaker.learnstructure;
+
 import scala.io.Source
 import scala.math._
 import scala.collection.mutable._
 
-package com.cloudera.recordbreaker.learnstructure
 
-package structuretypes {
-  /** The BaseType is an atomic type (int, str, etc) that can be either
-   *  parsed or inferred post-parsing.
-   */
-  abstract class BaseType
-  trait ParsedValue[T] extends BaseType {
-    val parsedValue: T
-    def getValue(): T = {parsedValue}
-  }
-
-  /** Basic integer. Parsed from input */
-  case class PInt() extends BaseType
-
-  /** Basic float.  Parsed from input */
-  case class PFloat() extends BaseType
-
-  /** Basic string.  Parsed from input */
-  case class PAlphanum() extends BaseType
-
-  /** Single-char string.  Created during metatoken parsing */
-  case class POther() extends BaseType
-
-  /** An option of Union that doesn't do anything.  Side effect of union refinement */
-  case class PVoid() extends BaseType
-
-  /** An option of Struct that doesn't do anything.  Side effect of struct refinement */
-  case class PEmpty() extends BaseType
-
-  /** A particular kind of string that has a known terminating character.  Inferred.
-   *  @param terminator Terminating char for string
-   */
-  case class PString(terminator: String) extends BaseType with ParsedValue[String] {val parsedValue=terminator}
-
-  /** An int that is always the same.  Inferred.
-   *  @param cval Constant value
-   */
-  case class PIntConst(cval: Int) extends BaseType with ParsedValue[Int] {val parsedValue=cval}
-
-  /** A string that is always the same.  Inferred.
-   * @param cval Constant value
-   */
-  case class PStringConst(cval: String) extends BaseType with ParsedValue[String] {val parsedValue=cval}
-
-  /** A meta token that has a list of BaseTypes with single-char POther on either side.
-   * @param lval Left-hand char
-   * @param center List of BaseTypes that makes up the MetaToken
-   * @param rval Right-hand char
-   */
-  case class PMetaToken(lval:POther, center:List[BaseType], rval:POther) extends BaseType
-
-  abstract class HigherType
-  case class HTStruct(value: List[HigherType]) extends HigherType
-  case class HTArray(value: HigherType) extends HigherType
-  case class HTUnion(value: List[HigherType]) extends HigherType
-  case class HTBaseType(value: BaseType) extends HigherType {
-    def getParser(): Parser[HigherType] = {
-      new Parser[HigherType] {
-        def apply(in: Input)
-      }
-    }
-  }
-  case class HTNamedBaseType(name: String, value: BaseType) extends HigherType
-  case class HTArrayFW(value: HigherType, size: Int) extends HigherType
-  case class HTOption(value: HigherType) extends HigherType
-
-  type Chunk = List[BaseType]
-  type Chunks = List[Chunk]
-
-  abstract class Prophecy
-  case class BaseProphecy(value: BaseType) extends Prophecy
-  case class StructProphecy(css: List[Chunks]) extends Prophecy
-  case class ArrayProphecy(prefix: Chunks, middle:Chunks, postfix:Chunks) extends Prophecy
-  case class UnionProphecy(css: List[Chunks]) extends Prophecy
+/** The BaseType is an atomic type (int, str, etc) that can be either
+ *  parsed or inferred post-parsing.
+ */
+abstract class BaseType
+trait ParsedValue[T] extends BaseType {
+  val parsedValue: T
+  def getValue(): T = {parsedValue}
 }
+
+/** Basic integer. Parsed from input */
+case class PInt() extends BaseType
+
+/** Basic float.  Parsed from input */
+case class PFloat() extends BaseType
+
+/** Basic string.  Parsed from input */
+case class PAlphanum() extends BaseType
+
+/** Single-char string.  Created during metatoken parsing */
+case class POther() extends BaseType
+
+/** An option of Union that doesn't do anything.  Side effect of union refinement */
+case class PVoid() extends BaseType
+
+/** An option of Struct that doesn't do anything.  Side effect of struct refinement */
+case class PEmpty() extends BaseType
+
+/** A particular kind of string that has a known terminating character.  Inferred.
+ *  @param terminator Terminating char for string
+ */
+case class PString(terminator: String) extends BaseType with ParsedValue[String] {val parsedValue=terminator}
+
+/** An int that is always the same.  Inferred.
+ *  @param cval Constant value
+ */
+case class PIntConst(cval: Int) extends BaseType with ParsedValue[Int] {val parsedValue=cval}
+
+/** A string that is always the same.  Inferred.
+ * @param cval Constant value
+ */
+case class PStringConst(cval: String) extends BaseType with ParsedValue[String] {val parsedValue=cval}
+
+/** A meta token that has a list of BaseTypes with single-char POther on either side.
+ * @param lval Left-hand char
+ * @param center List of BaseTypes that makes up the MetaToken
+ * @param rval Right-hand char
+ */
+case class PMetaToken(lval:POther, center:List[BaseType], rval:POther) extends BaseType
+
+abstract class HigherType
+case class HTStruct(value: List[HigherType]) extends HigherType
+case class HTArray(value: HigherType) extends HigherType
+case class HTUnion(value: List[HigherType]) extends HigherType
+case class HTBaseType(value: BaseType) extends HigherType
+case class HTNamedBaseType(name: String, value: BaseType) extends HigherType
+case class HTArrayFW(value: HigherType, size: Int) extends HigherType
+case class HTOption(value: HigherType) extends HigherType
+
+abstract class Prophecy
+case class BaseProphecy(value: BaseType) extends Prophecy
+case class StructProphecy(css: List[Chunks]) extends Prophecy
+case class ArrayProphecy(prefix: Chunks, middle:Chunks, postfix:Chunks) extends Prophecy
+case class UnionProphecy(css: List[Chunks]) extends Prophecy
+
 
 
 ////////////////////////////////////
 // Structure prediction
 ////////////////////////////////////
-package inferstructure {
-  def oracle(input:Chunks): Prophecy = {
+object inferstructure {
+  /** discover() transforms Chunks into an HTBaseType hierarchy
+   * This is the only public function in the inferstructure package.
+   */
+  def discover(cs:Chunks): HigherType = {
+    oracle(cs) match {
+      case a: BaseProphecy => HTBaseType(a.value)
+      case b: StructProphecy => HTStruct(b.css.map(discover))
+      case c: ArrayProphecy => HTStruct(List(discover(c.prefix), HTArray(discover(c.middle)), discover(c.postfix)))
+      case d: UnionProphecy => HTUnion(d.css.map(discover))
+    }
+  }
+
+  /** oracle() creates a Prophecy out of Chunks.
+   * Used internally by discover()
+   */
+  private def oracle(input:Chunks): Prophecy = {
     val minCoverage = 1
     val maxMass = 2
 
@@ -106,8 +112,8 @@ package inferstructure {
     // Compute histograms over input chunks
     //
     val numUniqueVals = Set() ++ input size
-    def histMap(filterChunk: PartialFunction[BaseType, Int]) = {
-      Map() ++ input.map(chunk => chunk collect(x=>filterChunk(x)) sum).flatten.groupBy(x=>x).map(x=> (x._1, x._2.length))
+    def histMap(filterChunk: PartialFunction[BaseType, Int]):Map[Int,Int] = {
+      Map() ++ input.map(chunk => chunk.collect(filterChunk).sum).groupBy(x=>x).map(z=> (z._1, z._2.length))
     }
     val intCounts = histMap({case x: PInt => 1})
     val floatCounts = histMap({case x: PFloat => 1})
@@ -118,46 +124,49 @@ package inferstructure {
     val emptyCounts = histMap({case x: PEmpty => 1})
     val metaCounts = histMap({case x: PMetaToken => 1})
 
-    val nonMetaMaps = Map(("int"->intCounts),("float"->floatCounts),("alpha"->alphaCounts)("str"->strCounts),("other"->otherCounts),("void"->voidCounts),("empty"->emptyCounts))
-    val nonMetaHistograms = nonMetaMaps.toList.map((l,x)=>Histogram(l,x))
-    val metaHistogram = Histogram("meta", metaCounts)    
+    val nonMetaMaps = List(("int"->intCounts),("float"->floatCounts),("alpha"->alphaCounts),("str"->strCounts),("other"->otherCounts),("void"->voidCounts),("empty"->emptyCounts)).toMap
+    val nonMetaHistograms = nonMetaMaps.toList.map(x => new Histogram(x._1,x._2))
+    val metaHistogram = new Histogram("meta", metaCounts)    
     val allMaps = nonMetaMaps + ("meta"->metaCounts)
-    val allHistograms = allMaps.toList.map((l,x)=>Histogram(l,x))
+    val allHistograms = allMaps.toList.map(t=>new Histogram(t._1,t._2))
 
 
     /** Histogram class exists just for oracle() statistics
      *  @param inM A map of observed counts to unique values.
      */
-    class Histogram[T](val label:String, inM: Map[Int, T]) = {
-      val m:List[(Int,T)] = inM.toList.sorted
-      val normalForm:List[(Int,T)] = List((0, m(0))) ++ (m-0).toList.sortWith((x,y) => x._2 > y._2)
+    class Histogram[T](val label:String, inM: Map[Int, T])(implicit inN:Numeric[T]) {
+      val n = inN
+      val normalForm:List[(Int,T)] = List((0, inM(0))) ++ inM.toList.sortBy(_._1).drop(1)
 
       def width() = normalForm.length-1
-      def mass(i: Int) = normalForm(i)._2
-      def rmass(i: Int) = normalForm(0)._2 + normalForm.slice(i+1,normalForm.length).map(x=>x._2).sum
-      def coverage() = normalForm.slice(1,normalForm.length).map(x=>x._2).sum
+      def mass(i: Int):Double = n.toDouble(normalForm(i)._2)
+      def rmass(i: Int):Double = n.toDouble(n.plus(normalForm(0)._2, (normalForm.slice(i+1,normalForm.length).map(z => z._2).reduce((a1,a2)=>n.plus(a1, a2)))))
+      def coverage():Double = n.toDouble(normalForm.slice(1,normalForm.length).map(x=>x._2).reduce((a1,a2)=>n.plus(a1, a2)))
 
       def symEntropy(otherHist:Histogram[T]): Double = {
-        def average(otherHist: Histogram[T]):List[(Int,T)] = {
-          def innerAverage(in:List[(Int,T)], accum:List[(Int,T)]): List[(Int,T)] = {
+        def average(otherHist: List[(Int,T)]):List[(Int,Double)] = {
+          def innerAverage(in:List[(Int,T)], accum:List[(Int,Double)]): List[(Int,Double)] = {
             in match {
-              case a :: b :: rest if (a._1 == b._1) => innerAverage(rest, (a._1,(a._2+b._2)/2.0)::accum)
-              case a :: rest                        => innerAverage(rest, (a._1,a._2/2.0)::accum)
-              case Nil                              => accum
+              case a :: b :: rest if (a._1 == b._1) =>
+                innerAverage(rest, (a._1, n.toDouble(a._2) + n.toDouble(b._2) / 2.0)::accum)
+              case a :: rest => innerAverage(rest, (a._1,n.toDouble(a._2) / 2.0)::accum)
+              case Nil       => accum
             }
           }
-          innerAverage((normalForm ++ otherHist.normalForm).sorted, Nil).reverse
+          innerAverage((normalForm ++ otherHist).sorted, Nil).reverse
         }
-        def relEntropy(otherHist: Histogram[T]): Double = {
+
+        // REMIND -- foreach() instead?
+        def relEntropy(srcHist: List[(Int, T)], otherHist: List[(Int, Double)]): Double = {
           var total:Double = 0
-          for (j <- 1 to width()) {
-            total += this.mass(j) * math.log(this.mass(j)/otherHist.mass(j))
+          for (j <- 1 to srcHist.length-1) {
+            total += n.toDouble(srcHist(j)._2) * math.log(n.toDouble(srcHist(j)._2) / otherHist(j)._2)
           }
           total
         }
 
-        val averageHist = this.average(otherHist)
-        0.5 * this.relEntropy(averageHist) + 0.5 * h2.relEntropy(averageHist)
+        val averageHist = average(otherHist.normalForm)
+        0.5 * relEntropy(this.normalForm, averageHist) + 0.5 * relEntropy(otherHist.normalForm, averageHist)
       }
     }
 
@@ -179,19 +188,19 @@ package inferstructure {
                                            x.map(v => List(v.head.asInstanceOf[PMetaToken].rval)))))
         case y:List[List[BaseType]] if (nonMetaHistograms.exists(h => h.coverage() == y.head.length)) =>
           Some(BaseProphecy(y.head.head))
-        case _: None
+        case _ => None
       }
     }
 
     //
     // Build the histogram clusters as described in "case 2"
     //
-    def clusterHistogramsIntoGroups(clusterTolerance: Double, histograms: List[Histogram[Int]]) = {
+    def clusterHistogramsIntoGroups[X](clusterTolerance: Double, histograms: List[Histogram[X]]): List[List[Histogram[X]]] = {
       val filteredHistograms = histograms.filter(h => h.coverage() > 0)
       val goodPairs = filteredHistograms.combinations(2).filter(hPair => (hPair(0).symEntropy(hPair(1)) <= clusterTolerance)).map(hPair=>(hPair(0), hPair(1)))
-      val startingGroups = filteredHistograms.map(List(h=>h.label))
+      val startingGroups = filteredHistograms.map(h=>List(h))
 
-      def processPairs(remainingGoodPairs, currentGroups: List[List[String]]): List[List[String]] = {
+      def processPairs(remainingGoodPairs:List[(Histogram[X],Histogram[X])], currentGroups: List[List[Histogram[X]]]): List[List[String]] = {
         remainingGoodPairs match {
           case firstPair :: remainderPairs => {
             val grpsToMerge, grpsToRetain = currentGroups.partition(grp => grp.contains(firstPair._1.label) || grp.contains(firstPair._2.label))
@@ -200,15 +209,15 @@ package inferstructure {
           case _ => currentGroups
         }
       }
-      processPairs(goodPairs, startingGroups)
+      return processPairs(goodPairs, startingGroups)
     }
     val groups = clusterHistogramsIntoGroups(0.01, allHistograms)
 
     //
     // Now utilize the clusters.  This is "case 3" in the paper
     //
-    def case3(): Option[Prophecy] = {
-      val orderedGroups = groups.sortBy(hGroup=>hGroup.map(h => h.rmass(1)).min)
+    def case3[X](): Option[Prophecy] = {
+      val orderedGroups:List[List[Histogram[X]]] = groups.sortBy(hGroup=>hGroup.map(h => h.rmass(1)).min)
       val chosenGroup = orderedGroups.find(hGroup=> hGroup.forall(h=> ((h.rmass(1) < maxMass) &&
                                                                          (h.coverage() > minCoverage))))
       // Build the appropriate struct, if any
@@ -251,9 +260,9 @@ package inferstructure {
     //
     // Case 4
     //
-    def case4(): Option[Prophecy] = {
-      val c4OrderedGroups = groups.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
-      val c4ChosenGroup = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverage))))
+    def case4[X](): Option[Prophecy] = {
+      val c4OrderedGroups:List[List[Histogram[X]]] = groups.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
+      val c4ChosenGroup:Option[Histogram] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverage))))
 
       c4ChosenGroup match {
         case Some(xlist) => {
@@ -304,27 +313,69 @@ package inferstructure {
         unionPartition.updated(chunk(0), unionPartition(chunk(0)) :+ chunk)
       }
       // println("PROPHECY UNION: " + input)
-      Some(UnionProphecy(List() ++ unionPartition.values))
+      UnionProphecy(List() ++ unionPartition.values)
     }
 
-    return case1() orElse case2() orElse case3() orElse() case4() getOrElse case5()
+    return case1() orElse case3() orElse case4() getOrElse case5()
   }
 
-  def discover(cs:Chunks): HigherType = {
-    return oracle(cs) match {
-      case a: BaseProphecy => HTBaseType(a.value)
-      case b: StructProphecy => HTStruct(b.css.map(discover))
-      case c: ArrayProphecy => HTStruct(List(discover(c.prefix), HTArray(discover(c.middle)), discover(c.postfix)))
-      case d: UnionProphecy => HTUnion(d.css.map(discover))
-    }
-  }
 }
 
 
 /***********************************
  * Information theoretic score and rewrite
  ***********************************/
-package rewritestructure {
+object rewritestructure {
+  ///////////////////////////////////////////
+  // Code to refine initial schema estimate
+  ///////////////////////////////////////////
+
+  /** refineAll() applies refinement rules to a given HigherType hierarchy and some Chunks
+   *  It is the only public method in this package
+   */
+  def refineAll(orig: HigherType, input: Chunks) = {
+    val dataIndependentRules = List(rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _)
+    val round1 = refine(orig, dataIndependentRules, costEncoding)
+    //val round2 = refine(round1, dataDependentRules, totalCost(input))
+    //val round3 = refine(round2, dataIndependentRules)
+    round1
+  }
+
+  /**
+   * A single step in the refinement process
+   */
+   private def refine(orig: HigherType, rewriteRules:List[HigherType=>HigherType], costFn:HigherType=>Double): HigherType = {
+    //println("Refining " + orig)
+    val newVersion = orig match {
+        case a: HTBaseType => a
+        case b: HTStruct => HTStruct(b.value.map(x=> refine(x, rewriteRules, costFn)))
+        case c: HTArray => HTArray(refine(c.value, rewriteRules, costFn))
+        case d: HTUnion => HTUnion(d.value.map(x=> refine(x, rewriteRules, costFn)))
+        case _ => orig
+      }
+    oneStep(newVersion, rewriteRules, costFn)
+  }
+  
+  /** Take one step in the schema refinement process
+   */
+  private def oneStep(orig: HigherType, rewriteRules:List[HigherType=>HigherType], costFn:HigherType=>Double): HigherType = {
+    val bestRewrite = rewriteRules.map(r=> r(orig)).map(s=> (costFn(s), s)).reduceLeft((x,y)=>if (x._1 < y._1) x else y)
+    if (bestRewrite._1 < costFn(orig)) {
+      oneStep(bestRewrite._2, rewriteRules, costFn)
+    } else {
+      orig
+    }
+  }
+
+
+  ///////////////////////////////////////////
+  // Schema cost estimation methods
+  ///////////////////////////////////////////
+
+  /** totalCost of applying an encoding to a dataset
+   */
+  private def totalCost(input: Chunks)(encoding: HigherType): Double = costEncoding(encoding) + costData(encoding, input)
+
   /** costData() computes a total cost value for an encoding and a dataset
    */
   private def costData(encoding:HigherType, input:Chunks):Double = {
@@ -366,33 +417,6 @@ package rewritestructure {
     }
   }
 
-  /** totalCost of applying an encoding to a dataset
-   */
-  private def totalCost(input: Chunks)(encoding: HigherType): Double = costEncoding(encoding) + costData(encoding, input)
-
-
-  /** Take one step in the schema refinement process
-   */
-  private def oneStep(orig: HigherType, rewriteRules:List[HigherType=>HigherType], costFn:HigherType=>Double): HigherType = {
-    val bestRewrite = rewriteRules.map(r=> r(orig)).map(s=> (costFn(s), s)).reduceLeft((x,y)=>if (x._1 < y._1) x else y)
-    if (bestRewrite._1 < costFn(orig)) {
-      oneStep(bestRewrite._2, rewriteRules, costFn)
-    } else {
-      orig
-    }
-  }
-
-  private def refine(orig: HigherType, rewriteRules:List[HigherType=>HigherType], costFn:HigherType=>Double): HigherType = {
-    //println("Refining " + orig)
-    val newVersion = orig match {
-        case a: HTBaseType => a
-        case b: HTStruct => HTStruct(b.value.map(x=> refine(x, rewriteRules, costFn)))
-        case c: HTArray => HTArray(refine(c.value, rewriteRules, costFn))
-        case d: HTUnion => HTUnion(d.value.map(x=> refine(x, rewriteRules, costFn)))
-        case _ => orig
-      }
-    oneStep(newVersion, rewriteRules, costFn)
-  }
 
   ///////////////////////////////////////////
   // Data-independent rewrite rules
@@ -448,6 +472,7 @@ package rewritestructure {
           case HTBaseType(c1) :: HTBaseType(c2) :: rest if (c1.isInstanceOf[PStringConst] && c2.isInstanceOf[PStringConst]) =>
             findAdjacent(soFar :+ HTBaseType(PStringConst(c1.asInstanceOf[PStringConst].cval + c2.asInstanceOf[PStringConst].cval)), rest)
           case first :: rest => findAdjacent(soFar :+ first, rest)
+          // REMIND -- mjc -- this last line seems like a bug. What about 'soFar'?
           case _ => remainder
         }
       }
@@ -467,22 +492,12 @@ package rewritestructure {
   //}
 
 
-  ///////////////////////////////////////////
-  // Apply refinement rules
-  ///////////////////////////////////////////
-  def refineAll(orig: HigherType, input: Chunks) = {
-    val dataIndependentRules = List(rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _)
-    val round1 = refine(orig, dataIndependentRules, costEncoding)
-    //val round2 = refine(round1, dataDependentRules, totalCost(input))
-    //val round3 = refine(round2, dataIndependentRules)
-    round1
-  }
 }
 
 /***********************************
  * Parse text file
  ***********************************/
-package parsing {
+object parsing {
   def parseFile(fname: String): Chunks = {
     def findMeta(lhs:POther with ParsedValue[String], rhs:POther with ParsedValue[String], l:List[BaseType]):List[BaseType] = {
       val (left,toprocess) = l.span(x => x != lhs)
@@ -530,7 +545,11 @@ package parsing {
 }
 
 
-package test {
+object test {
+  import parsing._
+  import inferstructure._
+  import rewritestructure._
+
   def flattenAndName(ht: HigherType, parentName: String): List[(HigherType, String)] = {
     ht match {
       case a: HTStruct => a.value.foldLeft(List[(HigherType,String)]())((lhs, rhs) => lhs ++ flattenAndName(rhs, parentName + "." + a.getClass.getName))
@@ -566,11 +585,8 @@ package test {
       val htOrig = discover(css)
       val htImproved = refineAll(htOrig, css)
 
-      val score1 = totalCost(css)(htOrig)
-      val score2 = totalCost(css)(htImproved)
-
-      println("Score 1:  " + score1 + " from " + htOrig)
-      println("Score 2:  " + score2 + " from " + htImproved)
+      println("Original inferred structure: " + htOrig)
+      println("Refined structure: " + htImproved)
     }
   }
 }
