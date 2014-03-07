@@ -31,7 +31,20 @@ object RBTest {
     }
   }
 
-  def test(): Unit = {
+  /**
+   *  Test the basic file parsing features
+   */
+  def test1(): Unit = {
+    val testFileDir = new java.io.File("src/samples/textdata")
+    val testFiles = testFileDir.listFiles
+    for (tf <- testFiles) {
+      println(tf)
+      val chunks = Parse.parseFile(tf.getCanonicalPath())
+    }
+  }
+
+  /**
+  def testOld(): Unit = {
     val css = parseFile("test3.txt")
     val testMode = true
     if (testMode) {
@@ -61,4 +74,47 @@ object RBTest {
       println("Refined structure: " + htImproved)
     }
   }
+   */
+
+
+  /*********************************************
+   * Test the structure rewrite rules
+   ********************************************/
+  /**
+  def testRewriteRules(): Unit = {
+    //
+    // rewriteSingletons
+    //
+    val testRewriteRules1 = List(HTStruct(List(HTBaseType(PInt(10)))), // 1
+                                 HTStruct(List()), // 2
+                                 HTUnion(List(HTBaseType(PInt(10)))), // 3
+                                 HTUnion(List())) // 4
+
+    val testRewriteRules2 = List(HTStruct(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PVoid()))), // 1
+                                 HTStruct(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PEmpty()))), // 2
+                                 HTUnion(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PVoid())))) // 3
+
+    //
+    // transformUniformStruct
+    //
+    val testRewriteRules3 = List(HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(1)), HTBaseType(PInt(1)))))
+
+    //
+    // commonUnionPrefix
+    //
+    val testRewriteRules4 = List(HTUnion(List(HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(10)))),
+                                              HTStruct(List(HTBaseType(PString("foo")), HTBaseType(PInt(10)))))), // 1
+                                 HTUnion(List(HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(10)))),
+                                              HTBaseType(PInt(10)))),                                            // 2
+                                 HTUnion(List(HTBaseType(PInt(10)),
+                                              HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(10)))))))       // 3
+
+    //
+    // combineAdjacentStringConstants
+    //
+    val testRewriteRules5 = List(HTStruct(List(HTBaseType(PStringConst("foo")),
+                                               HTBaseType(PStringConst("foo")),
+                                               HTBaseType(PInt(10)))))
+  }
+   */
 }

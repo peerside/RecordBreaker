@@ -44,12 +44,12 @@ object Infer {
      */
     class Histogram[T](val label:String, inM: Map[Int, T])(implicit inN:Numeric[T]) {
       val n = inN
-      val normalForm:List[(Int,T)] = List((0, inM(0))) ++ inM.toList.sortBy(_._1).drop(1)
+      val normalForm:List[(Int,T)] = List((0, inM.getOrElse(0, n.zero))) ++ (inM-0).toList.sortBy(_._2).reverse
 
       def width() = normalForm.length-1
       def mass(i: Int):Double = n.toDouble(normalForm(i)._2)
       def rmass(i: Int):Double = n.toDouble(n.plus(normalForm(0)._2, (normalForm.slice(i+1,normalForm.length).map(z => z._2).reduce((a1,a2)=>n.plus(a1, a2)))))
-      def coverage():Double = n.toDouble(normalForm.slice(1,normalForm.length).map(x=>x._2).reduce((a1,a2)=>n.plus(a1, a2)))
+      def coverage():Double = n.toDouble(normalForm.slice(1,normalForm.length).map(x=>x._2).foldLeft(n.zero)((a1,a2)=>n.plus(a1, a2)))
 
       def symEntropy(otherHist:Histogram[T]): Double = {
         def average(otherHist: List[(Int,T)]):List[(Int,Double)] = {
