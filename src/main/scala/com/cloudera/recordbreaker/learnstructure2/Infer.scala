@@ -102,21 +102,6 @@ object Infer {
     //////////////////////////////////////
     // Go through the 5 cases for the oracle.  Use the histogram data to make the correct prophecy
     //////////////////////////////////////
-    /**
-    println("-------")
-    println("histograms!")
-    println("Meta histogram width: " + metaHistogram.width())
-    println("Input head length: " + input.head.length)
-    for (h <- nonMetaHistograms) {
-      println(" sub h label: " + h.label)
-      println(" sub h coverage: " + h.coverage())
-      println(" sub h width: " + h.width())
-      println()
-    }
-    println("-------")
-    println("---------------- ENTER")     
-    */
-
     //
     // Case 1.  If the ONLY token is a MetaToken, then crack it open with a StructProphecy.
     // If the ONLY token is a base type, then return a BaseProphecy.
@@ -156,21 +141,6 @@ object Infer {
       return processPairs(goodPairs, startingGroups)
     }
     val groups = clusterHistogramsIntoGroups(0.01, allHistograms)
-    /**
-    println("All input histograms:")
-    for (h <- allHistograms) {
-      println("  " + h.label)
-    }
-    println()
-    println("All histogram groups")
-    for (glist <- groups) {
-      print("Group: ")
-      for (h <- glist) {
-        print(h.label + "  ")
-      }
-      println()
-    }
-     */
 
     //
     // Now utilize the clusters.  This is "case 3" in the paper
