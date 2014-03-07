@@ -17,6 +17,7 @@ package com.cloudera.recordbreaker.learnstructure2;
 import scala.io.Source
 import scala.math._
 import scala.collection.mutable._
+import java.util.regex.Pattern
 import RBTypes._
 
 /***********************************
@@ -24,6 +25,12 @@ import RBTypes._
  ***********************************/
 object Parse {
   def parseFile(fname: String): Chunks = {
+    process(Source.fromFile(fname, "UTF-8"))
+  }
+  def parseString(str: String): Chunks = {
+    process(Source.fromString(str))
+  }
+  def process(src: Source): Chunks = {
     def findMeta(lhs:POther with ParsedValue[String], rhs:POther with ParsedValue[String], l:List[BaseType]):List[BaseType] = {
       val (left,toprocess) = l.span(x => x != lhs)
       val (center, rest) = toprocess.slice(1,toprocess.length).span(x => x != rhs)
@@ -42,8 +49,6 @@ object Parse {
                                  new POther() with ParsedValue[String] {val parsedValue=">"},
                                  a)))
     }
-
-    val src = Source.fromFile(fname, "UTF-8")
     val strset = src.getLines()
     var css = List[List[BaseType]]()
     for (l <- strset.filter(x=>x.trim().length > 0)) {
@@ -55,12 +60,11 @@ object Parse {
         val c = t match {
             case x if t.forall(_.isDigit) => new PInt() with ParsedValue[Int] {val parsedValue=x.toInt}
             case y if {try{Some(y.toDouble); true} catch {case _:Throwable => false}} => new PFloat() with ParsedValue[Double] {val parsedValue=y.toDouble}
-            case a if a.length() == 1 => new POther() with ParsedValue[String] {val parsedValue=a}
+            case a if (a.length() == 1 && Pattern.matches("\\p{Punct}", a)) => new POther() with ParsedValue[String] {val parsedValue=a}
             case u => new PAlphanum() with ParsedValue[String] {val parsedValue=u}
           }
         cs = cs:+c
       }
-
       cs = findMetaTokens(cs)
       css = css:+cs
     }

@@ -32,15 +32,42 @@ object RBTest {
   }
 
   /**
-   *  Test the basic file parsing features
+   *  Test very basic synthetic input files
    */
-  def test1(): Unit = {
-    val testFileDir = new java.io.File("src/samples/textdata")
-    val testFiles = testFileDir.listFiles
-    for (tf <- testFiles) {
-      println(tf)
-      val chunks = Parse.parseFile(tf.getCanonicalPath())
+  def testBasics(): Unit = {
+    val s0 = "12.1 10\n12.1 10"
+    val s0Parse = List(List(PFloat(), PInt()), List(PFloat(), PInt()))
+
+    val s1 = "12.1 10\nfoo 10\n12.1 10\nfoo 10\n"
+    val s1Parse = List(List(PFloat(), PInt()),
+                       List(PAlphanum(), PInt()),
+                       List(PFloat(), PInt()),
+                       List(PAlphanum(), PInt()))
+
+    val s2 = "100 Hello A 0.32\n999 There X 3.147\n"
+    val s2Parse = List(List(PInt(), PAlphanum(), PAlphanum(), PFloat()),
+                       List(PInt(), PAlphanum(), PAlphanum(), PFloat()))
+
+    val s3 = "Foo [10] blah 99.0\nFoo [20] bloop 22.1\nFooBar [333] bleep 35.5\n"
+    val s3Parse = List(List(PAlphanum(), PMetaToken(POther(), List(PInt()), POther()), PAlphanum(), PFloat()),
+                       List(PAlphanum(), PMetaToken(POther(), List(PInt()), POther()), PAlphanum(), PFloat()),
+                       List(PAlphanum(), PMetaToken(POther(), List(PInt()), POther()), PAlphanum(), PFloat()))
+    
+    val tests = List((s0, s0Parse), (s1, s1Parse), (s2, s2Parse), (s3, s3Parse))
+
+    for (test <- tests) {
+      val parseResult = Parse.parseString(test._1)
+      if (parseResult != test._2) {
+        println("Input is:")
+        print(test._1)
+        println()
+        println()
+        println("Desired parse is: " + test._2)
+        println("Observed parse is: " + parseResult)
+        throw new RuntimeException("Misparse on input " + test._1 + " should yield " + test._2 + " but instead yields " + parseResult)
+      }
     }
+    println("testBasics() complete")
   }
 
   /**

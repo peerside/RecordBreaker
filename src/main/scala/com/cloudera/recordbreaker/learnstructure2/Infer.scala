@@ -48,7 +48,7 @@ object Infer {
 
       def width() = normalForm.length-1
       def mass(i: Int):Double = n.toDouble(normalForm(i)._2)
-      def rmass(i: Int):Double = n.toDouble(n.plus(normalForm(0)._2, (normalForm.slice(i+1,normalForm.length).map(z => z._2).reduce((a1,a2)=>n.plus(a1, a2)))))
+      def rmass(i: Int):Double = n.toDouble(n.plus(normalForm(0)._2, (normalForm.slice(i+1,normalForm.length).map(z => z._2).foldLeft(n.zero)((a1,a2)=>n.plus(a1, a2)))))
       def coverage():Double = n.toDouble(normalForm.slice(1,normalForm.length).map(x=>x._2).foldLeft(n.zero)((a1,a2)=>n.plus(a1, a2)))
 
       def symEntropy(otherHist:Histogram[T]): Double = {
@@ -102,6 +102,20 @@ object Infer {
     //////////////////////////////////////
     // Go through the 5 cases for the oracle.  Use the histogram data to make the correct prophecy
     //////////////////////////////////////
+    /**
+    println("-------")
+    println("histograms!")
+    println("Meta histogram width: " + metaHistogram.width())
+    println("Input head length: " + input.head.length)
+    for (h <- nonMetaHistograms) {
+      println(" sub h label: " + h.label)
+      println(" sub h coverage: " + h.coverage())
+      println(" sub h width: " + h.width())
+      println()
+    }
+    println("-------")
+    */
+    println("---------------- ENTER")
 
     //
     // Case 1.  If the ONLY token is a MetaToken, then crack it open with a StructProphecy.
@@ -115,7 +129,7 @@ object Infer {
           Some(StructProphecy(List[Chunks](x.map(v => List(v.head.asInstanceOf[PMetaToken].lval)),
                                            x.map(v => v.head.asInstanceOf[PMetaToken].center),
                                            x.map(v => List(v.head.asInstanceOf[PMetaToken].rval)))))
-        case y:List[List[BaseType]] if (nonMetaHistograms.exists(h => h.coverage() == y.head.length)) =>
+        case y:List[List[BaseType]] if (nonMetaHistograms.exists(h => h.coverage() == y.length) && (nonMetaHistograms.map(h=>h.coverage()).sum == y.length)) =>
           Some(BaseProphecy(y.head.head))
         case _ => None
       }
@@ -132,15 +146,29 @@ object Infer {
       def processPairs(remainingGoodPairs:List[(Histogram[X],Histogram[X])], currentGroups: List[List[Histogram[X]]]): List[List[Histogram[X]]] = {
         remainingGoodPairs match {
           case firstPair :: remainderPairs => {
-            val (grpsToMerge, grpsToRetain) = currentGroups.partition(grp => grp.contains(firstPair._1.label) || grp.contains(firstPair._2.label))
-            processPairs(remainderPairs, grpsToRetain :+ grpsToMerge.flatten)
+            val (grpToMerge1, remainingGrps) = currentGroups.partition(grp => grp.contains(firstPair._1))
+            val (grpToMerge2, rumpGrps) = remainingGrps.partition(grp => grp.contains(firstPair._2))
+            processPairs(remainderPairs, (grpToMerge1.flatten ++ grpToMerge2.flatten) +: rumpGrps)
           }
           case _ => currentGroups
         }
       }
       return processPairs(goodPairs, startingGroups)
     }
+    println("All input histograms:")
+    for (h <- allHistograms) {
+      println("  " + h.label)
+    }
+    println()
     val groups = clusterHistogramsIntoGroups(0.01, allHistograms)
+    println("All histogram groups")
+    for (glist <- groups) {
+      print("Group: ")
+      for (h <- glist) {
+        print(h.label + "  ")
+      }
+      println()
+    }
 
     //
     // Now utilize the clusters.  This is "case 3" in the paper
@@ -151,7 +179,8 @@ object Infer {
                                                                          (h.coverage() > minCoverage))))
       // Build the appropriate struct, if any
       chosenGroup match {
-        case Some(xlist) => {
+        case Some(groupOfHistograms) => {
+          val xlist = groupOfHistograms.map(x=>x.label)
           var totalPieces = List[Chunks]()
           for (chunk:List[BaseType] <- input) {
             val brokenPieces = chunk.foldLeft(List(List[BaseType]()))((x:List[List[BaseType]], y:BaseType) => {
@@ -179,7 +208,6 @@ object Infer {
             totalPieces = totalPieces.zip(brokenPieces).map(listPair=>listPair._1 :+ listPair._2)
           }
           // REMIND -- mjc -- there's some missing code here to handle the Union case.
-          // println("PROPHECY STRUCT? " + input)
           return Some(StructProphecy(totalPieces))
         }
         case _ => None
@@ -190,6 +218,7 @@ object Infer {
     // Case 4
     //
     def case4[X](groupsIn:List[List[Histogram[X]]]): Option[Prophecy] = {
+      println("ENTER CASE 4")
       val c4OrderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
       val c4ChosenGroup:Option[List[Histogram[X]]] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverage))))
 
@@ -246,6 +275,7 @@ object Infer {
       UnionProphecy(List() ++ unionPartition.values)
     }
 
+    println("Groups: " + groups)
     return case1() orElse case3(groups) orElse case4(groups) getOrElse case5()
   }
 }
