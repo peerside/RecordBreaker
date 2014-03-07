@@ -114,8 +114,8 @@ object Infer {
       println()
     }
     println("-------")
+    println("---------------- ENTER")     
     */
-    println("---------------- ENTER")
 
     //
     // Case 1.  If the ONLY token is a MetaToken, then crack it open with a StructProphecy.
@@ -155,12 +155,13 @@ object Infer {
       }
       return processPairs(goodPairs, startingGroups)
     }
+    val groups = clusterHistogramsIntoGroups(0.01, allHistograms)
+    /**
     println("All input histograms:")
     for (h <- allHistograms) {
       println("  " + h.label)
     }
     println()
-    val groups = clusterHistogramsIntoGroups(0.01, allHistograms)
     println("All histogram groups")
     for (glist <- groups) {
       print("Group: ")
@@ -169,6 +170,7 @@ object Infer {
       }
       println()
     }
+     */
 
     //
     // Now utilize the clusters.  This is "case 3" in the paper
@@ -218,7 +220,6 @@ object Infer {
     // Case 4
     //
     def case4[X](groupsIn:List[List[Histogram[X]]]): Option[Prophecy] = {
-      println("ENTER CASE 4")
       val c4OrderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
       val c4ChosenGroup:Option[List[Histogram[X]]] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverage))))
 
@@ -269,13 +270,11 @@ object Infer {
     def case5(): Prophecy = {
       var unionPartition: Map[BaseType, List[Chunk]] = HashMap().withDefaultValue(List[Chunk]())
       for (chunk <- input) {
-        unionPartition.updated(chunk(0), unionPartition(chunk(0)) :+ chunk)
+        unionPartition = unionPartition.updated(chunk(0), unionPartition(chunk(0)) :+ chunk)
       }
-      // println("PROPHECY UNION: " + input)
       UnionProphecy(List() ++ unionPartition.values)
     }
 
-    println("Groups: " + groups)
     return case1() orElse case3(groups) orElse case4(groups) getOrElse case5()
   }
 }

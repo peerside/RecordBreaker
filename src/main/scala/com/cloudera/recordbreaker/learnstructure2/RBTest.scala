@@ -32,28 +32,32 @@ object RBTest {
   }
 
   /**
-   *  Test very basic synthetic input files
+   *  Test very basic synthetic input files.
    */
   def testBasics(): Unit = {
     val s0 = "12.1 10\n12.1 10"
     val s0Parse = List(List(PFloat(), PInt()), List(PFloat(), PInt()))
+    val s0Struct = HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt())))
 
     val s1 = "12.1 10\nfoo 10\n12.1 10\nfoo 10\n"
     val s1Parse = List(List(PFloat(), PInt()),
                        List(PAlphanum(), PInt()),
                        List(PFloat(), PInt()),
                        List(PAlphanum(), PInt()))
+    val s1Struct = HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))
 
     val s2 = "100 Hello A 0.32\n999 There X 3.147\n"
     val s2Parse = List(List(PInt(), PAlphanum(), PAlphanum(), PFloat()),
                        List(PInt(), PAlphanum(), PAlphanum(), PFloat()))
+    val s2Struct = HTStruct(List(HTBaseType(PInt()), HTBaseType(PAlphanum()), HTBaseType(PAlphanum()), HTBaseType(PFloat())))
 
     val s3 = "Foo [10] blah 99.0\nFoo [20] bloop 22.1\nFooBar [333] bleep 35.5\n"
     val s3Parse = List(List(PAlphanum(), PMetaToken(POther(), List(PInt()), POther()), PAlphanum(), PFloat()),
                        List(PAlphanum(), PMetaToken(POther(), List(PInt()), POther()), PAlphanum(), PFloat()),
                        List(PAlphanum(), PMetaToken(POther(), List(PInt()), POther()), PAlphanum(), PFloat()))
+    val s3Struct = HTStruct(List(HTBaseType(PAlphanum()), HTStruct(List(HTBaseType(POther()), HTBaseType(PInt()), HTBaseType(POther()))), HTBaseType(PAlphanum()), HTBaseType(PFloat())))
     
-    val tests = List((s0, s0Parse), (s1, s1Parse), (s2, s2Parse), (s3, s3Parse))
+    val tests = List((s0, s0Parse, s0Struct), (s1, s1Parse, s1Struct), (s2, s2Parse, s2Struct), (s3, s3Parse, s3Struct))
 
     for (test <- tests) {
       val parseResult = Parse.parseString(test._1)
@@ -66,43 +70,20 @@ object RBTest {
         println("Observed parse is: " + parseResult)
         throw new RuntimeException("Misparse on input " + test._1 + " should yield " + test._2 + " but instead yields " + parseResult)
       }
+      val structResult = Infer.discover(parseResult)
+      if (structResult != test._3) {
+        println("Input is:")
+        print(test._1)
+        println()
+        println()
+        println("Parse is: " + parseResult)
+        println("Desired structure is: " + test._3)
+        println("Observed structure is: " + structResult)
+        throw new RuntimeException("Mis-structure on input " + test._1 + " should yield structure " + test._3 + " but instead yields " + structResult)
+      }
     }
     println("testBasics() complete")
   }
-
-  /**
-  def testOld(): Unit = {
-    val css = parseFile("test3.txt")
-    val testMode = true
-    if (testMode) {
-      val testCaseOrig = discover(css)
-      val testCase1 = HTStruct(List(HTBaseType(PInt()), HTStruct(List())))
-      val testCase2 = HTUnion(List(HTBaseType(PInt()), HTUnion(List())))
-      val testCase3 = HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))),
-                                   HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))
-      val testCase4 = HTStruct(List(HTBaseType(PStringConst("foo")),
-                                    HTBaseType(PStringConst("foo")),
-                                    HTBaseType(PInt())))
-      val testCase = testCaseOrig
-
-      println("Test case: " + testCase)
-      val improvedCase = refineAll(testCase, css)
-      println("Improved case: " + improvedCase)
-      val flatlist = flattenAndName(improvedCase, "root")
-      for (f <- flatlist) {
-        val (ht, nme) = f
-        println("Flat: " + nme, ht)
-      }
-    } else {
-      val htOrig = discover(css)
-      val htImproved = refineAll(htOrig, css)
-
-      println("Original inferred structure: " + htOrig)
-      println("Refined structure: " + htImproved)
-    }
-  }
-   */
-
 
   /*********************************************
    * Test the structure rewrite rules
