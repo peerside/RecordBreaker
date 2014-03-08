@@ -88,16 +88,73 @@ object RBTest {
   /*********************************************
    * Test the structure rewrite rules
    ********************************************/
-  /**
   def testRewriteRules(): Unit = {
     //
-    // rewriteSingletons
+    // Rewrite singleton structs, singleton unions, cleanup structs and unions
     //
-    val testRewriteRules1 = List(HTStruct(List(HTBaseType(PInt(10)))), // 1
-                                 HTStruct(List()), // 2
-                                 HTUnion(List(HTBaseType(PInt(10)))), // 3
-                                 HTUnion(List())) // 4
+    val testString00 = "10"
+    val testStruct00 = HTStruct(List(HTBaseType(PInt())))
+    val testRefinedStruct00 = HTBaseType(PInt())
 
+    val testString01 = ""
+    val testStruct01 = HTStruct(List())
+    val testRefinedStruct01 = HTBaseType(PEmpty())
+
+    val testString02 = "10"    
+    val testStruct02 = HTUnion(List(HTBaseType(PInt())))
+    val testRefinedStruct02 = HTBaseType(PInt())
+
+    val testString03 = ""
+    val testStruct03 = HTUnion(List())
+    val testRefinedStruct03 = HTBaseType(PVoid())
+
+    val tests0 = List((testString00, testStruct00, testRefinedStruct00),
+                     (testString01, testStruct01, testRefinedStruct01),
+                     (testString02, testStruct02, testRefinedStruct02),
+                     (testString03, testStruct03, testRefinedStruct03))
+
+    //
+    // Clean up uniform struct, eliminate common union postfix, combine adjacent string constants
+    //
+    val testString10 = "1 1 1"
+    val testStruct10 = HTStruct(List(HTBaseType(PInt()), HTBaseType(PInt()), HTBaseType(PInt())))
+    val testRefinedStruct10 = HTArrayFW(HTBaseType(PInt()), 3)
+
+    val tests1 = List((testString10, testStruct10, testRefinedStruct10))
+
+    //
+    // Eliminate common union postfix
+    //
+    val testString20 = "1 10\n5.5 10\n"
+    val testStruct20 = HTUnion(List(HTStruct(List(HTBaseType(PInt()), HTBaseType(PInt()))),
+                                    HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt())))))
+    val testRefinedStruct20 = HTStruct(List(HTUnion(List(HTStruct(List(HTBaseType(PInt()))),
+                                                         HTStruct(List(HTBaseType(PFloat()))))),
+                                            HTBaseType(PInt())))
+
+
+    val testString21 = "1.0 1\n1\n1.0 1\n1\n"
+    val testStruct21 = HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))),
+                                    HTBaseType(PInt())))
+    val testRefinedStruct21 = HTStruct(List(HTOption(HTStruct(List(HTBaseType(PFloat())))),
+                                            HTBaseType(PInt())))
+
+    val tests2 = List((testString20, testStruct20, testRefinedStruct20),
+                      (testString21, testStruct21, testRefinedStruct21))
+
+    val allTests = tests0 ++ tests1 ++ tests2
+
+    for (test <- allTests) {
+      val res = Rewrite.refineAll(test._2, Parse.parseString(test._1))
+      if (test._3 != res) {
+        println("Input structure is: " + test._2)
+        println("Target refined structure is: " + test._3)
+        println("Observed refined structure is: " + res)
+        throw new RuntimeException("Structure refinement failure on input: " + test._2)
+      }
+    }
+
+    /**
     val testRewriteRules2 = List(HTStruct(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PVoid()))), // 1
                                  HTStruct(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PEmpty()))), // 2
                                  HTUnion(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PVoid())))) // 3
@@ -105,17 +162,11 @@ object RBTest {
     //
     // transformUniformStruct
     //
-    val testRewriteRules3 = List(HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(1)), HTBaseType(PInt(1)))))
+
 
     //
     // commonUnionPrefix
     //
-    val testRewriteRules4 = List(HTUnion(List(HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(10)))),
-                                              HTStruct(List(HTBaseType(PString("foo")), HTBaseType(PInt(10)))))), // 1
-                                 HTUnion(List(HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(10)))),
-                                              HTBaseType(PInt(10)))),                                            // 2
-                                 HTUnion(List(HTBaseType(PInt(10)),
-                                              HTStruct(List(HTBaseType(PInt(1)), HTBaseType(PInt(10)))))))       // 3
 
     //
     // combineAdjacentStringConstants
@@ -123,6 +174,7 @@ object RBTest {
     val testRewriteRules5 = List(HTStruct(List(HTBaseType(PStringConst("foo")),
                                                HTBaseType(PStringConst("foo")),
                                                HTBaseType(PInt(10)))))
+     */
+   println("testRefineRules() complete")
   }
-   */
 }

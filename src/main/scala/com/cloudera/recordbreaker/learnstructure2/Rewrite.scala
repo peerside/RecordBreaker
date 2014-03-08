@@ -56,7 +56,11 @@ object Rewrite {
   /** Take one step in the schema refinement process
    */
   private def oneStep(orig: HigherType, rewriteRules:List[HigherType=>HigherType], costFn:HigherType=>Double): HigherType = {
-    val bestRewrite = rewriteRules.map(r=> r(orig)).map(s=> (costFn(s), s)).reduceLeft((x,y)=>if (x._1 < y._1) x else y)
+    val allRewrites = rewriteRules.map(r=> r(orig)).map(s=> (costFn(s), s))
+    val bestRewrite = allRewrites.reduceLeft((x,y)=>if (x._1 < y._1) x else y)
+
+    //println("Orig is " + orig + " with cost " + costFn(orig))
+    //println("Best rewrite is " +bestRewrite._2 + " with cost " + bestRewrite._1)
     if (bestRewrite._1 < costFn(orig)) {
       oneStep(bestRewrite._2, rewriteRules, costFn)
     } else {
@@ -109,7 +113,7 @@ object Rewrite {
       case b: HTUnion => log(24) + 1 + log(b.value.length+1) + b.value.map(costEncoding).sum
       case c: HTArray => log(24) + costEncoding(c.value)
       case d: HTArrayFW => log(24) + log(d.size) + costEncoding(d.value)
-      case _ => log(24)
+      case _ => log(24) + 2
     }
   }
 
@@ -144,9 +148,9 @@ object Rewrite {
     in match {
       case a: HTUnion if (a.value.length == 2) => {
         val retval = (a.value(0), a.value(1)) match {
-            case (l:HTStruct, r:HTStruct) if (l.value.last == r.value.last) => HTStruct(List(HTUnion(List(HTStruct(l.value.dropRight(1)),
-                                                                                                          HTStruct(r.value.dropRight(1)),
-                                                                                                          l.value.last))))
+            case (l:HTStruct, r:HTStruct) if (l.value.last == r.value.last) => {println("YES!!!!"); HTStruct(List(HTUnion(List(HTStruct(l.value.dropRight(1)),
+                                                                                                                               HTStruct(r.value.dropRight(1)))),
+                                                                                                                  l.value.last))}
             case (l: HTStruct, r: HigherType) if (l.value.last == r) => HTStruct(List(HTOption(HTStruct(l.value.dropRight(1))),
                                                                                       l.value.last))
             case (l: HigherType, r: HTStruct) if (r.value.last == l) => HTStruct(List(HTOption(HTStruct(r.value.dropRight(1))),
