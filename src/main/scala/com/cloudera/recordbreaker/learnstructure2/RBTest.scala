@@ -128,10 +128,9 @@ object RBTest {
     val testString20 = "1 10\n5.5 10\n"
     val testStruct20 = HTUnion(List(HTStruct(List(HTBaseType(PInt()), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt()))))),
                                     HTStruct(List(HTBaseType(PFloat()), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))))
-    val testRefinedStruct20 = HTStruct(List(HTUnion(List(HTStruct(List(HTBaseType(PInt()))),
-                                                         HTStruct(List(HTBaseType(PFloat()))))),
+    val testRefinedStruct20 = HTStruct(List(HTUnion(List(HTBaseType(PInt()),
+                                                         HTBaseType(PFloat()))),
                                             HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))
-
 
     val testString21 = "1.0 1\n1\n1.0 1\n1\n"
     val testStruct21 = HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))),
@@ -142,7 +141,21 @@ object RBTest {
     val tests2 = List((testString20, testStruct20, testRefinedStruct20),
                       (testString21, testStruct21, testRefinedStruct21))
 
-    val allTests = tests0 ++ tests1 ++ tests2
+    //
+    // combine adjacent string constants
+    //
+    val testString30 = "foo bar 10\n"
+    val testStruct30 = HTStruct(List(HTBaseType(PStringConst("foo")),
+                                     HTBaseType(PStringConst("bar")),
+                                     HTBaseType(PInt())))
+    val testRefinedStruct30 = HTStruct(List(HTBaseType(PStringConst("foobar")),
+                                            HTBaseType(PInt())))
+
+    val tests3 = List((testString30, testStruct30, testRefinedStruct30))
+    //
+    // Run all the tests
+    //
+    val allTests = tests0 ++ tests1 ++ tests2 ++ tests3
 
     for (test <- allTests) {
       val res = Rewrite.refineAll(test._2, Parse.parseString(test._1))
@@ -168,12 +181,6 @@ object RBTest {
     // commonUnionPrefix
     //
 
-    //
-    // combineAdjacentStringConstants
-    //
-    val testRewriteRules5 = List(HTStruct(List(HTBaseType(PStringConst("foo")),
-                                               HTBaseType(PStringConst("foo")),
-                                               HTBaseType(PInt(10)))))
      */
    println("testRefineRules() complete")
   }

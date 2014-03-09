@@ -32,10 +32,11 @@ object Rewrite {
    */
   def refineAll(orig: HigherType, input: Chunks) = {
     val dataIndependentRules = List(rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _)
+    val dataDependentRules = List()
     val round1 = refine(orig, dataIndependentRules, costEncoding)
-    //val round2 = refine(round1, dataDependentRules, totalCost(input))
-    //val round3 = refine(round2, dataIndependentRules)
-    round1
+    val round2 = refine(round1, dataDependentRules, totalCost(input))
+    val round3 = refine(round2, dataIndependentRules, costEncoding)
+    round3
   }
 
   /**
@@ -56,22 +57,26 @@ object Rewrite {
   /** Take one step in the schema refinement process
    */
   private def oneStep(orig: HigherType, rewriteRules:List[HigherType=>HigherType], costFn:HigherType=>Double): HigherType = {
-    val allRewrites = rewriteRules.map(r=> r(orig)).map(s=> (costFn(s), s))
-    val bestRewrite = allRewrites.reduceLeft((x,y)=>if (x._1 < y._1) x else y)
-
-    /**
-    println()
-    println("Orig is " + orig + " with cost " + costFn(orig))
-    for (rw <- allRewrites) {
-      println("  Rewrite " + rw._2 + " costs " + rw._1)
-    }
-    println()
-    println("Best rewrite is " +bestRewrite._2 + " with cost " + bestRewrite._1)
-     */
-    if (bestRewrite._1 < costFn(orig)) {
-      oneStep(bestRewrite._2, rewriteRules, costFn)
-    } else {
+    if (rewriteRules.length == 0) {
       orig
+    } else {
+      val allRewrites = rewriteRules.map(r=> r(orig)).map(s=> (costFn(s), s))
+      val bestRewrite = allRewrites.reduceLeft((x,y)=>if (x._1 < y._1) x else y)
+
+      /**
+       println()
+       println("Orig is " + orig + " with cost " + costFn(orig))
+       for (rw <- allRewrites) {
+       println("  Rewrite " + rw._2 + " costs " + rw._1)
+       }
+       println()
+       println("Best rewrite is " +bestRewrite._2 + " with cost " + bestRewrite._1)
+       */
+      if (bestRewrite._1 < costFn(orig)) {
+        oneStep(bestRewrite._2, rewriteRules, costFn)
+      } else {
+        orig
+      }
     }
   }
 
@@ -173,15 +178,14 @@ object Rewrite {
       case _ => in
     }
   }
-
   private def combineAdjacentStringConstants(in: HigherType): HigherType = {
     def findAdjacent(soFar: List[HigherType], remainder: List[HigherType]): List[HigherType] = {
       if (remainder.length == 0) {
         soFar
       } else {
         remainder match {
-          case HTBaseType(c1) :: HTBaseType(c2) :: rest if (c1.isInstanceOf[PStringConst] && c2.isInstanceOf[PStringConst]) =>
-            findAdjacent(soFar :+ HTBaseType(PStringConst(c1.asInstanceOf[PStringConst].cval + c2.asInstanceOf[PStringConst].cval)), rest)
+          case HTBaseType(c1) :: HTBaseType(c2) :: rest if (c1.isInstanceOf[PStringConst] && c2.isInstanceOf[PStringConst]) => 
+            findAdjacent(soFar :+ HTBaseType(new PStringConst(c1.asInstanceOf[PStringConst].cval + c2.asInstanceOf[PStringConst].cval)), rest)
           case first :: rest => findAdjacent(soFar :+ first, rest)
           // REMIND -- mjc -- this last line seems like a bug. What about 'soFar'?
           case _ => remainder
