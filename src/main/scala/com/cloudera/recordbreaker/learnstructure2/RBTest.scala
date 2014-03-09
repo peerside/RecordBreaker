@@ -126,11 +126,11 @@ object RBTest {
     // Eliminate common union postfix
     //
     val testString20 = "1 10\n5.5 10\n"
-    val testStruct20 = HTUnion(List(HTStruct(List(HTBaseType(PInt()), HTBaseType(PInt()))),
-                                    HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt())))))
+    val testStruct20 = HTUnion(List(HTStruct(List(HTBaseType(PInt()), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt()))))),
+                                    HTStruct(List(HTBaseType(PFloat()), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))))
     val testRefinedStruct20 = HTStruct(List(HTUnion(List(HTStruct(List(HTBaseType(PInt()))),
                                                          HTStruct(List(HTBaseType(PFloat()))))),
-                                            HTBaseType(PInt())))
+                                            HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))
 
 
     val testString21 = "1.0 1\n1\n1.0 1\n1\n"
