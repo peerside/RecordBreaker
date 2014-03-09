@@ -21,6 +21,7 @@ import RBTypes._
 import Parse._
 import Infer._
 import Rewrite._
+import org.apache.avro.Schema;
 
 object RBTest {
   def flattenAndName(ht: HigherType, parentName: String): List[(HigherType, String)] = {
@@ -85,9 +86,9 @@ object RBTest {
     println("testBasics() complete")
   }
 
-  /*********************************************
+  /**
    * Test the structure rewrite rules
-   ********************************************/
+   */
   def testRewriteRules(): Unit = {
     //
     // Rewrite singleton structs, singleton unions, cleanup structs and unions
@@ -152,6 +153,7 @@ object RBTest {
                                             HTBaseType(PInt())))
 
     val tests3 = List((testString30, testStruct30, testRefinedStruct30))
+
     //
     // Run all the tests
     //
@@ -168,5 +170,72 @@ object RBTest {
     }
 
    println("testRefineRules() complete")
+  }
+
+  /**
+   * Test Avro schema generation
+   */
+  def testSchemaGen(): Unit = {
+    val testHT0 = HTStruct(List(HTBaseType(PInt())))
+    val targetSchema0 = Schema.createRecord("record_1", "RECORD", "", false)
+    val slist0 = new java.util.ArrayList[Schema.Field]()
+    slist0.add(new Schema.Field("base_0", Schema.create(Schema.Type.INT), "", null))
+    targetSchema0.setFields(slist0)
+
+    val testHT1 = HTStruct(List(HTBaseType(PFloat())))
+    val targetSchema1 = Schema.createRecord("record_1", "RECORD", "", false)
+    val slist1 = new java.util.ArrayList[Schema.Field]()
+    slist1.add(new Schema.Field("base_0", Schema.create(Schema.Type.DOUBLE), "", null))
+    targetSchema1.setFields(slist1)
+
+    val testHT2 = HTStruct(List(HTBaseType(PAlphanum())))
+    val targetSchema2 = Schema.createRecord("record_1", "RECORD", "", false)
+    val slist2 = new java.util.ArrayList[Schema.Field]()
+    slist2.add(new Schema.Field("base_0", Schema.create(Schema.Type.STRING), "", null))
+    targetSchema2.setFields(slist2)
+
+    val testHT3 = HTStruct(List(HTBaseType(PStringConst("foo"))))
+    val targetSchema3 = Schema.createRecord("record_1", "RECORD", "", false)
+    val slist3 = new java.util.ArrayList[Schema.Field]()
+    slist3.add(new Schema.Field("base_0", Schema.create(Schema.Type.STRING), "", null))
+    targetSchema3.setFields(slist3)
+
+    val testHT4 = HTStruct(List(HTBaseType(PInt()), HTBaseType(PFloat()), HTBaseType(PAlphanum())))
+    val targetSchema4 = Schema.createRecord("record_3", "RECORD", "", false)
+    val slist4 = new java.util.ArrayList[Schema.Field]()
+    slist4.add(new Schema.Field("base_0", Schema.create(Schema.Type.INT), "", null))
+    slist4.add(new Schema.Field("base_1", Schema.create(Schema.Type.DOUBLE), "", null))
+    slist4.add(new Schema.Field("base_2", Schema.create(Schema.Type.STRING), "", null))    
+    targetSchema4.setFields(slist4)
+
+    val testHT5 = HTStruct(List(HTBaseType(PInt()), HTBaseType(PFloat()), HTUnion(List(HTBaseType(PFloat()), HTBaseType(PAlphanum())))))
+    val targetSchema5 = Schema.createRecord("record_3", "RECORD", "", false)
+    val reclist5 = new java.util.ArrayList[Schema.Field]()
+    reclist5.add(new Schema.Field("base_0", Schema.create(Schema.Type.INT), "", null))
+    reclist5.add(new Schema.Field("base_1", Schema.create(Schema.Type.DOUBLE), "", null))
+    val unionlist5 = new java.util.ArrayList[Schema]()
+    unionlist5.add(Schema.create(Schema.Type.DOUBLE))
+    unionlist5.add(Schema.create(Schema.Type.STRING))
+    reclist5.add(new Schema.Field("union_2", Schema.createUnion(unionlist5), "", null))
+    targetSchema5.setFields(reclist5)
+    
+    val testHTs = List((testHT0, targetSchema0),
+                       (testHT1, targetSchema1),
+                       (testHT2, targetSchema2),
+                       (testHT3, targetSchema3),
+                       (testHT4, targetSchema4),
+                       (testHT5, targetSchema5))
+
+    for (testPair <- testHTs) {
+      val s:Schema = HigherType.getAvroSchema(testPair._1)
+      if (s != testPair._2) {
+        println("Input HigherType is " + testPair._1)
+        println("Target schema is " + testPair._2)
+        println("Observed reconstructed schema is " + s)
+        throw new RuntimeException("Schema reconstruction failure on input " + testPair._1)
+      }
+    }
+
+   println("testSchemaGen() complete")    
   }
 }

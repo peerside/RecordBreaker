@@ -122,14 +122,23 @@ object RBTypes {
 
   object HigherType {
     var fieldCount = 0
+    def getAvroSchema(ht: HigherType): Schema = {
+      fieldCount = 0
+      ht match {
+        case a: HTBaseType => throw new RuntimeException("Cannot generate Avro schema when root of HigherType tree is HTBaseType")
+        case _ => ht.getAvroSchema()
+      }
+    }
+    def getFieldCount(): Int = {
+      fieldCount += 1
+      fieldCount-1
+    }
   }
   abstract class HigherType {
     import HigherType.fieldCount
-    val selfCount = fieldCount
-    fieldCount += 1
     def getAvroSchema(): Schema
     def name(): String = {
-      return namePrefix() + selfCount
+      return namePrefix() + HigherType.getFieldCount()
     }
     def namePrefix(): String
     def getDocString(): String = {
@@ -162,7 +171,7 @@ object RBTypes {
     // that such structures don't exist prior to processing with getAvroSchema
     def namePrefix(): String = "union_"    
     def getAvroSchema(): Schema = {
-      return Schema.createUnion(value.map(v => getAvroSchema()))
+      return Schema.createUnion(value.map(v => v.getAvroSchema()))
     }
   }
 
