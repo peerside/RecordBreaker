@@ -32,7 +32,7 @@ object RBTest {
   }
 
   /**
-   *  Test very basic synthetic input files.
+   *  Test very basic synthetic input files for parse and structure-inference correctness.
    */
   def testBasics(): Unit = {
     val s0 = "12.1 10\n12.1 10"
@@ -167,21 +167,6 @@ object RBTest {
       }
     }
 
-    /**
-    val testRewriteRules2 = List(HTStruct(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PVoid()))), // 1
-                                 HTStruct(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PEmpty()))), // 2
-                                 HTUnion(List(HTBaseType(PInt(10)), HTBaseType(PFloat(4.0)), HTBaseType(PVoid())))) // 3
-
-    //
-    // transformUniformStruct
-    //
-
-
-    //
-    // commonUnionPrefix
-    //
-
-     */
    println("testRefineRules() complete")
   }
 }
