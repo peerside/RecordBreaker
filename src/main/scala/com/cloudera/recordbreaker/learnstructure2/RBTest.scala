@@ -22,6 +22,9 @@ import Parse._
 import Infer._
 import Rewrite._
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericData.Record;
 
 object RBTest {
   def flattenAndName(ht: HigherType, parentName: String): List[(HigherType, String)] = {
@@ -237,5 +240,25 @@ object RBTest {
     }
 
    println("testSchemaGen() complete")    
+  }
+
+  def testIt(): Unit = {
+    val targetSchema0 = Schema.createRecord("record_0", "RECORD", "", false)
+    val targetSchema0List = new java.util.ArrayList[Schema.Field]()
+    targetSchema0List.add(new Schema.Field("base0", Schema.create(Schema.Type.DOUBLE), "", null))
+    targetSchema0.setFields(targetSchema0List)
+
+    val targetSchema1 = Schema.createRecord("record_1", "RECORD", "", false)
+    val targetSchema1List = new java.util.ArrayList[Schema.Field]()
+    targetSchema1List.add(new Schema.Field("base1", Schema.create(Schema.Type.INT), "", null))
+    targetSchema1.setFields(targetSchema1List)
+
+    val slist1 = new java.util.ArrayList[Schema]()
+    slist1.add(targetSchema0)
+    slist1.add(targetSchema1)
+    val targetTopSchema = Schema.createUnion(slist1)
+
+    val gdr = new GenericData.Record(targetTopSchema)
+    println("Success?")
   }
 }

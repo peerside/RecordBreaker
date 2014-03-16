@@ -30,6 +30,13 @@ object Parse {
   def parseString(str: String): Chunks = {
     process(Source.fromString(str))
   }
+  def parseFileWithoutMeta(fname: String): ParsedChunks = {
+    processWithoutMeta(Source.fromFile(fname, "UTF-8"))
+  }
+  def parseStringWithoutMeta(str: String): ParsedChunks = {
+    processWithoutMeta(Source.fromString(str))
+  }
+
   def process(src: Source): Chunks = {
     def findMeta(lhs:POther with ParsedValue[String], rhs:POther with ParsedValue[String], l:List[BaseType]):List[BaseType] = {
       val (left,toprocess) = l.span(x => x != lhs)
@@ -49,12 +56,17 @@ object Parse {
                                  new POther() with ParsedValue[String] {val parsedValue=">"},
                                  a)))
     }
+
+    processWithoutMeta(src).map(findMetaTokens(_))
+  }
+
+  def processWithoutMeta(src: Source): ParsedChunks = {
     val strset = src.getLines()
-    var css = List[List[BaseType]]()
+    var css = List[ParsedChunk]()
     for (l <- strset.filter(x=>x.trim().length > 0)) {
       var m = l.replaceAllLiterally("<", " < ").replaceAllLiterally(">", " > ").replaceAllLiterally("(", " ( ").replaceAllLiterally(")", " ) ").replaceAllLiterally("[", " [ ").replaceAllLiterally("]", " ] ")
       val tokens = m.split(" ").map(_.trim()).filter(x=>x.length>0)
-      var cs = List[BaseType]()
+      var cs = List[ParsedValue[Any]]()
 
       for (t <- tokens) {
         val c = t match {
@@ -65,7 +77,6 @@ object Parse {
           }
         cs = cs:+c
       }
-      cs = findMetaTokens(cs)
       css = css:+cs
     }
     return css

@@ -21,10 +21,16 @@ import scala.collection.mutable._
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.codehaus.jackson.JsonNode;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.generic.GenericContainer;
+import org.apache.avro.generic.GenericData.Record;
 
 object RBTypes {
   type Chunk = List[BaseType]
   type Chunks = List[Chunk]
+  type ParsedChunk = List[ParsedValue[Any]]
+  type ParsedChunks = List[ParsedChunk]
 
   /** The BaseType is an atomic type (int, str, etc) that can be either
    *  parsed or inferred post-parsing.
@@ -32,7 +38,7 @@ object RBTypes {
   abstract class BaseType {
     def getAvroSchema(): Schema
   }
-  trait ParsedValue[T] extends BaseType {
+  trait ParsedValue[+T] extends BaseType {
     val parsedValue: T
     def getValue(): T = {parsedValue}
   }
@@ -122,11 +128,20 @@ object RBTypes {
 
   object HigherType {
     var fieldCount = 0
-    def getAvroSchema(ht: HigherType): Schema = {
+    def resetFieldCount(): Unit = {
       fieldCount = 0
+    }
+    def getAvroSchema(ht: HigherType): Schema = {
       ht match {
         case a: HTBaseType => throw new RuntimeException("Cannot generate Avro schema when root of HigherType tree is HTBaseType")
         case _ => ht.getAvroSchema()
+      }
+    }
+    def processChunk(ht: HigherType, chunk: ParsedChunk): GenericContainer = {
+      val pcResults = ht.processChunk(chunk).filter(x=>x._1.length == 0)  // We only want the parses that consume entire input
+      pcResults.head._3 match {
+        case a: GenericContainer => a
+        case _ => throw new RuntimeException("Call to processChunk() yielded a non-GenericContainer result, indicating that source was not a record")
       }
     }
     def getFieldCount(): Int = {
@@ -135,11 +150,12 @@ object RBTypes {
     }
   }
   abstract class HigherType {
-    import HigherType.fieldCount
+    val fc = HigherType.getFieldCount()
     def getAvroSchema(): Schema
     def name(): String = {
-      return namePrefix() + HigherType.getFieldCount()
+      return namePrefix() + fc
     }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)]
     def namePrefix(): String
     def getDocString(): String = {
       return ""
@@ -159,11 +175,48 @@ object RBTypes {
       s.setFields(fieldsJ)
       return s
     }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      def processChildren(childrenToGo: List[HigherType], inChunk:ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
+        childrenToGo match {
+          case curChild::rest => {
+            val childLists = curChild.processChunk(inChunk)
+            if (childLists.length == 0) {
+              List()
+            } else {
+              if (rest.length == 0) {
+                childLists.map(x => (x._1, List(x._2), List(x._3)))
+              } else {
+                childLists.flatMap(cl => processChildren(rest, cl._1).map(sr => (sr._1, cl._2 +: sr._2, cl._3 +: sr._3)))
+              }
+            }
+          }
+          case _ => List()
+        }
+      }
+      val results = processChildren(value, chunk)
+      results.map(result => {
+                    val recordSchema = Schema.createRecord(name(), "RECORD", "", false)
+                    val fieldMetadata = value.map(v => (v.name(), v.getDocString(), v.getDefaultValue()))
+                    val schemaFields =
+                      for ((reportedSchema, reportedMetadata) <- result._2.zip(fieldMetadata)) yield
+                        new Schema.Field(reportedMetadata._1, reportedSchema, reportedMetadata._2, reportedMetadata._3)
+                    recordSchema.setFields(ListBuffer(schemaFields: _*))
+                    val gdr = new GenericData.Record(recordSchema)
+                    for (i <- 0 to result._3.length-1) {
+                      gdr.put(i, result._3(i))
+                    }
+                    (result._1, recordSchema, gdr)
+                  })
+    }
   }
+
   case class HTArray(value: HigherType) extends HigherType {
     def namePrefix(): String = "array_"    
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      List()
     }
   }
   case class HTUnion(value: List[HigherType]) extends HigherType {
@@ -173,6 +226,9 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return Schema.createUnion(value.map(v => v.getAvroSchema()))
     }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      value.flatMap(_.processChunk(chunk))
+    }
   }
 
   case class HTBaseType(value: BaseType) extends HigherType {
@@ -180,17 +236,30 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return value.getAvroSchema()
     }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      if (value != chunk(0)) {
+        List()
+      } else {
+        List((chunk.slice(1, chunk.length), getAvroSchema(), chunk(0).getValue()))
+      }
+    }
   }
   case class HTArrayFW(value: HigherType, size: Int) extends HigherType {
     def namePrefix(): String = "array_"            
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
     }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      List()
+    }
   }
   case class HTOption(value: HigherType) extends HigherType {
     def namePrefix(): String = "option_"                
     def getAvroSchema(): Schema = {
       return value.getAvroSchema()
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      List()
     }
   }
 

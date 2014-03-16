@@ -26,12 +26,16 @@ object Infer {
   /** discover() transforms Chunks into an HTBaseType hierarchy
    * This is the only public function in the inferstructure package.
    */
-  def discover(cs:Chunks): HigherType = {
+  def discover(cs: Chunks): HigherType = {
+    HigherType.resetFieldCount()
+    internalDiscover(cs)
+  }
+  private def internalDiscover(cs:Chunks): HigherType = {
     oracle(cs) match {
       case a: BaseProphecy => HTBaseType(a.value)
-      case b: StructProphecy => HTStruct(b.css.map(discover))
-      case c: ArrayProphecy => HTStruct(List(discover(c.prefix), HTArray(discover(c.middle)), discover(c.postfix)))
-      case d: UnionProphecy => HTUnion(d.css.map(discover))
+      case b: StructProphecy => HTStruct(b.css.map(internalDiscover))
+      case c: ArrayProphecy => HTStruct(List(internalDiscover(c.prefix), HTArray(internalDiscover(c.middle)), internalDiscover(c.postfix)))
+      case d: UnionProphecy => HTUnion(d.css.map(internalDiscover))
     }
   }
 
