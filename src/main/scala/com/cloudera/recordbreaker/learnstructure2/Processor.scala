@@ -45,11 +45,4 @@ object Processor {
     val schema = HigherType.getAvroSchema(ht)
     chunks.map(HigherType.processChunk(ht, _))
   }
-
-  def test() = {
-    val testString = "12.1 10\n12.1 10"
-    val ht = Infer.discover(Parse.parseString(testString))
-
-    println("Processor result: " + Processor.parse(testString, ht))
-  }
 }

@@ -28,7 +28,10 @@ object Infer {
    */
   def discover(cs: Chunks): HigherType = {
     HigherType.resetFieldCount()
-    internalDiscover(cs)
+    internalDiscover(cs) match {
+      case a: HTStruct => a
+      case x: HigherType => HTStruct(List(x))
+    }
   }
   private def internalDiscover(cs:Chunks): HigherType = {
     oracle(cs) match {

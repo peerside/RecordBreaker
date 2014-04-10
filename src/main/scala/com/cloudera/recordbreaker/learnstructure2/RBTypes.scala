@@ -18,6 +18,8 @@ import scala.io.Source
 import scala.math._
 import scala.collection.JavaConversions._
 import scala.collection.mutable._
+import scala.util.Marshal
+
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.codehaus.jackson.JsonNode;
@@ -136,6 +138,12 @@ object RBTypes {
         case a: HTBaseType => throw new RuntimeException("Cannot generate Avro schema when root of HigherType tree is HTBaseType")
         case _ => ht.getAvroSchema()
       }
+    }
+    def dumpToBytes(ht: HigherType): Array[Byte] = {
+      Marshal.dump(ht)
+    }
+    def loadFromBytes(b: Array[Byte]): HigherType = {
+      Marshal.load[HigherType](b)
     }
     def processChunk(ht: HigherType, chunk: ParsedChunk): GenericContainer = {
       val pcResults = ht.processChunk(chunk).filter(x=>x._1.length == 0)  // We only want the parses that consume entire input
