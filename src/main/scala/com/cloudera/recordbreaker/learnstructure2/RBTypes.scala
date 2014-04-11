@@ -145,10 +145,10 @@ object RBTypes {
     def loadFromBytes(b: Array[Byte]): HigherType = {
       Marshal.load[HigherType](b)
     }
-    def processChunk(ht: HigherType, chunk: ParsedChunk): GenericContainer = {
+    def processChunk(ht: HigherType, chunk: ParsedChunk): GenericRecord = {
       val pcResults = ht.processChunk(chunk).filter(x=>x._1.length == 0)  // We only want the parses that consume entire input
       pcResults.head._3 match {
-        case a: GenericContainer => a
+        case a: GenericRecord => a
         case _ => throw new RuntimeException("Call to processChunk() yielded a non-GenericContainer result, indicating that source was not a record")
       }
     }

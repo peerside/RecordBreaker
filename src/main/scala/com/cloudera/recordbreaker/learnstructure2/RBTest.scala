@@ -36,7 +36,7 @@ object RBTest {
   }
 
   /**
-   *  Test very basic synthetic input files for parse and structure-inference correctness.
+   *  Test parsing and structure-inference correctness.
    */
   def testBasics(): Unit = {
     val s0 = "12.1 10\n12.1 10"
@@ -90,7 +90,7 @@ object RBTest {
   }
 
   /**
-   * Test the structure rewrite rules
+   * Test structure rewrite rules
    */
   def testRewriteRules(): Unit = {
     //
@@ -238,27 +238,44 @@ object RBTest {
         throw new RuntimeException("Schema reconstruction failure on input " + testPair._1)
       }
     }
-
    println("testSchemaGen() complete")    
   }
 
-  def testIt(): Unit = {
-    val targetSchema0 = Schema.createRecord("record_0", "RECORD", "", false)
-    val targetSchema0List = new java.util.ArrayList[Schema.Field]()
-    targetSchema0List.add(new Schema.Field("base0", Schema.create(Schema.Type.DOUBLE), "", null))
-    targetSchema0.setFields(targetSchema0List)
+  /**
+   * Test Avro record construction
+   */
+  def testRecordConstruction() = {
+    val testStrings = List("12.1 10\n12.1 10",
+                           "10\n12.1")
 
-    val targetSchema1 = Schema.createRecord("record_1", "RECORD", "", false)
-    val targetSchema1List = new java.util.ArrayList[Schema.Field]()
-    targetSchema1List.add(new Schema.Field("base1", Schema.create(Schema.Type.INT), "", null))
-    targetSchema1.setFields(targetSchema1List)
+    for (ts <- testStrings) {
+      val ht = Infer.discover(Parse.parseString(ts))
+      println ("For following input:")
+      println(ts)
+      println()
+      val parsedTuples = Processor.parse(ts, ht)
+      println("Processor obtained " + parsedTuples.length + " items:")
+      parsedTuples.foreach(println(_))
+      println()
+    }
+  }
 
-    val slist1 = new java.util.ArrayList[Schema]()
-    slist1.add(targetSchema0)
-    slist1.add(targetSchema1)
-    val targetTopSchema = Schema.createUnion(slist1)
+  /**
+   * Test induced parser serialization
+   */
+  def testSerialization() = {
+    val testStrings = List("12.1 10\n12.1 10",
+                           "10\n12.1")
 
-    val gdr = new GenericData.Record(targetTopSchema)
-    println("Success?")
+    for (ts <- testStrings) {
+      val ht = Infer.discover(Parse.parseString(ts))
+      val dumped = HigherType.dumpToBytes(ht)
+      val reconHt = HigherType.loadFromBytes(dumped)
+
+      val parsedTuples = Processor.parse(ts, reconHt)
+      println("Processor obtained " + parsedTuples.length + " items:")
+      parsedTuples.foreach(println(_))
+      println()
+    }
   }
 }

@@ -33,15 +33,15 @@ import RBTypes._
  * inferred schema.
  ************************************************/
 object Processor {
-  def parseFile(fname: String, ht: HigherType): List[GenericContainer] = {
+  def parseFile(fname: String, ht: HigherType): List[GenericRecord] = {
     val chunks = Parse.parseFileWithoutMeta(fname)
     process(chunks, ht)
   }
-  def parse(str: String, ht: HigherType): List[GenericContainer] = {
+  def parse(str: String, ht: HigherType): List[GenericRecord] = {
     val chunks = Parse.parseStringWithoutMeta(str)
     process(chunks, ht)
   }
-  def process(chunks: ParsedChunks, ht: HigherType): List[GenericContainer] = {
+  def process(chunks: ParsedChunks, ht: HigherType): List[GenericRecord] = {
     val schema = HigherType.getAvroSchema(ht)
     chunks.map(HigherType.processChunk(ht, _))
   }

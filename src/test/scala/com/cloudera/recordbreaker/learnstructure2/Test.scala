@@ -20,14 +20,14 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
   before {
   }
 
+  /*************************
+   * Basic Parser
+   ************************/
   val basicFileA = "12.1 10\n12.1 10"
   val basicFileB = "12.1 10\nfoo 10\n12.1 10\nfoo 10\n"
   val basicFileC = "100 Hello A 0.32\n999 There X 3.147\n"
   val basicFileD = "Foo [10] blah 99.0\nFoo [20] bloop 22.1\nFooBar [333] bleep 35.5\n"
 
-  /*************************
-   * Basic Parser
-   ************************/
   "Raw Data Parser" should "parse basic file A" in {
     Parse.parseString(basicFileA) should be (List(List(PFloat(), PInt()), List(PFloat(), PInt())))
   }
@@ -71,13 +71,68 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
   }
 
   /*************************
-   * Structure Inference
+   * Rewrite Rules
    ************************/
+  "Rewrite Rules" should "rewrite singleton structs" in {
+    val parsed = Parse.parseString("10")
+    val shouldBeInferred = HTStruct(List(HTBaseType(PInt())))
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTBaseType(PInt()))
+  }
+
+  it should "cleanup empty structs" in {
+    val parsed = Parse.parseString("")
+    val shouldBeInferred = HTStruct(List())
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTBaseType(PEmpty()))
+  }
+
+  it should "rewrite singleton unions" in {
+    val parsed = Parse.parseString("10")
+    val shouldBeInferred = HTUnion(List(HTBaseType(PInt())))
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTBaseType(PInt()))
+  }
+
+  it should "cleanup empty unions" in {
+    val parsed = Parse.parseString("")
+    val shouldBeInferred = HTUnion(List())
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTBaseType(PVoid()))
+  }
+
+  it should "clean up uniform structs" in {
+    val parsed = Parse.parseString("1 1 1")
+    val shouldBeInferred = HTStruct(List(HTBaseType(PInt()), HTBaseType(PInt()), HTBaseType(PInt())))
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTArrayFW(HTBaseType(PInt()), 3))
+  }
+
+  it should "eliminate common union postfix type A" in {
+    val parsed = Parse.parseString("1 10\n5.5 10\n")
+    val shouldBeInferred = HTUnion(List(HTStruct(List(HTBaseType(PInt()), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt()))))),
+                                    HTStruct(List(HTBaseType(PFloat()), HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt())))))))
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTStruct(List(HTUnion(List(HTBaseType(PInt()),
+                                                                                      HTBaseType(PFloat()))),
+                                                                         HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt()))))))
+  }
+
+  it should "eliminate common union postfix type B" in {
+    val parsed = Parse.parseString("1.0 1\n1\n1.0 1\n1\n")
+    val shouldBeInferred = HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))),
+                                        HTBaseType(PInt())))
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTStruct(List(HTOption(HTStruct(List(HTBaseType(PFloat())))),
+                                                                         HTBaseType(PInt()))))
+  }
+
+  it should "combine adjacent string constants" in {
+    val parsed = Parse.parseString("foo bar 10\n")
+    val shouldBeInferred = HTStruct(List(HTBaseType(PStringConst("foo")),
+                                     HTBaseType(PStringConst("bar")),
+                                     HTBaseType(PInt())))
+    Rewrite.refineAll(shouldBeInferred, parsed) should be (HTStruct(List(HTBaseType(PStringConst("foobar")),
+                                                                         HTBaseType(PInt()))))
+  }
 
   /*************************
    * Avro Schema Generation
    ************************/
-  "Avro Schema Generator" should "generate a correct schema for basic structure 1" in {
+  "Avro Schema Generator" should "generate a correct schema for structure A" in {
     val targetSchema = Schema.createRecord("record_1", "RECORD", "", false)
     val slist0 = new java.util.ArrayList[Schema.Field]()
     slist0.add(new Schema.Field("base_0", Schema.create(Schema.Type.INT), "", null))
@@ -87,7 +142,7 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
     HigherType.getAvroSchema(HTStruct(List(HTBaseType(PInt())))) should be (targetSchema)
   }
 
-  it should "generate a correct schema for basic structure 2" in {
+  it should "generate a correct schema for structure B" in {
     val targetSchema = Schema.createRecord("record_1", "RECORD", "", false)
     val slist1 = new java.util.ArrayList[Schema.Field]()
     slist1.add(new Schema.Field("base_0", Schema.create(Schema.Type.DOUBLE), "", null))
@@ -97,7 +152,7 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
     HigherType.getAvroSchema(HTStruct(List(HTBaseType(PFloat())))) should be (targetSchema)
   }
 
-  it should "generate a correct schema for basic structure 3" in {
+  it should "generate a correct schema for structure C" in {
     val targetSchema = Schema.createRecord("record_1", "RECORD", "", false)
     val slist2 = new java.util.ArrayList[Schema.Field]()
     slist2.add(new Schema.Field("base_0", Schema.create(Schema.Type.STRING), "", null))
@@ -107,7 +162,7 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
     HigherType.getAvroSchema(HTStruct(List(HTBaseType(PAlphanum())))) should be (targetSchema)
   }
 
-  it should "generate a correct schema for basic structure 4" in {
+  it should "generate a correct schema for structure D" in {
     val targetSchema = Schema.createRecord("record_1", "RECORD", "", false)
     val slist3 = new java.util.ArrayList[Schema.Field]()
     slist3.add(new Schema.Field("base_0", Schema.create(Schema.Type.STRING), "", null))
@@ -117,7 +172,7 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
     HigherType.getAvroSchema(HTStruct(List(HTBaseType(PStringConst("foo"))))) should be (targetSchema)
   }
 
-  it should "generate a correct schema for basic structure 5" in {
+  it should "generate a correct schema for structure E" in {
     val targetSchema = Schema.createRecord("record_3", "RECORD", "", false)
     val slist4 = new java.util.ArrayList[Schema.Field]()
     slist4.add(new Schema.Field("base_0", Schema.create(Schema.Type.INT), "", null))
@@ -129,7 +184,7 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
     HigherType.getAvroSchema(HTStruct(List(HTBaseType(PInt()), HTBaseType(PFloat()), HTBaseType(PAlphanum())))) should be (targetSchema)
   }
 
-  it should "generate a correct schema for basic structure 6" in {
+  it should "generate a correct schema for structure F" in {
     val targetSchema = Schema.createRecord("record_5", "RECORD", "", false)
     val reclist5 = new java.util.ArrayList[Schema.Field]()
     reclist5.add(new Schema.Field("base_0", Schema.create(Schema.Type.INT), "", null))
@@ -147,11 +202,39 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
   /*************************
    * Avro Record Construction
    ************************/
+  "Record Parser" should "obtain correct tuples for basic input A" in {
+    val testData = "12.1 10\n12.1 10"
+    val ht = Infer.discover(Parse.parseString(testData))
+    val parsedTuples = Processor.parse(testData, ht)
+    parsedTuples(0).get(0) should be (12.1)
+    parsedTuples(0).get(1) should be (10)
+    parsedTuples(1).get(0) should be (12.1)
+    parsedTuples(1).get(1) should be (10)
+  }
+
+  it should  "obtain correct tuples for basic input B" in {
+    val testData = "10\n12.1"
+    val ht = Infer.discover(Parse.parseString(testData))
+    val parsedTuples = Processor.parse(testData, ht)
+    parsedTuples(0).get(0) should be (10)
+    parsedTuples(1).get(0) should be (12.1)    
+  }
 
   /*************************
    * Parser Serialization
    ************************/
-  "Parser serializer" should "serialize a faithful parser" in {
+  "Parser serializer" should "serialize a faithful parser for basic input A" in {
+    val testData = "12.1 10\n12.1 10"
+    val ht = Infer.discover(Parse.parseString(testData))
+    val reconHt = HigherType.loadFromBytes(HigherType.dumpToBytes(ht))
+    ht should be (reconHt)
+  }
+
+  it should "serialize a faithful parser for basic input B" in {
+    val testData = "10\n12.1"
+    val ht = Infer.discover(Parse.parseString(testData))
+    val reconHt = HigherType.loadFromBytes(HigherType.dumpToBytes(ht))
+    ht should be (reconHt)
   }
   
   after {
