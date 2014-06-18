@@ -19,6 +19,8 @@ import scala.math._
 import scala.collection.mutable._
 import com.cloudera.recordbreaker.learnstructure2.RBTypes._
 
+case class CustomException(smth:String) extends Exception(smth)
+
 ////////////////////////////////////
 // Structure prediction
 ////////////////////////////////////
@@ -56,6 +58,7 @@ object Infer {
       def width() = normalForm.length-1
       def mass(i: Int):Double = n.toDouble(normalForm(i)._2)
       def rmass(i: Int):Double = n.toDouble(n.plus(normalForm(0)._2, (normalForm.slice(i+1,normalForm.length).map(z => z._2).foldLeft(n.zero)((a1,a2)=>n.plus(a1, a2)))))
+      def totalMass: Double = inM.values.toList.map(x=>inN.toDouble(x)).sum
       def coverage():Double = n.toDouble(normalForm.slice(1,normalForm.length).map(x=>x._2).foldLeft(n.zero)((a1,a2)=>n.plus(a1, a2)))
 
       def symEntropy(otherHist:Histogram[T]): Double = {
@@ -80,8 +83,8 @@ object Infer {
       }
     }
 
-    val minCoverage = 1
-    val maxMass = 2
+    val minCoverageFactor = 0.2
+    val maxMass = 0.1
 
     //
     // Compute histograms over input chunks
@@ -154,40 +157,63 @@ object Infer {
     //
     def case3[X](groupsIn:List[List[Histogram[X]]]): Option[Prophecy] = {
       val orderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGroup=>hGroup.map(h => h.rmass(1)).min)
-      val chosenGroup = orderedGroups.find(hGroup=> hGroup.forall(h=> ((h.rmass(1) < maxMass) &&
-                                                                         (h.coverage() > minCoverage))))
+      val chosenGroup = orderedGroups.find(hGroup=> hGroup.forall(h=> ((h.rmass(1) / h.totalMass.toDouble < maxMass) &&
+                                                                         (h.coverage() > minCoverageFactor * input.length))))
       // Build the appropriate struct, if any
       chosenGroup match {
         case Some(groupOfHistograms) => {
           val xlist = groupOfHistograms.map(x=>x.label)
-          var totalPieces = List[Chunks]()
-          for (chunk:List[BaseType] <- input) {
-            val brokenPieces = chunk.foldLeft(List(List[BaseType]()))((x:List[List[BaseType]], y:BaseType) => {
-                                                                        val shouldBreak = y match {
-                                                                            case a: PInt => xlist contains "int"
-                                                                            case b: PFloat => xlist contains "float"
-                                                                            case c: PAlphanum => xlist contains "alpha"
-                                                                            case d: PString => xlist contains "str"
-                                                                            case e: POther => xlist contains "other"
-                                                                            case g: PVoid => xlist contains "void"
-                                                                            case h: PEmpty => xlist contains "empty"
-                                                                            case x: PMetaToken => xlist contains "meta"
-                                                                            case _ => false
-                                                                          }
-                                                                        if (shouldBreak) {
-                                                                          x :+ List(y) :+ List()
-                                                                        } else {
-                                                                          x.slice(0,x.length-1) :+ (x.last :+ y)
-                                                                        }
-                                                                      }).filter(x=>x.length>0)
-
-            if (totalPieces.length==0) {
-              totalPieces = (1 to brokenPieces.length).foldLeft(List[List[List[BaseType]]]())((a,b)=>a:+List[List[BaseType]]())
-            }
-            totalPieces = totalPieces.zip(brokenPieces).map(listPair=>listPair._1 :+ listPair._2)
+          var patterns = HashMap[String, Chunks]().withDefaultValue(List[List[BaseType]]())
+          for (chunk:Chunk <- input) {
+            val patternstr = chunk.foldLeft("")((orig, y) => orig + (y match {
+                                                  case a: PInt if xlist contains "int" => "i"
+                                                  case b: PFloat if xlist contains "float" => "f"
+                                                  case c: PAlphanum if xlist contains "alpha" => "a"
+                                                  case d: PString if xlist contains "str" => "s"
+                                                  case e: POther if xlist contains "other" => "o"
+                                                  case f: PVoid if xlist contains "void" => "v"
+                                                  case g: PEmpty if xlist contains "empty" => "e"
+                                                  case h: PMetaToken if xlist contains "meta" => "m"
+                                                  case _ => ""
+                                       }))
+            patterns = patterns.updated(patternstr, patterns(patternstr) :+ chunk)
           }
-          // REMIND -- mjc -- there's some missing code here to handle the Union case.
-          return Some(StructProphecy(totalPieces))
+
+          def buildPiecesFromChunks(inChunks:Chunks): List[Chunks] = {
+            var totalPieces = List[Chunks]()
+            for (chunk:List[BaseType] <- inChunks) {
+              val brokenPieces = chunk.foldLeft(List(List[BaseType]()))((x:List[List[BaseType]], y:BaseType) => {
+                                                                          val shouldBreak = y match {
+                                                                              case a: PInt => xlist contains "int"
+                                                                              case b: PFloat => xlist contains "float"
+                                                                              case c: PAlphanum => xlist contains "alpha"
+                                                                              case d: PString => xlist contains "str"
+                                                                              case e: POther => xlist contains "other"
+                                                                              case g: PVoid => xlist contains "void"
+                                                                              case h: PEmpty => xlist contains "empty"
+                                                                              case x: PMetaToken => xlist contains "meta"
+                                                                              case _ => false
+                                                                            }
+                                                                          if (shouldBreak) {
+                                                                            x :+ List(y) :+ List()
+                                                                          } else {
+                                                                            x.slice(0,x.length-1) :+ (x.last :+ y)
+                                                                          }
+                                                                        }).filter(x=>x.length>0)
+
+              if (totalPieces.length==0) {
+                totalPieces = (1 to brokenPieces.length).foldLeft(List[List[List[BaseType]]]())((a,b)=>a:+List[List[BaseType]]())
+              }
+              totalPieces = totalPieces.zip(brokenPieces).map(listPair=>listPair._1 :+ listPair._2)
+            }
+            totalPieces
+          }
+
+          if (patterns.size == 1) {
+            return Some(StructProphecy(buildPiecesFromChunks(patterns.head._2)))
+          } else {
+            return Some(UnionProphecy(patterns.values.toList))
+          }
         }
         case _ => None
       }
@@ -198,7 +224,7 @@ object Infer {
     //
     def case4[X](groupsIn:List[List[Histogram[X]]]): Option[Prophecy] = {
       val c4OrderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
-      val c4ChosenGroup:Option[List[Histogram[X]]] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverage))))
+      val c4ChosenGroup:Option[List[Histogram[X]]] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverageFactor * input.length))))
 
       c4ChosenGroup match {
         case Some(xlist) => {
@@ -245,11 +271,39 @@ object Infer {
     // Case 5
     //
     def case5(): Prophecy = {
-      var unionPartition: Map[BaseType, List[Chunk]] = HashMap().withDefaultValue(List[Chunk]())
-      for (chunk <- input) {
-        unionPartition = unionPartition.updated(chunk(0), unionPartition(chunk(0)) :+ chunk)
+      //
+      // If this call to oracle() was itself due to a call to internalDiscover() in the
+      // HTUnion clause, and this does not yield a reduction in the size of the union,
+      // we will get an infinite loop.
+      //
+      // We partition according to the token preamble.  The preamble must be long enough
+      // to yield at least two partitions.  Otherwise the algorithm may not make progress.
+      //
+      val maxPreambleSize = input.map(x=>x.length).max
+      for (preambleSize <- (1 to maxPreambleSize)) {
+        var unionPartition: Map[String, List[Chunk]] = HashMap().withDefaultValue(List[Chunk]())
+        for (chunk <- input) {
+          val preambleData = chunk.slice(0, preambleSize)
+          var preamble = preambleData.foldLeft("")((orig, y) => orig + (y match {
+                                                  case a: PInt => "i"
+                                                  case b: PFloat => "f"
+                                                  case c: PAlphanum => "a"
+                                                  case d: PString => "s"
+                                                  case e: POther => "o"
+                                                  case f: PVoid => "v"
+                                                  case g: PEmpty => "e"
+                                                  case h: PMetaToken => "m"
+                                                  case _ => ""
+                                                  }))
+          preamble = preamble + ("?" * (preambleSize - preamble.length))
+          unionPartition = unionPartition.updated(preamble, unionPartition(preamble) :+ chunk)
+        }
+
+        if (unionPartition.size > 1) {
+          return UnionProphecy(List() ++ unionPartition.values)
+        }
       }
-      UnionProphecy(List() ++ unionPartition.values)
+      throw CustomException("Could not find distinguishing preamble for UNION")
     }
 
     return case1() orElse case3(groups) orElse case4(groups) getOrElse case5()

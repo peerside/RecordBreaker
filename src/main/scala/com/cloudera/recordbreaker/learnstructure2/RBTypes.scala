@@ -171,6 +171,7 @@ object RBTypes {
     def getDefaultValue(): JsonNode = {
       return null
     }
+    def prettyprint(offset: Int = 0)
   }
 
   case class HTStruct(value: List[HigherType]) extends HigherType {
@@ -182,6 +183,13 @@ object RBTypes {
       val fieldsJ: java.util.List[Schema.Field] = ListBuffer(fields: _*)
       s.setFields(fieldsJ)
       return s
+    }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTStruct")
+      for (v <- value) {
+        v.prettyprint(offset+1)
+      }
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       def processChildren(childrenToGo: List[HigherType], inChunk:ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
@@ -223,6 +231,11 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
     }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTArray")
+      value.prettyprint(offset+1)
+    }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       List()
     }
@@ -234,6 +247,13 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return Schema.createUnion(value.map(v => v.getAvroSchema()))
     }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTUnion")
+      for (v <- value) {
+        v.prettyprint(offset+1)
+      }
+    }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       value.flatMap(_.processChunk(chunk))
     }
@@ -243,6 +263,10 @@ object RBTypes {
     def namePrefix(): String = "base_"        
     def getAvroSchema(): Schema = {
       return value.getAvroSchema()
+    }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTBaseType(" + value + ")")
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       if (value != chunk(0)) {
@@ -257,6 +281,11 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
     }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTArrayFW")
+      value.prettyprint(offset+1)
+    }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       List()
     }
@@ -265,6 +294,11 @@ object RBTypes {
     def namePrefix(): String = "option_"                
     def getAvroSchema(): Schema = {
       return value.getAvroSchema()
+    }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTOption")
+      value.prettyprint(offset+1)
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       List()

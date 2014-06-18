@@ -58,8 +58,12 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
   }
 
   it should "infer structure for basic file B" in {
-    Infer.discover(Parse.parseString(basicFileB)) should be (HTStruct(List(HTUnion(List(HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))),
-                                                                                        HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt()))))))))
+    Infer.discover(Parse.parseString(basicFileB)) should be (HTStruct(List(HTUnion(List(HTStruct(List(HTBaseType(PAlphanum()), HTBaseType(PInt()))),
+                                                                                        HTStruct(List(HTBaseType(PFloat()), HTBaseType(PInt()))))))))
+  }
+
+  it should "infer structure in this temporary file" in {
+    Infer.discover(Parse.parseString("10\n5.0\n")) should be (HTStruct(List(HTUnion(List(HTBaseType(PInt()), HTBaseType(PFloat()))))))
   }
 
   it should "infer structure for basic file C" in {
@@ -236,6 +240,34 @@ class Test extends FlatSpec with BeforeAndAfter with Matchers {
     val reconHt = HigherType.loadFromBytes(HigherType.dumpToBytes(ht))
     ht should be (reconHt)
   }
+
+  /**************************
+   * End-to-end tests on large files
+   *************************/
+  def testfile(fname: String): List[GenericRecord] = {
+    println("Got to this point? 1")
+    val filechunks = Parse.parseFileWithoutMeta(fname)
+    println("Got to this point? 2")
+    println("# of chunks: " + filechunks.length)
+    println("Got to this point? 2.2")    
+    val it = Infer.discover(filechunks.slice(0, 1))
+    println("Got to this point?  2.5")
+    for (i <- 1 to 11) {
+      val inferredType = Infer.discover(filechunks.slice(0, i))
+      println("Tested up to " + i)
+    }
+    val inferredType = Infer.discover(filechunks)
+    println("Got to this point? 3")
+    val avroSchema = HigherType.getAvroSchema(inferredType)
+    println("Got to this point? 4")     
+    return filechunks.map(fc => HigherType.processChunk(inferredType, fc))
+  }
+  val fname1 = "angioplasty.txt"
+
+  //"End-to-end test" should "yield a parser that can process all of file " + fname1 in {
+//    val gdrs = testfile("src/samples/textdata/" + fname1)
+//    gdrs.length should be (10)
+//  }
   
   after {
   }
