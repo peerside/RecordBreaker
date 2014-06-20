@@ -124,8 +124,11 @@ object Infer {
           Some(StructProphecy(List[Chunks](x.map(v => List(v.head.asInstanceOf[PMetaToken].lval)),
                                            x.map(v => v.head.asInstanceOf[PMetaToken].center),
                                            x.map(v => List(v.head.asInstanceOf[PMetaToken].rval)))))
-        case y:List[List[BaseType]] if (nonMetaHistograms.exists(h => h.coverage() == y.length) && (nonMetaHistograms.map(h=>h.coverage()).sum == y.length)) =>
+        case y:List[List[BaseType]] if (nonMetaHistograms.exists(h => h.coverage() == y.length) &&
+                                          (nonMetaHistograms.map(h=>h.coverage()).sum == y.length) &&
+                                          (y.forall(z => z.length == 1))) => {
           Some(BaseProphecy(y.head.head))
+        }
         case _ => None
       }
     }
