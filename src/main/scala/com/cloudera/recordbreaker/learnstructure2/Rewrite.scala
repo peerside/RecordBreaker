@@ -31,12 +31,14 @@ object Rewrite {
    *  It is the only public method in this package
    */
   def refineAll(orig: HigherType, input: Chunks) = {
-    val dataIndependentRules = List(rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _)
+    val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _)
     val dataDependentRules = List()
     val round1 = refine(orig, dataIndependentRules, costEncoding)
     val round2 = refine(round1, dataDependentRules, totalCost(input))
     val round3 = refine(round2, dataIndependentRules, costEncoding)
-    round3
+
+    val round4 = ensureRootIsStruct(round3)
+    round4
   }
 
   /**
@@ -137,6 +139,28 @@ object Rewrite {
   ///////////////////////////////////////////
   // Data-independent rewrite rules
   ///////////////////////////////////////////
+  private def removeNestedUnions(in: HigherType): HigherType = {
+    in match {
+      // If the union has all unions has children, then merge them.
+      case a: HTUnion if (a.value.exists(x=> x match {
+                                           case xa: HTUnion => true
+                                           case _ => false
+                                         })) => HTUnion(a.value.foldLeft(List[HigherType]())((listSoFar, topLevelUnionBranch) =>
+                                                          topLevelUnionBranch match {
+                                                            case xa: HTUnion => listSoFar ++ xa.value
+                                                            case _ => listSoFar :+ topLevelUnionBranch
+                                                          }))
+      case _ => in
+    }
+  }
+
+  private def ensureRootIsStruct(root: HigherType): HigherType = {
+    root match {
+      case a: HTStruct => a
+      case _ => HTStruct(List(root))
+    }
+  }
+
   private def rewriteSingletons(in: HigherType): HigherType = {
     in match {
       case a: HTStruct if (a.value.length == 1) => a.value.head
