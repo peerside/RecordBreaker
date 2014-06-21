@@ -287,9 +287,32 @@ object RBTypes {
       value.prettyprint(offset+1)
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      List()
+      def processChildren(numChildrenToGo: Int, inChunk: ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
+        val childList = value.processChunk(inChunk)
+        if (childList.length == 0) {
+          List()
+        } else {
+          if (numChildrenToGo == 1) {
+            childList.map(x => (x._1, List(x._2), List(x._3)))
+          } else {
+            childList.flatMap(childTuple => processChildren(numChildrenToGo-1, childTuple._1).map(rht => (rht._1,
+                                                                                                          List(childTuple._2) ++ rht._2,
+                                                                                                          List(childTuple._3) ++ rht._3)))
+          }
+        }
+      }
+      val results = processChildren(size, chunk)
+      results.map(result => {
+                    val gda = new GenericData.Array[Any](size, getAvroSchema())
+                    for (dataelt <- result._3) {
+                      gda.add(dataelt)
+                    }
+                    (result._1, getAvroSchema(), gda)
+                  })
     }
   }
+
+
   case class HTOption(value: HigherType) extends HigherType {
     def namePrefix(): String = "option_"                
     def getAvroSchema(): Schema = {
@@ -301,7 +324,7 @@ object RBTypes {
       value.prettyprint(offset+1)
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      List()
+      value.processChunk(chunk) :+ (chunk, getAvroSchema(), getDefaultValue())
     }
   }
 
