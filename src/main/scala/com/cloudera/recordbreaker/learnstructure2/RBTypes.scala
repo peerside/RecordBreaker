@@ -210,6 +210,15 @@ object RBTypes {
         }
       }
       val results = processChildren(value, chunk)
+      /**
+      println()
+      println("Input was " + chunk)
+      println("Processed " + results.length + " parse possibilities for HTStruct.")
+      for (x <- results) {
+        println("  For one of the parses, remaining chunks are: " + x._1)
+      }
+      println()
+       **/
       results.map(result => {
                     val recordSchema = Schema.createRecord(name(), "RECORD", "", false)
                     val fieldMetadata = value.map(v => (v.name(), v.getDocString(), v.getDefaultValue()))
@@ -226,7 +235,7 @@ object RBTypes {
     }
   }
 
-  case class HTArray(value: HigherType) extends HigherType {
+  case class HTArray(value: HigherType, minsize: Int = 1) extends HigherType {
     def namePrefix(): String = "array_"    
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
@@ -237,7 +246,36 @@ object RBTypes {
       value.prettyprint(offset+1)
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      List()
+      def processChildren(minChildrenToGo: Int, inChunk: ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
+          val childList = value.processChunk(inChunk)
+          if (childList.length == 0) {
+            List()
+          } else {
+            val futureResults = childList.flatMap(childTuple => processChildren(minChildrenToGo-1, childTuple._1).map(rht => (rht._1,
+                                                                                                                              List(childTuple._2) ++ rht._2,
+                                                                                                                              List(childTuple._3) ++ rht._3)))
+            if (minChildrenToGo > 1) {
+              futureResults
+            } else {
+              childList.map(x => (x._1, List(x._2), List(x._3))) ++ futureResults
+            }
+          }
+      }
+      val results = processChildren(minsize, chunk)
+      /**
+      println()
+      println("Input was " + chunk)      
+      println("Processed " + results.length + " parse possibilities for HTArray.")
+      for (x <- results) {
+        println("  For one of the parses, remaining chunks are: " + x._1)
+      }
+      println()
+       **/
+      results.map(result => {
+                    val gda = new GenericData.Array[Any](result._3.length, getAvroSchema())
+                    result._3.foreach(gda.add(_))
+                    (result._1, getAvroSchema(), gda)
+                  })
     }
   }
   case class HTUnion(value: List[HigherType]) extends HigherType {
@@ -255,7 +293,17 @@ object RBTypes {
       }
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      value.flatMap(_.processChunk(chunk))
+      val results = value.flatMap(_.processChunk(chunk))
+      /**
+      println()
+      println("Input was " + chunk)
+      println("Processed " + results.length + " parse possibilities for HTUnion.")      
+      for (x <- results) {
+        println("  For one of the parses, remaining chunks are: " + x._1)
+      }
+      println()
+       **/
+      results
     }
   }
 
@@ -272,6 +320,12 @@ object RBTypes {
       if (value != chunk(0)) {
         List()
       } else {
+        /**
+        println()
+        println("Input was " + chunk)
+        println("Processed HTBaseType(" + value + ").  Remaining chunks: " + chunk.slice(1, chunk.length))
+        println()
+         **/
         List((chunk.slice(1, chunk.length), getAvroSchema(), chunk(0).getValue()))
       }
     }
@@ -302,16 +356,22 @@ object RBTypes {
         }
       }
       val results = processChildren(size, chunk)
+      /**
+      println()
+      println("Input was " + chunk)      
+      println("Processed " + results.length + " parse possibilities for HTArrayFW.")
+      for (x <- results) {
+        println("  For one of the parses, remaining chunks are: " + x._1)
+      }
+      println()
+       **/
       results.map(result => {
                     val gda = new GenericData.Array[Any](size, getAvroSchema())
-                    for (dataelt <- result._3) {
-                      gda.add(dataelt)
-                    }
+                    result._3.foreach(gda.add(_))
                     (result._1, getAvroSchema(), gda)
                   })
     }
   }
-
 
   case class HTOption(value: HigherType) extends HigherType {
     def namePrefix(): String = "option_"                
@@ -324,7 +384,15 @@ object RBTypes {
       value.prettyprint(offset+1)
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      value.processChunk(chunk) :+ (chunk, getAvroSchema(), getDefaultValue())
+      val results = value.processChunk(chunk) :+ (chunk, getAvroSchema(), getDefaultValue())
+
+      /**
+      println()
+      println("Input was " + chunk)            
+      println("Processed " + results.length + " parse possibilities for HTOption.")
+      println()
+       **/
+      results
     }
   }
 

@@ -31,7 +31,7 @@ object Rewrite {
    *  It is the only public method in this package
    */
   def refineAll(orig: HigherType, input: Chunks) = {
-    val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _)
+    val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _, combineHomogeneousArrays _)
     val dataDependentRules = List()
     val round1 = refine(orig, dataIndependentRules, costEncoding)
     val round2 = refine(round1, dataDependentRules, totalCost(input))
@@ -54,7 +54,7 @@ object Rewrite {
         case _ => orig
       }
     oneStep(newVersion, rewriteRules, costFn)
-  }
+   }
   
   /** Take one step in the schema refinement process
    */
@@ -211,14 +211,39 @@ object Rewrite {
           case HTBaseType(c1) :: HTBaseType(c2) :: rest if (c1.isInstanceOf[PStringConst] && c2.isInstanceOf[PStringConst]) => 
             findAdjacent(soFar :+ HTBaseType(new PStringConst(c1.asInstanceOf[PStringConst].cval + c2.asInstanceOf[PStringConst].cval)), rest)
           case first :: rest => findAdjacent(soFar :+ first, rest)
-          // REMIND -- mjc -- this last line seems like a bug. What about 'soFar'?
-          case _ => remainder
+          case _ => throw new RuntimeException("This is an impossible merge step situation")
         }
       }
     }
 
     in match {
       case a: HTStruct => HTStruct(findAdjacent(List[HigherType](), a.value))
+      case _ => in
+    }
+  }
+
+  private def combineHomogeneousArrays(in: HigherType): HigherType = {
+    def findAdjacent(soFar: List[HigherType], remainder: List[HigherType], willProcessAll: Boolean): List[HigherType] = {
+      if (remainder.length == 0) {
+        soFar
+      } else {
+        remainder match {
+          case HTArrayFW(c1val, c1len) :: HTArrayFW(c2val, c2len) :: rest if (c1val == c2val) => {
+            if (willProcessAll) {
+              findAdjacent(soFar :+ HTArrayFW(c1val, c1len+c2len), rest, willProcessAll)
+            } else {
+              findAdjacent(soFar :+ HTArray(c1val, min(c1len, c2len)), rest, willProcessAll)
+            }
+          }
+          case first :: rest => findAdjacent(soFar :+ first, rest, willProcessAll)
+          case _ => throw new RuntimeException("This is an impossible array-combination step situation")
+        }
+      }
+    }
+
+    in match {
+      case a: HTUnion => HTUnion(findAdjacent(List[HigherType](), a.value, false))
+      case b: HTStruct => HTStruct(findAdjacent(List[HigherType](), b.value, true))
       case _ => in
     }
   }
