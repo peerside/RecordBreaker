@@ -317,7 +317,7 @@ object RBTypes {
       println("HTBaseType(" + value + ")")
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      if (value != chunk(0)) {
+      if (chunk.length == 0 || value != chunk(0)) {
         List()
       } else {
         /**
