@@ -1,0 +1,677 @@
+Feb 10 00:30:00 lofie newsyslog[66792]: logfile turned over
+Feb 10 00:29:58 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xb8-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:30:17 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:30:31 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:30:31 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024d5020-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:30:31 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024d5020-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:30:31 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 185 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:30:31 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 185: 0xe800006b.
+Feb 10 00:30:31 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xb9-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:30:50 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:31:02 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:31:02 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:31:02 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:31:02 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 186 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:31:02 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 186: 0xe800006b.
+Feb 10 00:31:02 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xba-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:31:21 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:31:34 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:31:34 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003cc640-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:31:34 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003cc640-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:31:34 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 187 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:31:34 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 187: 0xe800006b.
+Feb 10 00:31:34 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xbb-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:31:53 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:32:06 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:32:06 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024c7e70-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:32:06 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024c7e70-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:32:06 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 188 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:32:06 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 188: 0xe800006b.
+Feb 10 00:32:06 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xbc-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:32:25 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:32:39 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:32:39 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:32:39 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:32:39 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 189 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:32:39 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 189: 0xe800006b.
+Feb 10 00:32:39 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xbd-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:32:58 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:33:10 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:33:10 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:33:10 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:33:10 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 190 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:33:10 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 190: 0xe800006b.
+Feb 10 00:33:10 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xbe-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:33:10 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642762022767
+Feb 10 00:33:29 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:33:43 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:33:43 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:33:43 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:33:43 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 191 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:33:43 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 191: 0xe800006b.
+Feb 10 00:33:43 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xbf-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:34:02 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:34:11 lofie com.apple.backupd-auto[66810]: Not starting scheduled Time Machine backup - time machine destination not resolvable.
+Feb 10 00:34:15 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:34:15 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024d5020-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:34:15 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024d5020-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:34:15 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 192 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:34:15 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 192: 0xe800006b.
+Feb 10 00:34:15 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc0-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:34:20 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:34:28 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:34:28 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024c7e70-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:34:28 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024c7e70-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:34:28 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 193 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:34:28 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 193: 0xe800006b.
+Feb 10 00:34:28 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc1-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:34:43 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:34:50 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:34:50 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003cc640-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:34:50 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003cc640-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:34:50 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 194 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:34:50 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 194: 0xe800006b.
+Feb 10 00:34:50 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc2-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:35:09 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:35:15 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:35:15 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:35:15 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:35:15 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 195 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:35:15 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 195: 0xe800006b.
+Feb 10 00:35:15 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc3-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:35:35 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:35:48 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:35:48 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:35:48 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:35:48 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 196 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:35:48 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 196: 0xe800006b.
+Feb 10 00:35:48 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc4-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:36:07 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:36:21 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:36:21 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:36:21 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:36:21 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 197 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:36:21 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 197: 0xe800006b.
+Feb 10 00:36:21 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc5-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:36:36 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:36:44 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:36:44 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003cc640-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:36:44 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003cc640-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:36:44 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 198 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:36:44 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 198: 0xe800006b.
+Feb 10 00:36:44 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc6-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:37:03 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:37:10 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:37:10 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003b8f80-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:37:10 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003b8f80-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:37:10 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 199 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:37:10 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 199: 0xe800006b.
+Feb 10 00:37:10 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc7-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:37:29 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:41:06 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:41:06 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024d5020-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:41:06 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024d5020-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:41:06 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 200 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:41:06 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 200: 0xe800006b.
+Feb 10 00:41:06 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc8-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:41:28 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:41:36 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:41:36 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024d5020-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:41:36 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024d5020-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:41:36 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 201 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:41:36 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 201: 0xe800006b.
+Feb 10 00:41:36 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xc9-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:41:55 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:42:08 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:42:08 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024c7e70-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:42:08 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024c7e70-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:42:08 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 202 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:42:08 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 202: 0xe800006b.
+Feb 10 00:42:08 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xca-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:42:27 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:42:40 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:42:40 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1003cc640-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:42:40 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1003cc640-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:42:40 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 203 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:42:40 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 203: 0xe800006b.
+Feb 10 00:42:40 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xcb-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:42:47 lofie [0x0-0x1ee2ee1].backupd-helper[66858]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 10 00:43:00 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:43:12 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:43:12 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024d5020-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:43:12 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024d5020-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:43:12 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 204 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:43:12 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 204: 0xe800006b.
+Feb 10 00:43:12 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xcc-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:43:31 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:43:44 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:43:44 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024c7e70-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:43:44 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024c7e70-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:43:44 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 205 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:43:44 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 205: 0xe800006b.
+Feb 10 00:43:44 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xcd-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:44:03 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:44:11 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:44:11 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024d5020-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:44:11 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024d5020-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:44:11 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 206 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:44:11 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 206: 0xe800006b.
+Feb 10 00:44:11 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xce-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:44:43 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 00:45:14 lofie com.apple.usbmuxd[57835]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 10 00:45:14 lofie com.apple.usbmuxd[57835]: MuxNetworkInitiateConnect Client 0x1024c7e70-usbmuxd/NULL requesting attach to ae49feaeec383221a3669aa2ef40635b9f9866c1:62078 failed, could not begin background connection attempt: -1
+Feb 10 00:45:14 lofie com.apple.usbmuxd[57835]: HandleUSBMuxConnect Client 0x1024c7e70-usbmuxd/NULL MuxNetworkInitiateConnect failed
+Feb 10 00:45:14 lofie usbmuxd[57835]: AMDeviceConnect (thread 0x100598000): Could not connect to lockdown port (62078) on device 207 - ae49feaeec383221a3669aa2ef40635b9f9866c1: 0xe800006b.
+Feb 10 00:45:14 lofie usbmuxd[57835]: _AMDevicePreflightWorker (thread 0x100598000): Pair worker could not connect to lockdownd on device 207: 0xe800006b.
+Feb 10 00:45:14 lofie com.apple.usbmuxd[57835]: HandleDeviceAttachHelperCallback preflighting failed for WiFi device 0xcf-10.0.1.5:0: 0xe800006b. Ignoring device.
+Feb 10 00:48:22 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642762934150
+Feb 10 00:48:22 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642762934150
+Feb 10 00:48:22 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642762934150
+Feb 10 00:53:52 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642763264881
+Feb 10 00:58:11 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642763523442
+Feb 10 01:01:27 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642763719425
+Feb 10 01:05:39 lofie configd[13]: PowerManagement configd: System Sleep prevented by active remote login session (300 second threshold).
+Feb 10 01:05:39 lofie configd[13]: PowerManagement configd: tty sleep preventer: /dev/ttys001
+Feb 10 01:06:38 lofie configd[13]: DHCP en1: RENEW/REBIND transmit failed
+Feb 10 01:14:18 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 7867055642764490852
+Feb 10 01:14:18 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442460361
+Feb 10 01:16:16 lofie loginwindow[57781]: loginwindow SleepWakeCallback WILL sleep
+Feb 10 01:16:16 lofie com.apple.usbmuxd[57835]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 10 01:16:17 lofie configd[13]: PMConnection IPConfiguration com.apple.powermanagement.applicationresponse.slowresponse 1144 ms
+Feb 10 12:50:43 lofie loginwindow[57781]: loginwindow SleepWakeCallback will power on, Currenttime:2/10/2012 12:50:43.008 PM - Waketime:2/10/2012 12:50:41.530 PM = Deltatime:1.478375912
+Feb 10 12:50:43 lofie configd[13]: PMConnection IPConfiguration com.apple.powermanagement.applicationresponse.slowresponse 102 ms
+Feb 10 12:50:43 lofie configd[13]: network configuration changed.
+Feb 10 12:50:43 lofie vmnet-bridge[129]: Dynamic store changed
+Feb 10 12:50:43 lofie vmnet-bridge[129]: Failed to read SCproperties for key: State:/Network/Global/IPv4
+Feb 10 12:50:43 lofie vmnet-bridge[129]: Stopping bridge for: en1
+Feb 10 12:50:43 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442591109
+Feb 10 12:50:43 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442591109
+Feb 10 12:50:43 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442591592
+Feb 10 12:50:43 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442591592
+Feb 10 12:50:43 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442591842
+Feb 10 12:50:43 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442591842
+Feb 10 12:50:44 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592093
+Feb 10 12:50:44 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592093
+Feb 10 12:50:44 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592193
+Feb 10 12:50:44 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592193
+Feb 10 12:50:44 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592344
+Feb 10 12:50:44 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592344
+Feb 10 12:50:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592875
+Feb 10 12:50:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442592875
+Feb 10 12:50:45 lofie configd[13]: Sleep: Success - BATT 98 - Idle Sleep
+Feb 10 12:50:45 lofie configd[13]: Wake: Success - BATT 98 - EC LID0
+Feb 10 12:50:45 lofie configd[13]: Hibernate Statistics
+Feb 10 12:50:45 lofie configd[13]: Kernel configd com.apple.powermanagement.applicationresponse.cancelled
+Feb 10 12:50:45 lofie fitbitd[50]: The system has powered on. Simulating connect for basestation "/dev/cu.Fitbit".
+Feb 10 12:50:45 lofie configd[13]: Kernel Google Chrome com.apple.powermanagement.applicationresponse.timedout 30000 ms
+Feb 10 12:50:45 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:45 lofie.local fitbitd[50] <Notice>: The system has powered on. Simulating connect for basestation "/dev/cu.Fitbit".
+Feb 10 12:50:45 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:45 lofie.local MacUserInterface[50] <Debug>: Processing action 'basestationconnect'...
+Feb 10 12:50:45 lofie configd[13]: Kernel Google Chrome He com.apple.powermanagement.applicationresponse.timedout 30000 ms
+Feb 10 12:50:45: --- last message repeated 3 times ---
+Feb 10 12:50:45 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:45 lofie.local MacUserInterface[50] <Info>: Base station with serial '/dev/cu.Fitbit' has been plugged in.
+Feb 10 12:50:45 lofie configd[13]: Kernel Google Chrome He com.apple.powermanagement.applicationresponse.timedout 30000 ms
+Feb 10 12:50:45: --- last message repeated 4 times ---
+Feb 10 12:50:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442593344
+Feb 10 12:50:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442593344
+Feb 10 12:50:46 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442593877
+Feb 10 12:50:46 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442593877
+Feb 10 12:50:46 lofie eapolclient[66975]: en1 START
+Feb 10 12:50:46 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442594277
+Feb 10 12:50:46 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442594277
+Feb 10 12:50:46 lofie eapolclient[66975]: eapmschapv2_success_request: successfully authenticated
+Feb 10 12:50:46 lofie eapolclient[66975]: PEAP: successfully authenticated
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Starting session in standard mode...
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Ending active session and restarting in standard mode...
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Debug>: [CTX] StartSession: setting restarting context 0
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Ending session...
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Reset channel.
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Closed channel.
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Debug>: Pending acks: 0
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Reset channel.
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Starting session in standard mode...
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Debug>: [CTX] StartSession: setting context 0
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Processing request...
+Feb 10 12:50:46 lofie MacUserInterface[50]: Failed to find device
+Feb 10 12:50:46 lofie MacUserInterface[50]: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Info>: Initializing [baud: 50000, device: 255]... 
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Critical>: Failed to find device
+Feb 10 12:50:46 lofie com.fitbit.fitbitd[50]: Fri Feb 10 12:50:46 lofie.local MacUserInterface[50] <Critical>: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 12:50:46 lofie vmnet-bridge[129]: Preferences changed called
+Feb 10 12:50:47: --- last message repeated 1 time ---
+Feb 10 12:50:47 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442595377
+Feb 10 12:50:47 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442595377
+Feb 10 12:50:47 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442595377
+Feb 10 12:50:47 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442595377
+Feb 10 12:50:49 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442597300
+Feb 10 12:50:49 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442597300
+Feb 10 12:50:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442597977
+Feb 10 12:50:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442597977
+Feb 10 12:50:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442598302
+Feb 10 12:50:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442598302
+Feb 10 12:50:53 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442601308
+Feb 10 12:50:53 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442601308
+Feb 10 12:50:58 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442605977
+Feb 10 12:50:58 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442605977
+Feb 10 12:51:02 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442610326
+Feb 10 12:51:02 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442610326
+Feb 10 12:51:05 lofie configd[13]: network configuration changed.
+Feb 10 12:51:05 lofie vmnet-bridge[129]: Dynamic store changed
+Feb 10 12:51:05 lofie vmnet-bridge[129]: Started bridge for 0, en1
+Feb 10 12:51:05 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442613266
+Feb 10 12:51:05 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442613266
+Feb 10 12:51:05 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442613266
+Feb 10 12:51:05 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442613544
+Feb 10 12:51:05 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442613794
+Feb 10 12:51:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442614044
+Feb 10 12:51:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442614268
+Feb 10 12:51:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442614268
+Feb 10 12:51:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442614268
+Feb 10 12:51:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442614368
+Feb 10 12:51:07 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442615368
+Feb 10 12:51:09 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442617274
+Feb 10 12:51:09 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442617274
+Feb 10 12:51:09 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442617274
+Feb 10 12:51:09 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442617374
+Feb 10 12:51:13 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442621374
+Feb 10 12:51:13 lofie loginwindow[57781]: no spins reported for this wake
+Feb 10 12:51:13 lofie [0x0-0x1eedeec].backupd-helper[66911]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 10 12:51:14 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442621977
+Feb 10 12:51:14 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442621977
+Feb 10 12:51:18 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442626292
+Feb 10 12:51:18 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442626292
+Feb 10 12:51:18 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442626292
+Feb 10 12:51:21 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442629374
+Feb 10 12:51:35 lofie login[60036]: DEAD_PROCESS: 60036 ttys001
+Feb 10 12:51:35 lofie login[62570]: DEAD_PROCESS: 62570 ttys002
+Feb 10 12:51:37 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442645375
+Feb 10 12:51:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442653346
+Feb 10 12:51:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442653346
+Feb 10 12:51:45 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442653346
+Feb 10 12:51:46 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442653977
+Feb 10 12:51:46 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442653977
+Feb 10 12:52:09 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442677376
+Feb 10 12:52:30 lofie loginwindow[57781]: ERROR | -[ApplicationManager _instantOffTryQuitAllForRequstor:replyEvent:] | _instantOffTryQuitAllForRequstor - _vproc_set_global_on_demand returned error -2074481922
+Feb 10 12:52:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442717977
+Feb 10 12:52:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442717977
+Feb 10 12:52:50 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442717977
+Feb 10 12:52:57 lofie login[58014]: DEAD_PROCESS: 58014 ttys000
+Feb 10 12:53:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442734508
+Feb 10 12:53:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442734508
+Feb 10 12:53:06 lofie mDNSResponder[33]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000006   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 8442734508
+Feb 10 12:53:12 lofie eapolclient[66975]: eapmschapv2_success_request: successfully authenticated
+Feb 10 12:53:12 lofie eapolclient[66975]: PEAP: successfully authenticated
+Feb 10 12:54:51 lofie loginwindow[57781]: ERROR | -[ApplicationManager _instantOffTryQuitAllForRequstor:replyEvent:] | _instantOffTryQuitAllForRequstor - _vproc_set_global_on_demand returned error -2074481922
+Feb 10 12:55:42 localhost com.apple.launchd[1]: *** launchd[1] has started up. ***
+Feb 10 12:55:53 localhost DirectoryService[15]: Improper shutdown detected
+Feb 10 12:55:59 localhost bootlog[44]: BOOT_TIME: 1328896540 0
+Feb 10 12:55:59 localhost fseventsd[37]: event logs in /.fseventsd out of sync with volume.  destroying old logs. (5519255 19 5519311)
+Feb 10 12:56:04 localhost fseventsd[37]: log dir: /.fseventsd getting new uuid: DE3F78B2-7CC4-44F4-8082-7EEB65C0D9BC
+Feb 10 12:56:05 localhost blued[17]: Apple Bluetooth daemon started
+Feb 10 12:56:09 localhost VMware Fusion 416484[55]: Starting VMware Fusion: 
+Feb 10 12:56:09 localhost com.vmware.launchd.vmware[48]: VMware Fusion 416484: Starting VMware Fusion: 
+Feb 10 12:56:10 localhost mDNSResponder[32]: mDNSResponder mDNSResponder-258.21 (May 26 2011 14:40:13) starting
+Feb 10 12:56:10 localhost com.apple.usbmuxd[24]: usbmuxd-263 on Aug 23 2011 at 00:44:06, running 64 bit
+Feb 10 12:56:10 localhost fitbitd[49]: fitbitd: v1.5.2 (built Jun  6 2011 16:39:58 using Boost 1_45)
+Feb 10 12:56:10 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:10 localhost fitbitd[49] <Notice>: fitbitd: v1.5.2 (built Jun  6 2011 16:39:58 using Boost 1_45)
+Feb 10 12:56:10 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:10 localhost fitbitd[49] <Info>: Signal handler thread started.
+Feb 10 12:56:11 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:11 localhost fitbitd[49] <Debug>: launchd checkin found 1 fds
+Feb 10 12:56:11 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:11 localhost fitbitd[49] <Info>: Running daemon startup sequence.
+Feb 10 12:56:12 localhost /System/Library/CoreServices/loginwindow.app/Contents/MacOS/loginwindow[33]: Login Window Application Started
+Feb 10 12:56:13 localhost MacUserInterface[49]: Failed to find device
+Feb 10 12:56:13 localhost MacUserInterface[49]: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 12:56:13 localhost fitbitd[49]: Updated pid file with pid 49.
+Feb 10 12:56:13 localhost fitbitd[49]: Daemon successfully started.
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Debug>: Processing action 'init'...
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Debug>: [CTX] StartSession: setting context 0
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Info>: Processing request...
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Info>: Initializing [baud: 50000, device: 255]... 
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Critical>: Failed to find device
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost MacUserInterface[49] <Critical>: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost fitbitd[49] <Debug>: scheduling socket on runloop
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost fitbitd[49] <Notice>: Updated pid file with pid 49.
+Feb 10 12:56:13 localhost com.fitbit.fitbitd[49]: Fri Feb 10 12:56:13 localhost fitbitd[49] <Notice>: Daemon successfully started.
+Feb 10 12:56:13 localhost configd[13]: bootp_session_transmit: bpf_write(en1) failed: Network is down (50)
+Feb 10 12:56:13 localhost configd[13]: DHCP en1: INIT transmit failed
+Feb 10 12:56:13 localhost configd[13]: network configuration changed.
+Feb 10 12:56:13 lofie configd[13]: setting hostname to "lofie.local"
+Feb 10 12:56:14 lofie repair_packages[58]: PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-api.pkg
+Feb 10 12:56:14 lofie com.vmware.launchd.vmware[48]: 2012-02-10 12:56:14.627 repair_packages[58:907] PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-api.pkg
+Feb 10 12:56:14 lofie repair_packages[58]: PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-bin.pkg
+Feb 10 12:56:14 lofie com.vmware.launchd.vmware[48]: 2012-02-10 12:56:14.631 repair_packages[58:907] PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-bin.pkg
+Feb 10 12:56:14 lofie repair_packages[58]: PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-gui.pkg
+Feb 10 12:56:14 lofie com.vmware.launchd.vmware[48]: 2012-02-10 12:56:14.632 repair_packages[58:907] PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-gui.pkg
+Feb 10 12:56:14 lofie repair_packages[58]: PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-kext.pkg
+Feb 10 12:56:14 lofie com.vmware.launchd.vmware[48]: 2012-02-10 12:56:14.633 repair_packages[58:907] PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-kext.pkg
+Feb 10 12:56:14 lofie repair_packages[58]: PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-profiles.pkg
+Feb 10 12:56:14 lofie com.vmware.launchd.vmware[48]: 2012-02-10 12:56:14.634 repair_packages[58:907] PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-profiles.pkg
+Feb 10 12:56:14 lofie repair_packages[58]: PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-startup.pkg
+Feb 10 12:56:14 lofie com.vmware.launchd.vmware[48]: 2012-02-10 12:56:14.635 repair_packages[58:907] PackageKit: *** Missing bundle identifier: /Library/Receipts/vpnclient-startup.pkg
+Feb 10 12:56:14 lofie com.apple.SystemStarter[25]: Starting Cisco Systems VPN Driver
+Feb 10 12:56:15 lofie kextloadlogger[82]: /System/Library/Extensions/CiscoVPN.kext
+Feb 10 12:56:21 lofie loginwindow[33]: Login Window Started Security Agent
+Feb 10 12:56:23 lofie WindowServer[74]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 12:56:23 lofie com.apple.WindowServer[74]: Fri Feb 10 12:56:23 lofie.local WindowServer[74] <Error>: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 12:56:27 lofie com.vmware.launchd.vmware[48]: Verifying files from package 'com.vmware.fusion.application' on '/'.
+Feb 10 12:56:27 lofie com.vmware.launchd.vmware[48]: Finished verifying files from package 'com.vmware.fusion.application' on '/'.
+Feb 10 12:56:28 lofie vmnet-bridge[114]: UUID: Unable to open /dev/mem: No such file or directory
+Feb 10 12:56:28 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 12:56:28 lofie vmnet-bridge[114]: Failed to read SCproperties for key: State:/Network/Global/IPv4
+Feb 10 12:56:28 lofie vmnet-bridge[114]: Stopping bridge for: 
+Feb 10 12:56:29 lofie com.vmware.launchd.vmware[48]: Started network services
+Feb 10 12:56:29 lofie VMware Fusion 416484[130]: restart cisco vpn client
+Feb 10 12:56:29 lofie com.vmware.launchd.vmware[48]: VMware Fusion 416484: restart cisco vpn client
+Feb 10 12:56:29 lofie com.vmware.launchd.vmware[48]: Stopping Cisco Systems VPN Driver
+Feb 10 12:56:29 lofie com.vmware.launchd.vmware[48]: Starting Cisco Systems VPN Driver
+Feb 10 12:56:29 lofie kextloadlogger[133]: /System/Library/Extensions/CiscoVPN.kext
+Feb 10 12:56:29 lofie com.vmware.launchd.vmware[48]: Verifying and re-installing files from /Library/Application Support/VMware Fusion/thnuclnt
+Feb 10 12:56:33 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 12:56:33 lofie configd[13]: network configuration changed.
+Feb 10 12:56:33 lofie vmnet-bridge[114]: Started bridge for 0, en1
+Feb 10 12:56:34 lofie SecurityAgent[98]: NSSecureTextFieldCell detected a field editor ((null)) that is not a NSTextView subclass designed to work with the cell. Ignoring...
+Feb 10 12:56:35 lofie loginwindow[33]: Login Window - Returned from Security Agent
+Feb 10 12:56:35 lofie loginwindow[33]: USER_PROCESS: 33 console
+Feb 10 12:56:35 lofie com.apple.launchd.peruser.501[142] (com.apple.ReportCrash): Falling back to default Mach exception handler. Could not find: com.apple.ReportCrash.Self
+Feb 10 12:56:41 lofie com.apple.launchd.peruser.501[142] (com.adobe.ARM.925793fb327152fd34795896fa1fb9ffa268b2a852256fe56609efa3[169]): posix_spawn("/Applications/Adobe Reader 9/Adobe Reader.app/Contents/MacOS/Updater/Adobe Reader Updater Helper.app/Contents/MacOS/Adobe Reader Updater Helper", ...): No such file or directory
+Feb 10 12:56:41 lofie com.apple.launchd.peruser.501[142] (com.adobe.ARM.925793fb327152fd34795896fa1fb9ffa268b2a852256fe56609efa3[169]): Exited with exit code: 1
+Feb 10 12:56:44 lofie root[173]: /usr/libexec/ntpd-wrapper: scutil key State:/Network/Global/DNS not present after 30 seconds
+Feb 10 12:56:48 lofie com.apple.launchd.peruser.501[142] (com.apple.Kerberos.renew.plist[163]): Exited with exit code: 1
+Feb 10 12:56:48 lofie root[177]: sntp options: a=2 v=1 e=0.100 E=5.000 P=2147483647.000
+Feb 10 12:56:48 lofie root[177]:     d=15 c=5 x=0 op=1 l=/var/run/sntp.pid f= time.apple.com
+Feb 10 12:56:48 lofie root[177]: sntp: getaddrinfo(hostname, ntp)  failed with nodename nor servname provided, or not known
+Feb 10 12:56:55 lofie tv.boxee.helper[167]: Using key code for OSX 10.5
+Feb 10 12:57:00 lofie pbs[184]: Malformed Services entries in Info.plist for Service at URL /Applications/TeX/LaTeXiT.app\n	The value for key NSTimeOut was supposed to be of type NSString, but instead it was of type NSNumber\n	The value for key NSTimeOut was supposed to be of type NSString, but instead it was of type NSNumber\n	The value for key NSTimeOut was supposed to be of type NSString, but instead it was of type NSNumber\n	The value for key NSTimeOut was supposed to be of type NSString, but instead it was of type NSNumber\n	The value for key NSTimeOut was supposed to be of type NSString, but instead it was of type NSNumber\n	The value for key NSTimeOut was supposed to be of type NSString, but instead it was of type NSNumber
+Feb 10 12:57:02 lofie eapolclient[185]: en1 START
+Feb 10 12:57:10 lofie eapolclient[185]: eapmschapv2_success_request: successfully authenticated
+Feb 10 12:57:10 lofie eapolclient[185]: PEAP: successfully authenticated
+Feb 10 12:57:20 lofie configd[13]: network configuration changed.
+Feb 10 12:57:20 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 12:57:20 caen-cse-141-212-203-151 configd[13]: setting hostname to "caen-cse-141-212-203-151.wireless.engin.umich.edu"
+Feb 10 12:57:24 caen-cse-141-212-203-151 GoogleSoftwareUpdateAgent[166]: INSERT-HANG-DETECTED: Tx time:4.042792, # of Inserts: 0, # of bytes written: 0, Did shrink: NO
+Feb 10 12:57:26 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: [0210/125726:INFO:breakpad_mac.mm(148)] Breakpad disabled
+Feb 10 12:57:53 caen-cse-141-212-203-151 com.apple.quicklook[186]: missing or invalid value for cross-reference offset.
+Feb 10 12:58:12 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: [196:-1281806336:153278137469:ERROR:backend_impl.cc(1186)] Critical error found -8
+Feb 10 12:58:13 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: [196:-1281806336:153449194535:ERROR:entry_impl.cc(919)] Failed to save user data
+Feb 10 12:58:18 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: [196:-1281806336:159233968624:ERROR:backend_impl.cc(1186)] Critical error found -8
+Feb 10 12:58:19 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: [196:-1281806336:159487682324:ERROR:entry_impl.cc(919)] Failed to save user data
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: Entered INJECT_pthread_entry
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: Installing event loop timer
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: proc: 0x1016f4e5b
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: upp: 0x1016f4e5b
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: InstallEventLoopTimer: 0x7fff80c7bdd8
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: GetMainEventLoop: 0x7fff80c7bc41
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: timer installed!
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: Loading /Library/DropboxHelperTools/Dropbox_u501/DropboxBundle.bundle/Contents/MacOS/DropboxBundle
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: module initializer in main thread?: 1
+Feb 10 12:58:45 caen-cse-141-212-203-151 com.apple.Finder[148]: Dropbox: dlopen returned: 0x11511ea80
+Feb 10 13:01:19 caen-cse-141-212-203-151 mdworker32[255]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 13:04:46 caen-cse-141-212-203-151 mdworker32[266]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 13:06:34 caen-cse-141-212-203-151 ntpd[19]: time reset -1.304427 s
+Feb 10 13:06:46 caen-cse-141-212-203-151 /System/Library/CoreServices/CCacheServer.app/Contents/MacOS/CCacheServer[175]: No valid tickets, timing out
+Feb 10 13:08:45 caen-cse-141-212-203-151 mdworker32[277]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 13:15:16 caen-cse-141-212-203-151 mdworker32[282]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 13:18:44 caen-cse-141-212-203-151 mdworker32[290]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 13:18:50 caen-cse-141-212-203-151 loginwindow[33]: loginwindow SleepWakeCallback WILL sleep
+Feb 10 13:18:51 lofie configd[13]: setting hostname to "lofie.local"
+Feb 10 13:18:51 lofie configd[13]: network configuration changed.
+Feb 10 13:18:51 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 13:18:51 lofie vmnet-bridge[114]: Failed to read SCproperties for key: State:/Network/Global/IPv4
+Feb 10 13:18:51 lofie vmnet-bridge[114]: Stopping bridge for: en1
+Feb 10 13:21:43 lofie loginwindow[33]: loginwindow SleepWakeCallback will power on, Currenttime:2/10/2012 1:21:43.237 PM - Waketime:2/10/2012 1:21:41.640 PM = Deltatime:1.597101927
+Feb 10 13:21:44 lofie fitbitd[49]: The system has powered on. Simulating connect for basestation "".
+Feb 10 13:21:44 lofie configd[13]: Sleep: Success - BATT 83 - Clamshell Sleep
+Feb 10 13:21:44 lofie configd[13]: Wake: Success - BATT 83 - EC LID0
+Feb 10 13:21:44 lofie configd[13]: Hibernate Statistics
+Feb 10 13:21:44 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:44 lofie.local fitbitd[49] <Notice>: The system has powered on. Simulating connect for basestation "".
+Feb 10 13:21:44 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:44 lofie.local MacUserInterface[49] <Debug>: Processing action 'basestationconnect'...
+Feb 10 13:21:44 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:44 lofie.local MacUserInterface[49] <Info>: Base station with serial '' has been plugged in.
+Feb 10 13:21:44 lofie configd[13]: PMConnection AirPort configd plug-in com.apple.powermanagement.applicationresponse.slowresponse 1849 ms
+Feb 10 13:21:44 lofie configd[13]: PMConnection IPConfiguration com.apple.powermanagement.applicationresponse.slowresponse 1851 ms
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Ending active session and restarting in standard mode...
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Debug>: [CTX] StartSession: setting restarting context 0
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Ending session...
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Reset channel.
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Closed channel.
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Debug>: Pending acks: 0
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Reset channel.
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 13:21:46 lofie MacUserInterface[49]: Failed to find device
+Feb 10 13:21:46 lofie MacUserInterface[49]: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Debug>: [CTX] StartSession: setting context 0
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Processing request...
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Info>: Initializing [baud: 50000, device: 255]... 
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Critical>: Failed to find device
+Feb 10 13:21:46 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:21:46 lofie.local MacUserInterface[49] <Critical>: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 13:21:46 lofie eapolclient[185]: eapmschapv2_success_request: successfully authenticated
+Feb 10 13:21:46 lofie eapolclient[185]: PEAP: successfully authenticated
+Feb 10 13:21:46 lofie vmnet-bridge[114]: Preferences changed called
+Feb 10 13:21:47: --- last message repeated 1 time ---
+Feb 10 13:21:47 lofie ntpd[19]: bind() fd 25, family 30, port 123, scope 5, addr fe80::226:bbff:fe08:509d, in6_is_addr_multicast=0 flags=0x11 fails: Can't assign requested address
+Feb 10 13:21:47 lofie ntpd[19]: unable to create socket on en1 (10) for fe80::226:bbff:fe08:509d#123
+Feb 10 13:21:50 lofie ntpd[19]: sendto(17.151.16.23) (fd=24): No route to host
+Feb 10 13:21:51 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 13:21:51 lofie vmnet-bridge[114]: Started bridge for 0, en1
+Feb 10 13:21:51 lofie configd[13]: network configuration changed.
+Feb 10 13:21:52 lofie ntpd[19]: sendto(17.151.16.23) (fd=24): Network is unreachable
+Feb 10 13:21:52 caen-cse-141-212-203-151 configd[13]: setting hostname to "caen-cse-141-212-203-151.wireless.engin.umich.edu"
+Feb 10 13:21:59 caen-cse-141-212-203-151 ntpd[19]: time reset +0.338880 s
+Feb 10 13:22:13 caen-cse-141-212-203-151 loginwindow[33]: no spins reported for this wake
+Feb 10 13:22:13 caen-cse-141-212-203-151 [0x0-0x3c03c].backupd-helper[298]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 10 13:32:34 caen-cse-141-212-203-151 mdworker32[318]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 13:32:38 caen-cse-141-212-203-151 loginwindow[33]: loginwindow SleepWakeCallback WILL sleep
+Feb 10 13:32:39 lofie configd[13]: setting hostname to "lofie.local"
+Feb 10 13:32:39 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 13:32:39 lofie configd[13]: network configuration changed.
+Feb 10 13:32:39 lofie vmnet-bridge[114]: Failed to read SCproperties for key: State:/Network/Global/IPv4
+Feb 10 13:32:39 lofie vmnet-bridge[114]: Stopping bridge for: en1
+Feb 10 13:40:13 lofie loginwindow[33]: loginwindow SleepWakeCallback will power on, Currenttime:2/10/2012 1:40:13.237 PM - Waketime:2/10/2012 1:40:11.660 PM = Deltatime:1.576820910
+Feb 10 13:40:14 lofie configd[13]: Sleep: Success - BATT 76 - Clamshell Sleep
+Feb 10 13:40:14 lofie configd[13]: Wake: Success - BATT 76 - EC LID0
+Feb 10 13:40:14 lofie configd[13]: Hibernate Statistics
+Feb 10 13:40:14 lofie fitbitd[49]: The system has powered on. Simulating connect for basestation "".
+Feb 10 13:40:14 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:14 lofie.local fitbitd[49] <Notice>: The system has powered on. Simulating connect for basestation "".
+Feb 10 13:40:14 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:14 lofie.local MacUserInterface[49] <Debug>: Processing action 'basestationconnect'...
+Feb 10 13:40:14 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:14 lofie.local MacUserInterface[49] <Info>: Base station with serial '' has been plugged in.
+Feb 10 13:40:15 lofie configd[13]: PMConnection AirPort configd plug-in com.apple.powermanagement.applicationresponse.slowresponse 2131 ms
+Feb 10 13:40:15 lofie configd[13]: PMConnection IPConfiguration com.apple.powermanagement.applicationresponse.slowresponse 2137 ms
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Ending active session and restarting in standard mode...
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Debug>: [CTX] StartSession: setting restarting context 0
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Ending session...
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Reset channel.
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Closed channel.
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Debug>: Pending acks: 0
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Reset channel.
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Debug>: [CTX] StartSession: setting context 0
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Processing request...
+Feb 10 13:40:16 lofie MacUserInterface[49]: Failed to find device
+Feb 10 13:40:16 lofie MacUserInterface[49]: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Info>: Initializing [baud: 50000, device: 255]... 
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Critical>: Failed to find device
+Feb 10 13:40:16 lofie com.fitbit.fitbitd[49]: Fri Feb 10 13:40:16 lofie.local MacUserInterface[49] <Critical>: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 10 13:40:16 lofie eapolclient[185]: eapmschapv2_success_request: successfully authenticated
+Feb 10 13:40:16 lofie eapolclient[185]: PEAP: successfully authenticated
+Feb 10 13:40:17 lofie vmnet-bridge[114]: Preferences changed called
+Feb 10 13:40:19: --- last message repeated 1 time ---
+Feb 10 13:40:19 lofie ntpd[19]: sendto(17.151.16.23) (fd=24): No route to host
+Feb 10 13:40:22 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 10 13:40:22 lofie configd[13]: network configuration changed.
+Feb 10 13:40:22 lofie vmnet-bridge[114]: Started bridge for 0, en1
+Feb 10 13:40:22 caen-cse-141-212-203-151 configd[13]: setting hostname to "caen-cse-141-212-203-151.wireless.engin.umich.edu"
+Feb 10 13:40:23 caen-cse-141-212-203-151 ntpd[19]: sendto(17.151.16.23) (fd=24): Network is unreachable
+Feb 10 13:40:43 caen-cse-141-212-203-151 loginwindow[33]: no spins reported for this wake
+Feb 10 13:40:43 caen-cse-141-212-203-151 [0x0-0x46046].backupd-helper[327]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 10 13:42:33 caen-cse-141-212-203-151 [0x0-0x48048].backupd-helper[336]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 10 13:42:37 caen-cse-141-212-203-151 [0x0-0x49049].backupd-helper[338]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 10 13:43:30 caen-cse-141-212-203-151 PubSubAgent[343]: EntryCore: Multiple authors not supported yet (ignoring subsequent ones)
+Feb 10 13:45:13: --- last message repeated 2 times ---
+Feb 10 13:50:48 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 13:50:48 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[272] <Error>: doClip: empty path.
+Feb 10 13:52:43: --- last message repeated 2 times ---
+Feb 10 13:52:59 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 13:52:59 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[272] <Error>: doClip: empty path.
+Feb 10 13:53:45: --- last message repeated 2 times ---
+Feb 10 13:53:45 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 13:53:45 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[272] <Error>: doClip: empty path.
+Feb 10 13:53:47: --- last message repeated 2 times ---
+Feb 10 13:53:47 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 13:53:47 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[272] <Error>: doClip: empty path.
+Feb 10 13:54:43: --- last message repeated 2 times ---
+Feb 10 13:54:43 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 13:54:43 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[272] <Error>: doClip: empty path.
+Feb 10 13:55:13: --- last message repeated 2 times ---
+Feb 10 14:00:23 caen-cse-141-212-203-151 mdworker32[368]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 14:06:11 caen-cse-141-212-203-151 com.apple.backupd-auto[399]: Not starting scheduled Time Machine backup - time machine destination not resolvable.
+Feb 10 14:13:17 caen-cse-141-212-203-151 PubSubAgent[424]: EntryCore: Multiple authors not supported yet (ignoring subsequent ones)
+Feb 10 14:15:13: --- last message repeated 2 times ---
+Feb 10 14:36:46 caen-cse-141-212-203-151 mdworker32[492]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 14:37:01 caen-cse-141-212-203-151 Google Chrome[196]: Cannot find function pointer FusionVMDKPlugIn_Factory for factory C138F397-D2BE-48DB-9DAB-9FAA203BF4AE in CFBundle/CFPlugIn 0x129afea0 </Library/Contextual Menu Items/FusionVMDKPlugIn.plugin> (not loaded)
+Feb 10 14:37:47 caen-cse-141-212-203-151 Safari[340]: Periodic CFURLCache Insert stats (iters: 657) - Tx time:0.531152, # of Inserts: 9, # of bytes written: 126671, Did shrink: NO, Size of cache-file: 181477376, Num of Failures: 0
+Feb 10 14:43:42 caen-cse-141-212-203-151 mdworker32[526]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 14:44:54 caen-cse-141-212-203-151 Safari[340]: INSERT-HANG-DETECTED: Tx time:3.228102, # of Inserts: 56, # of bytes written: 945255, Did shrink: NO
+Feb 10 14:45:30 caen-cse-141-212-203-151 Safari[340]: INSERT-HANG-DETECTED: Tx time:3.617303, # of Inserts: 119, # of bytes written: 1652339, Did shrink: NO
+Feb 10 15:06:11 caen-cse-141-212-203-151 com.apple.backupd-auto[590]: Not starting scheduled Time Machine backup - time machine destination not resolvable.
+Feb 10 15:07:46 caen-cse-141-212-203-151 Safari[340]: Periodic CFURLCache Insert stats (iters: 360) - Tx time:0.006187, # of Inserts: 1, # of bytes written: 8443, Did shrink: NO, Size of cache-file: 182525952, Num of Failures: 2
+Feb 10 15:14:06 caen-cse-141-212-203-151 mdworker32[617]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 15:16:57 caen-cse-141-212-203-151 Safari[340]: INSERT-HANG-DETECTED: Tx time:20.537141, # of Inserts: 1, # of bytes written: 768, Did shrink: YES
+Feb 10 15:17:09 caen-cse-141-212-203-151 Safari[340]: INSERT-HANG-DETECTED: Tx time:12.581477, # of Inserts: 2, # of bytes written: 1536, Did shrink: YES
+Feb 10 15:21:19 caen-cse-141-212-203-151 mdworker32[636]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 15:42:07 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 15:42:07 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 15:42:43: --- last message repeated 2 times ---
+Feb 10 15:42:52 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 15:42:52 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 15:42:54: --- last message repeated 2 times ---
+Feb 10 15:42:54 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 15:42:54 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 15:45:13: --- last message repeated 2 times ---
+Feb 10 15:50:35 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 15:50:35 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 15:50:44: --- last message repeated 2 times ---
+Feb 10 15:50:44 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 15:50:44 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 15:51:23: --- last message repeated 2 times ---
+Feb 10 15:51:23 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 15:51:23 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 15:52:43: --- last message repeated 2 times ---
+Feb 10 15:53:18 caen-cse-141-212-203-151 Safari[340]: Periodic CFURLCache Insert stats (iters: 542) - Tx time:2.090736, # of Inserts: 81, # of bytes written: 1898261, Did shrink: NO, Size of cache-file: 181485568, Num of Failures: 2
+Feb 10 15:59:47 caen-cse-141-212-203-151 mdworker32[723]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 16:06:11 caen-cse-141-212-203-151 com.apple.backupd-auto[744]: Not starting scheduled Time Machine backup - time machine destination not resolvable.
+Feb 10 16:07:40 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 16:07:40 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 16:08:10: --- last message repeated 2 times ---
+Feb 10 16:12:27 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 16:12:27 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 16:12:42: --- last message repeated 2 times ---
+Feb 10 16:12:42 caen-cse-141-212-203-151 mdworker32[762]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 16:13:24 caen-cse-141-212-203-151 PubSubAgent[767]: EntryCore: Multiple authors not supported yet (ignoring subsequent ones)
+Feb 10 16:15:13: --- last message repeated 2 times ---
+Feb 10 16:23:16 caen-cse-141-212-203-151 Safari[340]: Periodic CFURLCache Insert stats (iters: 360) - Tx time:0.065041, # of Inserts: 2, # of bytes written: 781, Did shrink: NO, Size of cache-file: 181485568, Num of Failures: 0
+Feb 10 16:29:40 caen-cse-141-212-203-151 mdworker32[792]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 16:32:58 caen-cse-141-212-203-151 [0x0-0x13013].com.google.Chrome[196]: Fri Feb 10 16:32:58 caen-cse-141-212-203-151.wireless.engin.umich.edu Google Chrome Helper[651] <Error>: doClip: empty path.
+Feb 10 16:34:54: --- last message repeated 2 times ---
+Feb 10 16:34:54 caen-cse-141-212-203-151 Google Chrome[196]: Cannot find function pointer FusionVMDKPlugIn_Factory for factory C138F397-D2BE-48DB-9DAB-9FAA203BF4AE in CFBundle/CFPlugIn 0x129afea0 </Library/Contextual Menu Items/FusionVMDKPlugIn.plugin> (not loaded)
+Feb 10 16:36:26 caen-cse-141-212-203-151 com.apple.launchd.peruser.501[142] (com.adobe.ARM.925793fb327152fd34795896fa1fb9ffa268b2a852256fe56609efa3[811]): posix_spawn("/Applications/Adobe Reader 9/Adobe Reader.app/Contents/MacOS/Updater/Adobe Reader Updater Helper.app/Contents/MacOS/Adobe Reader Updater Helper", ...): No such file or directory
+Feb 10 16:36:26 caen-cse-141-212-203-151 com.apple.launchd.peruser.501[142] (com.adobe.ARM.925793fb327152fd34795896fa1fb9ffa268b2a852256fe56609efa3[811]): Exited with exit code: 1
+Feb 10 16:43:51 caen-cse-141-212-203-151 mdworker32[820]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 16:48:41 caen-cse-141-212-203-151 mdworker32[825]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 16:49:32 caen-cse-141-212-203-151 Safari[340]: *** WebKit discarding exception: <NSImageCacheException> Cannot lock focus on image <NSImage 0x122acde00 Size={0, 0} Reps=(\n)>, because it is size zero.
+Feb 10 16:59:44 caen-cse-141-212-203-151 mdworker32[887]: kCGErrorFailure: Set a breakpoint @ CGErrorBreakpoint() to catch errors as they are logged.
+Feb 10 16:59:48 caen-cse-141-212-203-151 loginwindow[33]: loginwindow SleepWakeCallback WILL sleep
+Feb 11 14:21:47 caen-cse-141-212-203-151 configd[13]: PMConnection AirPort configd plug-in com.apple.powermanagement.applicationresponse.slowresponse 206 ms
+Feb 11 14:21:47 caen-cse-141-212-203-151 configd[13]: PMConnection IPConfiguration com.apple.powermanagement.applicationresponse.slowresponse 214 ms
+Feb 11 14:21:47 caen-cse-141-212-203-151 loginwindow[33]: loginwindow SleepWakeCallback will power on, Currenttime:2/11/2012 2:21:47.286 PM - Waketime:2/11/2012 2:21:45.580 PM = Deltatime:1.705653906
+Feb 11 14:21:48 lofie configd[13]: setting hostname to "lofie.local"
+Feb 11 14:21:49 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 11 14:21:49 lofie configd[13]: network configuration changed.
+Feb 11 14:21:49 lofie vmnet-bridge[114]: Failed to read SCproperties for key: State:/Network/Global/IPv4
+Feb 11 14:21:49 lofie vmnet-bridge[114]: Stopping bridge for: en1
+Feb 11 14:21:49 lofie fitbitd[49]: The system has powered on. Simulating connect for basestation "".
+Feb 11 14:21:49 lofie configd[13]: Sleep: Success - BATT 82 - Clamshell Sleep
+Feb 11 14:21:49 lofie configd[13]: Wake: Success - BATT 82 - EC LID0
+Feb 11 14:21:49 lofie configd[13]: Hibernate Statistics
+Feb 11 14:21:49 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:49 lofie.local fitbitd[49] <Notice>: The system has powered on. Simulating connect for basestation "".
+Feb 11 14:21:49 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:49 lofie.local MacUserInterface[49] <Debug>: Processing action 'basestationconnect'...
+Feb 11 14:21:49 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:49 lofie.local MacUserInterface[49] <Info>: Base station with serial '' has been plugged in.
+Feb 11 14:21:50 lofie eapolclient[185]: en1 STOP
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Ending active session and restarting in standard mode...
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Debug>: [CTX] StartSession: setting restarting context 0
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Ending session...
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Reset channel.
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Closed channel.
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Debug>: Pending acks: 0
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Reset channel.
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Starting session in standard mode...
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Debug>: [CTX] ResetSession: setting context 0
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Debug>: [CTX] StartSession: setting context 0
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Processing request...
+Feb 11 14:21:50 lofie MacUserInterface[49]: Failed to find device
+Feb 11 14:21:50 lofie MacUserInterface[49]: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Info>: Initializing [baud: 50000, device: 255]... 
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Critical>: Failed to find device
+Feb 11 14:21:50 lofie com.fitbit.fitbitd[49]: Sat Feb 11 14:21:50 lofie.local MacUserInterface[49] <Critical>: Failed to initialize communication [VID: 0x10c4, PID: 0x84c4]. Is the base station plugged in?
+Feb 11 14:21:51 lofie vmnet-bridge[114]: Preferences changed called
+Feb 11 14:21:53: --- last message repeated 1 time ---
+Feb 11 14:21:53 lofie configd[13]: network configuration changed.
+Feb 11 14:21:53 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 11 14:21:53 lofie vmnet-bridge[114]: Started bridge for 0, en1
+Feb 11 14:21:54 lofie com.apple.usbmuxd[24]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 11 14:21:55 lofie usbmuxd[24]: _AMDeviceConnectByAddressAndPort (thread 0x100598000): IPv4
+Feb 11 14:22:01 lofie com.apple.usbmuxd[24]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 11 14:22:07 lofie com.apple.usbmuxd[24]: _SendAttachNotification (thread 0x7fff7088fcc0): sending attach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _GetAddrInfoReplyReceivedCallback matched.
+Feb 11 14:22:08 lofie usbmuxd[24]: _AMDeviceConnectByAddressAndPort (thread 0x100598000): IPv4
+Feb 11 14:22:06 lofie ntpd[19]: time reset -3.115945 s
+Feb 11 14:22:14 lofie loginwindow[33]: no spins reported for this wake
+Feb 11 14:22:15 lofie [0x0-0xda0da].backupd-helper[898]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 11 14:23:42 lofie login[1042]: USER_PROCESS: 1042 ttys000
+Feb 11 14:24:37 lofie defaults[1083]: \nThe domain/default pair of (/Users/mjc/Library/Application Support/Freedom/Reg, licKey) does not exist
+Feb 11 14:24:41 lofie /Applications/Freedom.app/Contents/MacOS/applet[1080]: GetDYLDEntryPointWithImage(/System/Library/Frameworks/AppKit.framework/Versions/Current/AppKit,_NSCreateAppKitServicesMenu) failed.
+Feb 11 14:24:50 lofie SecurityAgent[1091]: system.privilege.admin|2012-02-11 14:24:50 -0500
+Feb 11 14:24:54 lofie authexec[1093]: executing /System/Library/ScriptingAdditions/StandardAdditions.osax/Contents/MacOS/uid
+Feb 11 14:24:55 lofie authexec[1100]: executing /System/Library/ScriptingAdditions/StandardAdditions.osax/Contents/MacOS/uid
+Feb 11 14:25:05 lofie com.apple.usbmuxd[24]: _handle_timer Fish out of water!!!
+Feb 11 14:25:07 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000005   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 2447661958
+Feb 11 14:27:55 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 2447829737
+Feb 11 14:27:55 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 2447829737
+Feb 11 14:27:55 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000005   en1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 2447829737
+Feb 11 14:27:56 lofie com.apple.backupd-auto[1122]: Not starting scheduled Time Machine backup - time machine destination not resolvable.
+Feb 11 14:31:25 lofie ntpd[19]: sendto(17.151.16.23) (fd=26): Permission denied
+Feb 11 14:33:17 lofie configd[13]: 
+Feb 11 14:33:18: --- last message repeated 6 times ---
+Feb 11 14:33:18 lofie configd[13]: network configuration changed.
+Feb 11 14:33:18 lofie vmnet-bridge[114]: Dynamic store changed
+Feb 11 14:33:18 lofie vmnet-bridge[114]: Failed to read SCproperties for key: State:/Network/Global/IPv4
+Feb 11 14:33:18 lofie vmnet-bridge[114]: Stopping bridge for: en1
+Feb 11 14:33:18 lofie com.apple.usbmuxd[24]: _SendDetachNotification (thread 0x7fff7088fcc0): sending detach for device 60:fa:cd:6b:48:28@fe80::62fa:cdff:fe6b:4828._apple-mobdev._tcp.local.: _BrowseReplyReceivedCallback got bonjour removal.
+Feb 11 14:33:18 lofie com.apple.usbmuxd[24]: networkDeviceCallback Surprisingly, there is no mie matching name
+Feb 11 14:33:18 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743120470
+Feb 11 14:33:18 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743120470
+Feb 11 14:33:19 lofie configd[13]: 
+Feb 11 14:33:19: --- last message repeated 2 times ---
+Feb 11 14:33:19 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743121472
+Feb 11 14:33:19 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743121472
+Feb 11 14:33:20 lofie configd[13]: 
+Feb 11 14:33:22: --- last message repeated 8 times ---
+Feb 11 14:33:22 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743124479
+Feb 11 14:33:22 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743124479
+Feb 11 14:33:23 lofie configd[13]: 
+Feb 11 14:33:31: --- last message repeated 26 times ---
+Feb 11 14:33:31 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743133497
+Feb 11 14:33:31 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743133497
+Feb 11 14:33:32 lofie configd[13]: 
+Feb 11 14:33:45: --- last message repeated 38 times ---
+Feb 11 14:33:45 lofie vmnet-bridge[114]: Preferences changed called
+Feb 11 14:33:58: --- last message repeated 1 time ---
+Feb 11 14:33:58 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743160551
+Feb 11 14:33:58 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743160551
+Feb 11 14:35:19 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743241714
+Feb 11 14:35:19 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743241714
+Feb 11 14:39:23 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743485200
+Feb 11 14:39:23 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6743485200
+Feb 11 14:39:59 lofie ntpd[19]: sendto(17.151.16.23) (fd=24): No route to host
+Feb 11 14:45:36 lofie [0x0-0xe70e7].backupd-helper[1156]: Not starting Time Machine backup after wake - failed to resolve alias to backup volume
+Feb 11 14:48:09 lofie [0x0-0xe80e8].com.google.Chrome[1158]: [0211/144809:INFO:breakpad_mac.mm(148)] Breakpad disabled
+Feb 11 14:51:33 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6744215658
+Feb 11 14:51:33 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6744215658
+Feb 11 15:27:56 lofie com.apple.backupd-auto[1276]: Not starting scheduled Time Machine backup - time machine destination not resolvable.
+Feb 11 15:28:05 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000007 vmnet1/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6746407032
+Feb 11 15:28:05 lofie mDNSResponder[32]: mDNSPlatformSendUDP sendto(8) failed to send packet on InterfaceID 0000000000000008 vmnet8/4 to 224.0.0.251:5353 skt 8 error -1 errno 13 (Permission denied) 6746407032
+Feb 11 16:14:03 lofie /Applications/Emacs.app/Contents/MacOS/Emacs[1020]: BUG in libdispatch: 10K549 - 1986 - 0x4

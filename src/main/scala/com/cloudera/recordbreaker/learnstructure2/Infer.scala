@@ -236,6 +236,7 @@ object Infer {
       val c4OrderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
       val c4ChosenGroup:Option[List[Histogram[X]]] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverageFactor * input.length))))
 
+      //println("Number of ordered groups: " + c4OrderedGroups.length)
       c4ChosenGroup match {
         case Some(xlist) => {
           /// REMIND -- THIS IS PROBABLY NOT CORRECT.  WHAT IS xList?
@@ -246,7 +247,6 @@ object Infer {
 
           for (chunk:List[BaseType] <- input) {
             def processPiece(answerSoFar: List[Chunk], partialChunk:List[BaseType]):List[Chunk] = {
-              //println("Input chunk: " + partialChunk + ", Answer so far: " + answerSoFar)
               if (partialChunk.length == 0) {
                 answerSoFar
               } else {
@@ -262,9 +262,12 @@ object Infer {
                                                                                                                            case x: PMetaToken => "meta"
                                                                                                                            case _ => ""
                                                                                                                          })))
-
                 val endSequence = seenSets.indexWhere(observedSet=> (observedSet & knownClusterElts).size == knownClusterElts.size)
-                processPiece(answerSoFar :+ partialChunk.slice(0,endSequence+1), partialChunk.slice(endSequence+1, partialChunk.length))
+                if (endSequence < 0) {
+                  answerSoFar :+ partialChunk
+                } else {
+                  processPiece(answerSoFar :+ partialChunk.slice(0,endSequence+1), partialChunk.slice(endSequence+1, partialChunk.length))
+                }
               }
             }
 
