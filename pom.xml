@@ -184,7 +184,7 @@
               <goal>compile</goal>
               <goal>testCompile</goal>
             </goals>
-            <phase>test</phase>            
+            <phase>compile</phase>            
             <configuration>
               <args>
                 <arg>-make:transitive</arg>

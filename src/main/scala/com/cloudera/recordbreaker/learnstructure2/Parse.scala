@@ -16,6 +16,7 @@ package com.cloudera.recordbreaker.learnstructure2;
 
 import scala.io.Source
 import scala.math._
+import scala.util.control._
 import scala.collection.mutable._
 import java.util.regex.Pattern
 import RBTypes._
@@ -70,7 +71,13 @@ object Parse {
 
       for (t <- tokens) {
         val c = t match {
-            case x if t.forall(_.isDigit) => new PInt() with ParsedValue[Int] {val parsedValue=x.toInt}
+            case x if t.forall(_.isDigit) => {
+              try {
+                new PInt() with ParsedValue[Int] {val parsedValue=x.toInt}
+              } catch {
+                case NonFatal(exc) => new PAlphanum() with ParsedValue[String] {val parsedValue=x}
+              }
+            }
             case y if {try{Some(y.toDouble); true} catch {case _:Throwable => false}} => new PFloat() with ParsedValue[Double] {val parsedValue=y.toDouble}
             case a if (a.length() == 1 && Pattern.matches("\\p{Punct}", a)) => new POther() with ParsedValue[String] {val parsedValue=a}
             case u => new PAlphanum() with ParsedValue[String] {val parsedValue=u}
