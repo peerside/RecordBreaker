@@ -36,6 +36,7 @@ object Infer {
     }
   }
   private def internalDiscover(cs:Chunks): HigherType = {
+    //println("internalDiscover()...")
     oracle(cs) match {
       case a: BaseProphecy => HTBaseType(a.value)
       case b: StructProphecy => HTStruct(b.css.map(internalDiscover))
@@ -48,6 +49,8 @@ object Infer {
    * Used internally by discover()
    */
   private def oracle(input:Chunks): Prophecy = {
+    //println("Calling oracle on input...")
+
     /** Histogram class exists just for oracle() statistics
      *  @param inM A map of observed counts to unique values.
      */
@@ -89,6 +92,7 @@ object Infer {
     //
     // Compute histograms over input chunks
     //
+    //println("Computing histograms...")
     val numUniqueVals = Set() ++ input size
     def histMap(filterChunk: PartialFunction[BaseType, Int]):Map[Int,Int] = {
       Map() ++ input.map(chunk => chunk.collect(filterChunk).sum).groupBy(x=>x).map(z=> (z._1, z._2.length))
@@ -117,6 +121,7 @@ object Infer {
     // If the ONLY token is a base type, then return a BaseProphecy.
     //
     def case1(): Option[Prophecy] = {
+      //println("Case 1...")
       input match {
         case x:List[List[BaseType]] if ((metaHistogram.width() > 0) &&
                                           (metaHistogram.rmass(1) == 0) &&
@@ -159,6 +164,7 @@ object Infer {
     // Now utilize the clusters.  This is "case 3" in the paper
     //
     def case3[X](groupsIn:List[List[Histogram[X]]]): Option[Prophecy] = {
+      //println("Case 3...")
       val orderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGroup=>hGroup.map(h => h.rmass(1)).min)
       val chosenGroup = orderedGroups.find(hGroup=> hGroup.forall(h=> ((h.rmass(1) / h.totalMass.toDouble < maxMass) &&
                                                                          (h.coverage() > minCoverageFactor * input.length))))
@@ -226,6 +232,7 @@ object Infer {
     // Case 4
     //
     def case4[X](groupsIn:List[List[Histogram[X]]]): Option[Prophecy] = {
+      //println("Case 4...")
       val c4OrderedGroups:List[List[Histogram[X]]] = groupsIn.sortBy(hGrp=>hGrp.map(h => h.coverage).max)(Ordering[Double].reverse)
       val c4ChosenGroup:Option[List[Histogram[X]]] = c4OrderedGroups.find(hGrp=> hGrp.forall(h=>((h.width() > 3) && (h.coverage() > minCoverageFactor * input.length))))
 
@@ -239,6 +246,7 @@ object Infer {
 
           for (chunk:List[BaseType] <- input) {
             def processPiece(answerSoFar: List[Chunk], partialChunk:List[BaseType]):List[Chunk] = {
+              //println("Input chunk: " + partialChunk + ", Answer so far: " + answerSoFar)
               if (partialChunk.length == 0) {
                 answerSoFar
               } else {
@@ -254,13 +262,15 @@ object Infer {
                                                                                                                            case x: PMetaToken => "meta"
                                                                                                                            case _ => ""
                                                                                                                          })))
-                val endSequence = seenSets.slice(1,seenSets.size).indexWhere(observedSet=> (observedSet & knownClusterElts).size == knownClusterElts.size)
+
+                val endSequence = seenSets.indexWhere(observedSet=> (observedSet & knownClusterElts).size == knownClusterElts.size)
                 processPiece(answerSoFar :+ partialChunk.slice(0,endSequence+1), partialChunk.slice(endSequence+1, partialChunk.length))
               }
             }
+
             val breakdown = processPiece(List[Chunk](), chunk)
             preambles = preambles :+ breakdown.head
-            middles = middles :+ breakdown(1)
+            middles = middles ++ breakdown.slice(1, breakdown.length-1)
             postambles = postambles :+ breakdown.last
           }
           //println("PROPHECY ARRAY: " + input)
@@ -274,6 +284,7 @@ object Infer {
     // Case 5
     //
     def case5(): Prophecy = {
+      //println("Case 5...")
       //
       // If this call to oracle() was itself due to a call to internalDiscover() in the
       // HTUnion clause, and this does not yield a reduction in the size of the union,
