@@ -359,7 +359,7 @@ object RBTypes {
     }
     def prettyprint(offset: Int = 0) {
       print(" " * offset)
-      println("HTArrayFW")
+      println("HTArrayFW  size=" + size)
       value.prettyprint(offset+1)
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
@@ -407,13 +407,6 @@ object RBTypes {
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       val results = value.processChunk(chunk) :+ (chunk, getAvroSchema(), getDefaultValue())
-
-      /**
-      println()
-      println("Input was " + chunk)            
-      println("Processed " + results.length + " parse possibilities for HTOption.")
-      println()
-       **/
       results
     }
   }
