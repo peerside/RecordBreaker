@@ -16,6 +16,7 @@ package com.cloudera.recordbreaker.learnstructure2;
 
 import scala.io.Source
 import scala.math._
+import scala.util.control._
 import scala.collection.JavaConversions._
 import scala.collection.mutable._
 import scala.util.Marshal
@@ -283,7 +284,14 @@ object RBTypes {
     // that such structures don't exist prior to processing with getAvroSchema
     def namePrefix(): String = "union_"    
     def getAvroSchema(): Schema = {
-      return Schema.createUnion(value.map(v => v.getAvroSchema()))
+      try {
+        return Schema.createUnion(value.map(v => v.getAvroSchema()).distinct)
+      } catch {
+        case NonFatal(exc) => {
+          println("ERRPR ON " + value)
+          Schema.createUnion(value.map(v => v.getAvroSchema()).distinct)
+        }
+      }
     }
     def prettyprint(offset: Int = 0) {
       print(" " * offset)
@@ -317,17 +325,31 @@ object RBTypes {
       println("HTBaseType(" + value + ")")
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      if (chunk.length == 0 || value != chunk(0)) {
-        List()
-      } else {
-        /**
-        println()
-        println("Input was " + chunk)
-        println("Processed HTBaseType(" + value + ").  Remaining chunks: " + chunk.slice(1, chunk.length))
-        println()
-         **/
+      //if (chunk.length > 0 && value.isCompatibleWith(chunk(0))) {
+      //if (chunk.length > 0 && (value.getAvroSchema() == chunk(0).getAvroSchema())) {
+      if (chunk.length > 0 && (value == chunk(0))) {
+        //
+        // REMIND: need to support isCompatibleWith(), instead of the case class-generated equality function.
+        // In particular, a POther needs to accept either POther or PAlphanum as an acceptable input.
+        //
+        val inputElt = chunk(0).getValue()
         List((chunk.slice(1, chunk.length), getAvroSchema(), chunk(0).getValue()))
+      } else {
+        List()
       }
+    }
+  }
+  case class HTNoop() extends HigherType {
+    def namePrefix(): String = "noop_"
+    def getAvroSchema(): Schema = {
+      throw new RuntimeException("Avro schema undefined for noop")
+    }
+    def prettyprint(offset: Int = 0) {
+      print(" " * offset)
+      println("HTNoop")
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+      throw new RuntimeException("processChunk() undefined for noop")
     }
   }
   case class HTArrayFW(value: HigherType, size: Int) extends HigherType {
@@ -397,6 +419,7 @@ object RBTypes {
   }
 
   abstract class Prophecy
+  case class EmptyProphecy() extends Prophecy
   case class BaseProphecy(value: BaseType) extends Prophecy
   case class StructProphecy(css: List[Chunks]) extends Prophecy
   case class ArrayProphecy(prefix: Chunks, middle:Chunks, postfix:Chunks) extends Prophecy

@@ -31,7 +31,7 @@ object Rewrite {
    *  It is the only public method in this package
    */
   def refineAll(orig: HigherType, input: Chunks) = {
-    val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, combineAdjacentStringConstants _, combineHomogeneousArrays _)
+    val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, filterNoops _, combineAdjacentStringConstants _, combineHomogeneousArrays _)
     val dataDependentRules = List()
     val round1 = refine(orig, dataIndependentRules, costEncoding)
     val round2 = refine(round1, dataDependentRules, totalCost(input))
@@ -139,6 +139,26 @@ object Rewrite {
   ///////////////////////////////////////////
   // Data-independent rewrite rules
   ///////////////////////////////////////////
+  private def filterNoops(in: HigherType): HigherType = {
+    in match {
+      case a: HTStruct if (a.value.exists(elt => elt match {
+                                            case xa: HTNoop => true
+                                            case _ => false
+                                          })) => HTStruct(a.value.filter(elt => elt match {
+                                                                           case ya: HTNoop => false
+                                                                           case _ => true
+                                                                         }))
+      case b: HTUnion if (b.value.exists(elt => elt match {
+                                           case xb: HTNoop => true
+                                           case _ => false
+                                         })) => HTOption(HTUnion(b.value.filter(elt => elt match {
+                                                                                   case yb: HTNoop => false
+                                                                                   case _ => true
+                                                                                 })))
+      case _ => in
+    }
+  }
+
   private def removeNestedUnions(in: HigherType): HigherType = {
     in match {
       // If the union has all unions has children, then merge them.
@@ -202,6 +222,29 @@ object Rewrite {
       case _ => in
     }
   }
+  /**
+  private def unionStringRedundancy(in: HigherType): HigherType = {
+    // There are multiple internal types that get mapped to an Avro String.
+    // We cannot permit a Union to contain multiple such type-branches, or else the branches
+    // cannot be distinguished after converting to an Avro schema.
+    in match {
+      case a: HTUnion => {
+        def strTest(bt: BaseType): Boolean = {
+          bt match {
+            case a: POther => true
+            case b: PAlphanum => true
+            case c: PString => true
+            case d: PStringConst => true
+            case _ => false
+          }
+        }
+        if (a.value.count(strTest(_)) > 1) {
+          HTUnion(a.value.filter(strTest(_))
+        }
+      }
+    }
+  }
+   **/
   private def combineAdjacentStringConstants(in: HigherType): HigherType = {
     def findAdjacent(soFar: List[HigherType], remainder: List[HigherType]): List[HigherType] = {
       if (remainder.length == 0) {

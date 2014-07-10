@@ -42,6 +42,7 @@ object Infer {
       case b: StructProphecy => HTStruct(b.css.map(internalDiscover))
       case c: ArrayProphecy => HTStruct(List(internalDiscover(c.prefix), HTArray(internalDiscover(c.middle)), internalDiscover(c.postfix)))
       case d: UnionProphecy => HTUnion(d.css.map(internalDiscover))
+      case e: EmptyProphecy => HTNoop()
     }
   }
 
@@ -50,6 +51,7 @@ object Infer {
    */
   private def oracle(input:Chunks): Prophecy = {
     //println("Calling oracle on input...")
+    //println("Calling oracle, with input size " + input.length + " and last chunk of " + input.last)
 
     /** Histogram class exists just for oracle() statistics
      *  @param inM A map of observed counts to unique values.
@@ -116,6 +118,17 @@ object Infer {
     //////////////////////////////////////
     // Go through the 5 cases for the oracle.  Use the histogram data to make the correct prophecy
     //////////////////////////////////////
+    //
+    // Case 0.  Is the input entirely empty?  If so, we capture it trivially.
+    //
+    def case0(): Option[Prophecy] = {
+      if (input.forall(elt => elt.length == 0)) {
+        Some(EmptyProphecy())
+      } else {
+        None
+      }
+    }
+
     //
     // Case 1.  If the ONLY token is a MetaToken, then crack it open with a StructProphecy.
     // If the ONLY token is a base type, then return a BaseProphecy.
@@ -189,7 +202,7 @@ object Infer {
           }
 
           def buildPiecesFromChunks(inChunks:Chunks): List[Chunks] = {
-            var totalPieces = List[Chunks]()
+            var totalPieces = List[List[List[BaseType]]]()
             for (chunk:List[BaseType] <- inChunks) {
               val brokenPieces = chunk.foldLeft(List(List[BaseType]()))((x:List[List[BaseType]], y:BaseType) => {
                                                                           val shouldBreak = y match {
@@ -208,18 +221,19 @@ object Infer {
                                                                           } else {
                                                                             x.slice(0,x.length-1) :+ (x.last :+ y)
                                                                           }
-                                                                        }).filter(x=>x.length>0)
-
-              if (totalPieces.length==0) {
-                totalPieces = (1 to brokenPieces.length).foldLeft(List[List[List[BaseType]]]())((a,b)=>a:+List[List[BaseType]]())
-              }
-              totalPieces = totalPieces.zip(brokenPieces).map(listPair=>listPair._1 :+ listPair._2)
+                                                                        })
+              totalPieces = totalPieces :+ brokenPieces
             }
-            totalPieces
+            var spunPieces = List[List[List[BaseType]]]()
+            for (i <- (0 to totalPieces.head.length-1)) {
+              spunPieces = spunPieces :+ totalPieces.map(tp => tp(i))
+            }
+            spunPieces.filter(sp => sp.exists(elt => elt.length > 0))
           }
 
           if (patterns.size == 1) {
-            return Some(StructProphecy(buildPiecesFromChunks(patterns.head._2)))
+            val pieces = buildPiecesFromChunks(patterns.head._2)
+            return Some(StructProphecy(pieces))
           } else {
             return Some(UnionProphecy(patterns.values.toList))
           }
@@ -239,7 +253,6 @@ object Infer {
       //println("Number of ordered groups: " + c4OrderedGroups.length)
       c4ChosenGroup match {
         case Some(xlist) => {
-          /// REMIND -- THIS IS PROBABLY NOT CORRECT.  WHAT IS xList?
           val knownClusterElts = HashSet() ++ xlist.map(histogram => histogram.label)
           var preambles:Chunks = List[Chunk]()
           var middles:Chunks = List[Chunk]()
@@ -287,7 +300,7 @@ object Infer {
     // Case 5
     //
     def case5(): Prophecy = {
-      //println("Case 5...")
+      //println("Case 5")
       //
       // If this call to oracle() was itself due to a call to internalDiscover() in the
       // HTUnion clause, and this does not yield a reduction in the size of the union,
@@ -323,7 +336,7 @@ object Infer {
       throw CustomException("Could not find distinguishing preamble for UNION")
     }
 
-    return case1() orElse case3(groups) orElse case4(groups) getOrElse case5()
+    return case0() orElse case1() orElse case3(groups) orElse case4(groups) getOrElse case5()
   }
 }
 
