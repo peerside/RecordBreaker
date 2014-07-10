@@ -211,15 +211,6 @@ object RBTypes {
         }
       }
       val results = processChildren(value, chunk)
-      /**
-      println()
-      println("Input was " + chunk)
-      println("Processed " + results.length + " parse possibilities for HTStruct.")
-      for (x <- results) {
-        println("  For one of the parses, remaining chunks are: " + x._1)
-      }
-      println()
-       **/
       results.map(result => {
                     val recordSchema = Schema.createRecord(name(), "RECORD", "", false)
                     val fieldMetadata = value.map(v => (v.name(), v.getDocString(), v.getDefaultValue()))
@@ -263,15 +254,6 @@ object RBTypes {
           }
       }
       val results = processChildren(minsize, chunk)
-      /**
-      println()
-      println("Input was " + chunk)      
-      println("Processed " + results.length + " parse possibilities for HTArray.")
-      for (x <- results) {
-        println("  For one of the parses, remaining chunks are: " + x._1)
-      }
-      println()
-       **/
       results.map(result => {
                     val gda = new GenericData.Array[Any](result._3.length, getAvroSchema())
                     result._3.foreach(gda.add(_))
@@ -280,8 +262,8 @@ object RBTypes {
     }
   }
   case class HTUnion(value: List[HigherType]) extends HigherType {
-    // Note: this won't handle doubled union structures.  We should ensure
-    // that such structures don't exist prior to processing with getAvroSchema
+    // Note: Avro can't handle directly nested union structures.  We remove
+    // such structures in the Rewrite module.
     def namePrefix(): String = "union_"    
     def getAvroSchema(): Schema = {
       try {
@@ -302,15 +284,6 @@ object RBTypes {
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
       val results = value.flatMap(_.processChunk(chunk))
-      /**
-      println()
-      println("Input was " + chunk)
-      println("Processed " + results.length + " parse possibilities for HTUnion.")      
-      for (x <- results) {
-        println("  For one of the parses, remaining chunks are: " + x._1)
-      }
-      println()
-       **/
       results
     }
   }
@@ -325,13 +298,7 @@ object RBTypes {
       println("HTBaseType(" + value + ")")
     }
     def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      //if (chunk.length > 0 && value.isCompatibleWith(chunk(0))) {
-      //if (chunk.length > 0 && (value.getAvroSchema() == chunk(0).getAvroSchema())) {
       if (chunk.length > 0 && (value == chunk(0))) {
-        //
-        // REMIND: need to support isCompatibleWith(), instead of the case class-generated equality function.
-        // In particular, a POther needs to accept either POther or PAlphanum as an acceptable input.
-        //
         val inputElt = chunk(0).getValue()
         List((chunk.slice(1, chunk.length), getAvroSchema(), chunk(0).getValue()))
       } else {
@@ -378,15 +345,6 @@ object RBTypes {
         }
       }
       val results = processChildren(size, chunk)
-      /**
-      println()
-      println("Input was " + chunk)      
-      println("Processed " + results.length + " parse possibilities for HTArrayFW.")
-      for (x <- results) {
-        println("  For one of the parses, remaining chunks are: " + x._1)
-      }
-      println()
-       **/
       results.map(result => {
                     val gda = new GenericData.Array[Any](size, getAvroSchema())
                     result._3.foreach(gda.add(_))
