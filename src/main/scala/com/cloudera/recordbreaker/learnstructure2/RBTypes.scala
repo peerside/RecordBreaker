@@ -131,8 +131,13 @@ object RBTypes {
 
   object HigherType {
     var fieldCount = 0
+    var denomCount = 0
     def resetFieldCount(): Unit = {
       fieldCount = 0
+    }
+    def resetUsageStatistics(ht: HigherType): Unit = {
+      denomCount = 0
+      ht.resetUsageStatistics()
     }
     def getAvroSchema(ht: HigherType): Schema = {
       ht match {
@@ -148,7 +153,19 @@ object RBTypes {
     }
     def processChunk(ht: HigherType, chunk: ParsedChunk): GenericRecord = {
       val pcResults = ht.processChunk(chunk).filter(x=>x._1.length == 0)  // We only want the parses that consume entire input
-      pcResults.head._3 match {
+
+      // uniquify based on ht.name()
+      pcResults.head._2.foldLeft(HashSet[String]())((seenSoFar, curHt) => {
+                                              if (seenSoFar.contains(curHt.name())) {
+                                                seenSoFar
+                                              } else {
+                                                curHt.incrementUsage()
+                                                seenSoFar + curHt.name()
+                                              }
+                                            })
+      denomCount += 1
+
+      pcResults.head._4 match {
         case a: GenericRecord => a
         case _ => throw new RuntimeException("Call to processChunk() yielded a non-GenericContainer result, indicating that source was not a record")
       }
@@ -157,14 +174,22 @@ object RBTypes {
       fieldCount += 1
       fieldCount-1
     }
+    def prettyprint(ht: HigherType):Unit = {
+      ht.prettyprint(0, true, denomCount)
+    }
   }
   abstract class HigherType {
     val fc = HigherType.getFieldCount()
+    var linesProcessed = 0
     def getAvroSchema(): Schema
     def name(): String = {
       return namePrefix() + fc
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)]
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)]
+    def resetUsageStatistics(): Unit
+    def incrementUsage(): Unit = {
+      linesProcessed += 1
+    }
     def namePrefix(): String
     def getDocString(): String = {
       return ""
@@ -172,7 +197,7 @@ object RBTypes {
     def getDefaultValue(): JsonNode = {
       return null
     }
-    def prettyprint(offset: Int = 0)
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int)
   }
 
   case class HTStruct(value: List[HigherType]) extends HigherType {
@@ -185,15 +210,23 @@ object RBTypes {
       s.setFields(fieldsJ)
       return s
     }
-    def prettyprint(offset: Int = 0) {
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
+      value.foreach(_.resetUsageStatistics())
+    }
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
       print(" " * offset)
-      println("HTStruct")
+      print("HTStruct " + name())
+      if (showStatistics && denom > 0) {
+        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+      }
+      println()
       for (v <- value) {
-        v.prettyprint(offset+1)
+        v.prettyprint(offset+1, showStatistics, denom)
       }
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      def processChildren(childrenToGo: List[HigherType], inChunk:ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
+      def processChildren(childrenToGo: List[HigherType], inChunk:ParsedChunk): List[(ParsedChunk, List[HigherType], List[Schema], List[Any])] = {
         childrenToGo match {
           case curChild::rest => {
             val childLists = curChild.processChunk(inChunk)
@@ -201,28 +234,29 @@ object RBTypes {
               List()
             } else {
               if (rest.length == 0) {
-                childLists.map(x => (x._1, List(x._2), List(x._3)))
+                childLists.map(x => (x._1, x._2, List(x._3), List(x._4)))
               } else {
-                childLists.flatMap(cl => processChildren(rest, cl._1).map(sr => (sr._1, cl._2 +: sr._2, cl._3 +: sr._3)))
+                childLists.flatMap(cl => processChildren(rest, cl._1).map(sr => (sr._1, cl._2 ++ sr._2, cl._3 +: sr._3, cl._4 +: sr._4)))
               }
             }
           }
           case _ => List()
         }
       }
+      // Each result from processChildren() is a different possible parse
       val results = processChildren(value, chunk)
       results.map(result => {
                     val recordSchema = Schema.createRecord(name(), "RECORD", "", false)
                     val fieldMetadata = value.map(v => (v.name(), v.getDocString(), v.getDefaultValue()))
                     val schemaFields =
-                      for ((reportedSchema, reportedMetadata) <- result._2.zip(fieldMetadata)) yield
+                      for ((reportedSchema, reportedMetadata) <- result._3.zip(fieldMetadata)) yield
                         new Schema.Field(reportedMetadata._1, reportedSchema, reportedMetadata._2, reportedMetadata._3)
                     recordSchema.setFields(ListBuffer(schemaFields: _*))
                     val gdr = new GenericData.Record(recordSchema)
                     for (i <- 0 to result._3.length-1) {
-                      gdr.put(i, result._3(i))
+                      gdr.put(i, result._4(i))
                     }
-                    (result._1, recordSchema, gdr)
+                    (result._1, result._2 :+ this, recordSchema, gdr)
                   })
     }
   }
@@ -232,32 +266,42 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
     }
-    def prettyprint(offset: Int = 0) {
-      print(" " * offset)
-      println("HTArray")
-      value.prettyprint(offset+1)
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
+      value.resetUsageStatistics()
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      def processChildren(minChildrenToGo: Int, inChunk: ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+      print(" " * offset)
+      print("HTArray " + name())
+      if (showStatistics && denom > 0) {
+        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+      }
+      println()
+
+      value.prettyprint(offset+1, showStatistics, denom)
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
+      def processChildren(minChildrenToGo: Int, inChunk: ParsedChunk): List[(ParsedChunk, List[HigherType], List[Schema], List[Any])] = {
           val childList = value.processChunk(inChunk)
           if (childList.length == 0) {
             List()
           } else {
             val futureResults = childList.flatMap(childTuple => processChildren(minChildrenToGo-1, childTuple._1).map(rht => (rht._1,
-                                                                                                                              List(childTuple._2) ++ rht._2,
-                                                                                                                              List(childTuple._3) ++ rht._3)))
+                                                                                                                              childTuple._2 ++ rht._2,
+                                                                                                                              List(childTuple._3) ++ rht._3,
+                                                                                                                              List(childTuple._4) ++ rht._4)))
             if (minChildrenToGo > 1) {
               futureResults
             } else {
-              childList.map(x => (x._1, List(x._2), List(x._3))) ++ futureResults
+              childList.map(x => (x._1, x._2, List(x._3), List(x._4))) ++ futureResults
             }
           }
       }
       val results = processChildren(minsize, chunk)
       results.map(result => {
-                    val gda = new GenericData.Array[Any](result._3.length, getAvroSchema())
-                    result._3.foreach(gda.add(_))
-                    (result._1, getAvroSchema(), gda)
+                    val gda = new GenericData.Array[Any](result._4.length, getAvroSchema())
+                    result._4.foreach(gda.add(_))
+                    (result._1, result._2 :+ this, getAvroSchema(), gda)
                   })
     }
   }
@@ -270,21 +314,29 @@ object RBTypes {
         return Schema.createUnion(value.map(v => v.getAvroSchema()).distinct)
       } catch {
         case NonFatal(exc) => {
-          println("ERRPR ON " + value)
           Schema.createUnion(value.map(v => v.getAvroSchema()).distinct)
         }
       }
     }
-    def prettyprint(offset: Int = 0) {
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
+      value.foreach(_.resetUsageStatistics())
+    }
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
       print(" " * offset)
-      println("HTUnion")
+      print("HTUnion " + name())
+      if (showStatistics && denom > 0) {
+        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+      }
+      println()
+
       for (v <- value) {
-        v.prettyprint(offset+1)
+        v.prettyprint(offset+1, showStatistics, denom)
       }
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
       val results = value.flatMap(_.processChunk(chunk))
-      results
+      results.map(r => (r._1, r._2 :+ this, r._3, r._4))
     }
   }
 
@@ -293,14 +345,21 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return value.getAvroSchema()
     }
-    def prettyprint(offset: Int = 0) {
-      print(" " * offset)
-      println("HTBaseType(" + value + ")")
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+      print(" " * offset)
+      print("HTBaseType(" + value + ") " + name())
+      if (showStatistics && denom > 0) {
+        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+      }
+      println()      
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
       if (chunk.length > 0 && (value == chunk(0))) {
         val inputElt = chunk(0).getValue()
-        List((chunk.slice(1, chunk.length), getAvroSchema(), chunk(0).getValue()))
+        List((chunk.slice(1, chunk.length), List(this), getAvroSchema(), chunk(0).getValue()))
       } else {
         List()
       }
@@ -311,11 +370,14 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       throw new RuntimeException("Avro schema undefined for noop")
     }
-    def prettyprint(offset: Int = 0) {
-      print(" " * offset)
-      println("HTNoop")
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+      print(" " * offset)
+      println("HTNoop")      
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
       throw new RuntimeException("processChunk() undefined for noop")
     }
   }
@@ -324,31 +386,40 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return Schema.createArray(value.getAvroSchema())
     }
-    def prettyprint(offset: Int = 0) {
-      print(" " * offset)
-      println("HTArrayFW  size=" + size)
-      value.prettyprint(offset+1)
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
+      value.resetUsageStatistics()
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      def processChildren(numChildrenToGo: Int, inChunk: ParsedChunk): List[(ParsedChunk, List[Schema], List[Any])] = {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+      print(" " * offset)
+      print("HTArrayFW " + name() + " size=" + size )
+      if (showStatistics && denom > 0) {
+        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+      }
+      println()      
+      value.prettyprint(offset+1, showStatistics, denom)
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
+      def processChildren(numChildrenToGo: Int, inChunk: ParsedChunk): List[(ParsedChunk, List[HigherType], List[Schema], List[Any])] = {
         val childList = value.processChunk(inChunk)
         if (childList.length == 0) {
           List()
         } else {
           if (numChildrenToGo == 1) {
-            childList.map(x => (x._1, List(x._2), List(x._3)))
+            childList.map(x => (x._1, x._2, List(x._3), List(x._4)))
           } else {
             childList.flatMap(childTuple => processChildren(numChildrenToGo-1, childTuple._1).map(rht => (rht._1,
-                                                                                                          List(childTuple._2) ++ rht._2,
-                                                                                                          List(childTuple._3) ++ rht._3)))
+                                                                                                          childTuple._2 ++ rht._2,
+                                                                                                          List(childTuple._3) ++ rht._3,
+                                                                                                          List(childTuple._4) ++ rht._4)))
           }
         }
       }
       val results = processChildren(size, chunk)
       results.map(result => {
                     val gda = new GenericData.Array[Any](size, getAvroSchema())
-                    result._3.foreach(gda.add(_))
-                    (result._1, getAvroSchema(), gda)
+                    result._4.foreach(gda.add(_))
+                    (result._1, result._2 :+ this, getAvroSchema(), gda)
                   })
     }
   }
@@ -358,13 +429,21 @@ object RBTypes {
     def getAvroSchema(): Schema = {
       return value.getAvroSchema()
     }
-    def prettyprint(offset: Int = 0) {
-      print(" " * offset)
-      println("HTOption")
-      value.prettyprint(offset+1)
+    def resetUsageStatistics(): Unit = {
+      linesProcessed = 0
+      value.resetUsageStatistics()
     }
-    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, Schema, Any)] = {
-      val results = value.processChunk(chunk) :+ (chunk, getAvroSchema(), getDefaultValue())
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+      print(" " * offset)
+      print("HTOption " + name())
+      if (showStatistics && denom > 0) {
+        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+      }
+      println()      
+      value.prettyprint(offset+1, showStatistics, denom)
+    }
+    def processChunk(chunk: ParsedChunk): List[(ParsedChunk, List[HigherType], Schema, Any)] = {
+      val results = value.processChunk(chunk).map(t=>(t._1, t._2 :+ this, t._3, t._4)) :+ (chunk, List(this), getAvroSchema(), getDefaultValue())
       results
     }
   }
