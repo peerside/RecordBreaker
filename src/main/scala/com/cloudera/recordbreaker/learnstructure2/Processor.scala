@@ -43,6 +43,6 @@ object Processor {
   }
   def process(chunks: ParsedChunks, ht: HigherType): List[GenericRecord] = {
     val schema = HigherType.getAvroSchema(ht)
-    chunks.map(HigherType.processChunk(ht, _))
+    chunks.map(HigherType.processChunk(ht, _)).filter(_.isDefined).map(_.get)
   }
 }

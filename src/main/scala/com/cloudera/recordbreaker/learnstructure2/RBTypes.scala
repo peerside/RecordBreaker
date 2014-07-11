@@ -132,11 +132,13 @@ object RBTypes {
   object HigherType {
     var fieldCount = 0
     var denomCount = 0
+    var missingCount = 0
     def resetFieldCount(): Unit = {
       fieldCount = 0
     }
     def resetUsageStatistics(ht: HigherType): Unit = {
       denomCount = 0
+      missingCount = 0
       ht.resetUsageStatistics()
     }
     def getAvroSchema(ht: HigherType): Schema = {
@@ -151,23 +153,27 @@ object RBTypes {
     def loadFromBytes(b: Array[Byte]): HigherType = {
       Marshal.load[HigherType](b)
     }
-    def processChunk(ht: HigherType, chunk: ParsedChunk): GenericRecord = {
+    def processChunk(ht: HigherType, chunk: ParsedChunk): Option[GenericRecord] = {
       val pcResults = ht.processChunk(chunk).filter(x=>x._1.length == 0)  // We only want the parses that consume entire input
-
-      // uniquify based on ht.name()
-      pcResults.head._2.foldLeft(HashSet[String]())((seenSoFar, curHt) => {
-                                              if (seenSoFar.contains(curHt.name())) {
-                                                seenSoFar
-                                              } else {
-                                                curHt.incrementUsage()
-                                                seenSoFar + curHt.name()
-                                              }
-                                            })
       denomCount += 1
 
       pcResults.head._4 match {
-        case a: GenericRecord => a
-        case _ => throw new RuntimeException("Call to processChunk() yielded a non-GenericContainer result, indicating that source was not a record")
+        case a: GenericRecord =>  {
+          // uniquify based on ht.name()
+          pcResults.head._2.foldLeft(HashSet[String]())((seenSoFar, curHt) => {
+                                                          if (seenSoFar.contains(curHt.name())) {
+                                                            seenSoFar
+                                                          } else {
+                                                            curHt.incrementUsage()
+                                                            seenSoFar + curHt.name()
+                                                          }
+                                                        })
+          Some(a)
+        }
+        case _ => {
+          missingCount += 1
+          None
+        }
       }
     }
     def getFieldCount(): Int = {
@@ -175,6 +181,12 @@ object RBTypes {
       fieldCount-1
     }
     def prettyprint(ht: HigherType):Unit = {
+      if (denomCount > 0) {
+        println("Failed to parse " + missingCount + " of " + denomCount + " input lines (" + (100 * (missingCount/denomCount.toFloat)) + "%)")
+      } else {
+        println("No test statistics available.")
+      }
+      println()
       ht.prettyprint(0, true, denomCount)
     }
   }
