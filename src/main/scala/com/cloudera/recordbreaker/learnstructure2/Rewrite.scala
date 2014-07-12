@@ -30,15 +30,29 @@ object Rewrite {
   /** refineAll() applies refinement rules to a given HigherType hierarchy and some Chunks
    *  It is the only public method in this package
    */
+  val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, filterNoops _, combineAdjacentStringConstants _, combineHomogeneousArrays _)
   def refineAll(orig: HigherType, input: Chunks) = {
-    val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, filterNoops _, combineAdjacentStringConstants _, combineHomogeneousArrays _)
     val dataDependentRules = List()
     val round1 = refine(orig, dataIndependentRules, costEncoding)
     val round2 = refine(round1, dataDependentRules, totalCost(input))
     val round3 = refine(round2, dataIndependentRules, costEncoding)
 
     val round4 = ensureRootIsStruct(round3)
+    HigherType.resetUsageStatistics(round4)
     round4
+  }
+
+  def dropComponent(orig: HigherType, label: String): HigherType = {
+    val dropComponents = List(dropComponent(label) _)
+    val origScore = costEncoding(orig)
+    val round1 = refine(orig, dropComponents, costEncoding)
+    val newScore = costEncoding(round1)
+    if (newScore >= origScore) {
+      throw CustomException("No valid UNION-child found for removal")
+    }
+    val round2 = refine(round1, dataIndependentRules, costEncoding)
+    HigherType.resetUsageStatistics(round2)
+    round2
   }
 
   /**
@@ -48,9 +62,21 @@ object Rewrite {
     //println("Refining " + orig)
     val newVersion = orig match {
         case a: HTBaseType => a
-        case b: HTStruct => HTStruct(b.value.map(x=> refine(x, rewriteRules, costFn)))
-        case c: HTArray => HTArray(refine(c.value, rewriteRules, costFn))
-        case d: HTUnion => HTUnion(d.value.map(x=> refine(x, rewriteRules, costFn)))
+        case b: HTStruct => {
+          val n = HTStruct(b.value.map(x=> refine(x, rewriteRules, costFn)))
+          n.fc = b.fc
+          n
+        }
+        case c: HTArray => {
+          val n = HTArray(refine(c.value, rewriteRules, costFn))
+          n.fc = c.fc
+          n
+        }
+        case d: HTUnion => {
+          val n = HTUnion(d.value.map(x=> refine(x, rewriteRules, costFn)))
+          n.fc = d.fc
+          n
+        }
         case _ => orig
       }
     oneStep(newVersion, rewriteRules, costFn)
@@ -155,6 +181,16 @@ object Rewrite {
                                                                                    case yb: HTNoop => false
                                                                                    case _ => true
                                                                                  })))
+      case _ => in
+    }
+  }
+
+  private def dropComponent(label: String)(in: HigherType): HigherType = {
+    in match {
+      case a: HTUnion if (a.value.exists(_.name() == label) &&
+                            a.value.length > 1) => {
+        HTUnion(a.value.filterNot(_.name() == label))
+      }
       case _ => in
     }
   }

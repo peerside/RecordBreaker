@@ -157,6 +157,10 @@ object RBTypes {
       val pcResults = ht.processChunk(chunk).filter(x=>x._1.length == 0)  // We only want the parses that consume entire input
       denomCount += 1
 
+      if (pcResults.length == 0) {
+        missingCount += 1
+        return None
+      }
       pcResults.head._4 match {
         case a: GenericRecord =>  {
           // uniquify based on ht.name()
@@ -191,7 +195,7 @@ object RBTypes {
     }
   }
   abstract class HigherType {
-    val fc = HigherType.getFieldCount()
+    var fc = HigherType.getFieldCount()
     var linesProcessed = 0
     def getAvroSchema(): Schema
     def name(): String = {
