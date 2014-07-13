@@ -193,6 +193,17 @@ object RBTypes {
       println()
       ht.prettyprint(0, true, denomCount)
     }
+
+    def getLowestCountUnionBranch(ht: HigherType): Tuple2[Int, Option[String]] = {
+      ht match {
+        case a: HTUnion => (a.value.map(x=> getLowestCountUnionBranch(x)) ++ a.value.map(z => (z.linesProcessed, Some(z.name())))).minBy(_._1)
+        case b: HTStruct => b.value.map(x=> getLowestCountUnionBranch(x)).minBy(_._1)
+        case c: HTArray => getLowestCountUnionBranch(c.value)
+        case d: HTArrayFW => getLowestCountUnionBranch(d.value)
+        case e: HTOption => getLowestCountUnionBranch(e.value)          
+        case f: HTBaseType => (Int.MaxValue, None)
+      }
+    }
   }
   abstract class HigherType {
     var fc = HigherType.getFieldCount()
@@ -213,7 +224,7 @@ object RBTypes {
     def getDefaultValue(): JsonNode = {
       return null
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int)
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit
   }
 
   case class HTStruct(value: List[HigherType]) extends HigherType {
@@ -230,11 +241,11 @@ object RBTypes {
       linesProcessed = 0
       value.foreach(_.resetUsageStatistics())
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       print("HTStruct " + name())
       if (showStatistics && denom > 0) {
-        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+        print("  (" + (100 * (linesProcessed / denom.toDouble)) + "%)")
       }
       println()
       for (v <- value) {
@@ -286,11 +297,11 @@ object RBTypes {
       linesProcessed = 0
       value.resetUsageStatistics()
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       print("HTArray " + name())
       if (showStatistics && denom > 0) {
-        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+        print("  (" + (100 * (linesProcessed / denom.toDouble)) + "%)")
       }
       println()
 
@@ -338,11 +349,11 @@ object RBTypes {
       linesProcessed = 0
       value.foreach(_.resetUsageStatistics())
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       print("HTUnion " + name())
       if (showStatistics && denom > 0) {
-        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+        print("  (" + (100 * (linesProcessed / denom.toDouble)) + "%)")
       }
       println()
 
@@ -364,11 +375,11 @@ object RBTypes {
     def resetUsageStatistics(): Unit = {
       linesProcessed = 0
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       print("HTBaseType(" + value + ") " + name())
       if (showStatistics && denom > 0) {
-        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+        print("  (" + (100 * (linesProcessed / denom.toDouble)) + "%)")
       }
       println()      
     }
@@ -389,7 +400,7 @@ object RBTypes {
     def resetUsageStatistics(): Unit = {
       linesProcessed = 0
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       println("HTNoop")      
     }
@@ -406,11 +417,11 @@ object RBTypes {
       linesProcessed = 0
       value.resetUsageStatistics()
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       print("HTArrayFW " + name() + " size=" + size )
       if (showStatistics && denom > 0) {
-        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+        print("  (" + (100 * (linesProcessed / denom.toDouble)) + "%)")
       }
       println()      
       value.prettyprint(offset+1, showStatistics, denom)
@@ -449,11 +460,11 @@ object RBTypes {
       linesProcessed = 0
       value.resetUsageStatistics()
     }
-    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int) {
+    def prettyprint(offset: Int, showStatistics: Boolean, denom: Int): Unit = {
       print(" " * offset)
       print("HTOption " + name())
       if (showStatistics && denom > 0) {
-        print("  (" + (100 * (linesProcessed / denom.toFloat)) + "%)")
+        print("  (" + (100 * (linesProcessed / denom.toDouble)) + "%)")
       }
       println()      
       value.prettyprint(offset+1, showStatistics, denom)

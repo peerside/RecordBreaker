@@ -27,10 +27,14 @@ object Rewrite {
   // Code to refine initial schema estimate
   ///////////////////////////////////////////
 
-  /** refineAll() applies refinement rules to a given HigherType hierarchy and some Chunks
-   *  It is the only public method in this package
+  /**
+   * refineAll() applies refinement rules to a given HigherType hierarchy and some Chunks.
+   * 
+   * It is not optional: many inferred HigherType structures will translate to illegal Avro
+   * structures before they go through the refinment process
    */
   val dataIndependentRules = List(removeNestedUnions _, rewriteSingletons _, cleanupStructUnion _, transformUniformStruct _, commonUnionPostfix _, filterNoops _, combineAdjacentStringConstants _, combineHomogeneousArrays _)
+
   def refineAll(orig: HigherType, input: Chunks) = {
     val dataDependentRules = List()
     val round1 = refine(orig, dataIndependentRules, costEncoding)
@@ -42,8 +46,14 @@ object Rewrite {
     round4
   }
 
-  def dropComponent(orig: HigherType, label: String): HigherType = {
-    val dropComponents = List(dropComponent(label) _)
+  /**
+   * dropComponent() removes a targeted UNION branch from a given HigherType structure.
+   * The intention here is that the user picks a UNION branch that processes only a small
+   * and unimportant portion of the overall input file; its removal simplifies the structure
+   * but has minimal impact on the parser's actual operation
+   */
+  def dropComponent(orig: HigherType, labels: List[String]): HigherType = {
+    val dropComponents = List(dropComponent(labels) _)
     val origScore = costEncoding(orig)
     val round1 = refine(orig, dropComponents, costEncoding)
     val newScore = costEncoding(round1)
@@ -53,6 +63,36 @@ object Rewrite {
     val round2 = refine(round1, dataIndependentRules, costEncoding)
     HigherType.resetUsageStatistics(round2)
     round2
+  }
+
+  /**
+   * automaticDropComponent() uses an algorithm to figure out how many and which
+   * UNION branches to remove.  It repeatedly removes the lowest-impact branches
+   * that still permit it to satisfy the user-given parse fraction requirement
+   */
+  def automaticDropComponent(orig: HigherType, input: ParsedChunks, minParseFraction: Double): HigherType = {
+    def computeMissingFraction(ht: HigherType, inc: ParsedChunks): Double = {
+      HigherType.resetUsageStatistics(ht)
+      Processor.process(inc, ht)
+      HigherType.missingCount / HigherType.denomCount.toDouble
+    }
+
+    // Very un-scala-like.  What is the scala idiom for the below case?
+    var curStructure = orig    
+    HigherType.resetUsageStatistics(curStructure)
+    Processor.process(input, curStructure)
+    while (true) {
+      val bestTupleToRemove = HigherType.getLowestCountUnionBranch(curStructure)
+      if (bestTupleToRemove._2.isEmpty) {
+        return curStructure
+      }
+      val refinedStructure = Rewrite.dropComponent(curStructure, List(bestTupleToRemove._2.get))
+      if ((1-computeMissingFraction(refinedStructure, input)) < minParseFraction) {
+        return curStructure
+      }
+      curStructure = refinedStructure
+    }
+    return curStructure
   }
 
   /**
@@ -75,6 +115,11 @@ object Rewrite {
         case d: HTUnion => {
           val n = HTUnion(d.value.map(x=> refine(x, rewriteRules, costFn)))
           n.fc = d.fc
+          n
+        }
+        case e: HTOption => {
+          val n = HTOption(refine(e.value, rewriteRules, costFn))
+          n.fc = e.fc
           n
         }
         case _ => orig
@@ -185,11 +230,11 @@ object Rewrite {
     }
   }
 
-  private def dropComponent(label: String)(in: HigherType): HigherType = {
+  private def dropComponent(labels: List[String])(in: HigherType): HigherType = {
     in match {
-      case a: HTUnion if (a.value.exists(_.name() == label) &&
+      case a: HTUnion if (a.value.exists(x=>labels.contains(x.name())) &&
                             a.value.length > 1) => {
-        HTUnion(a.value.filterNot(_.name() == label))
+        HTUnion(a.value.filterNot(x=>labels.contains(x.name())))
       }
       case _ => in
     }

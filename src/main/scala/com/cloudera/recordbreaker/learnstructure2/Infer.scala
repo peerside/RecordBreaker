@@ -30,10 +30,12 @@ object Infer {
    */
   def discover(cs: Chunks): HigherType = {
     HigherType.resetFieldCount()
-    internalDiscover(cs) match {
+    val result = internalDiscover(cs) match {
       case a: HTStruct => a
       case x: HigherType => HTStruct(List(x))
     }
+
+    Rewrite.refineAll(result, cs)
   }
   private def internalDiscover(cs:Chunks): HigherType = {
     //println("internalDiscover()...")
